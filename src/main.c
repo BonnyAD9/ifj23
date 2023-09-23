@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "utils.h"
+
 int main(void) {
-    printf("Hello ifj32 :)\n");
+    TODO("ifj project");
 }
