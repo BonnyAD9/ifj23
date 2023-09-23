@@ -18,7 +18,7 @@ bool str_eq(const String a, const String b) {
         return false;
     }
 
-    return memcmp(a.str, b.str, a.len);
+    return memcmp(a.str, b.str, a.len) == 0;
 }
 
 String str_clone(const String s) {
