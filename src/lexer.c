@@ -41,23 +41,29 @@ void lex_free(Lexer *lex) {
 }
 
 Token lex_next(Lexer *lex) {
+    sb_clear(&lex->buffer);
+
     while (isspace(lex->cur_chr)) {
         next_chr(lex);
     }
 
     if (lex->cur_chr == '_' || isalpha(lex->cur_chr)) {
-        return read_ident(lex);
+        lex->cur = read_ident(lex);
+        return lex->cur;
     }
 
     if (isdigit(lex->cur_chr)) {
-        return read_num(lex);
+        lex->cur = read_num(lex);
+        return lex->cur;
     }
 
     if (lex->cur_chr == '"') {
-        return read_str(lex);
+        lex->cur = read_str(lex);
+        return lex->cur;
     }
 
-    return read_operator(lex);
+    lex->cur = read_operator(lex);
+    return lex->cur;
 }
 
 static Token read_ident(Lexer *lex) {
