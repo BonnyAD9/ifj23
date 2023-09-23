@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug",
+            "program": "${workspaceFolder}/ifj23",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Makefile",
+            "env": {
+                "ASAN_OPTIONS": "detect_leaks=0"
+            }
+        }
+    ]
+}
