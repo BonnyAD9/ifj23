@@ -2,6 +2,7 @@
 *******************************************************************************
 
 -> Coding style rules:
+
     1. Indentation:                     4 spaces
     2. Variable and function names:     snake_case
         f.e. name_of_function (...)
