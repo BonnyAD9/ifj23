@@ -10,7 +10,7 @@ ROBJ:=$(patsubst src/%.c, obj/release/%.o, $(SRC))
 
 .DEFAULT_GOAL:=debug
 
-.PHONY: debug release install clean rel deb
+.PHONY: debug release clean rel deb
 
 
 debug:
