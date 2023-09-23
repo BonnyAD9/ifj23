@@ -14,7 +14,7 @@ static Token read_str(Lexer *lex);
 /// Reads operator or EOF
 static Token read_operator(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the NEW char
-static Token next_chr(Lexer *lex);
+static int next_chr(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the OLD char
 static int chr_next(Lexer *lex);
 
@@ -60,15 +60,15 @@ Token lex_next(Lexer *lex) {
     return read_operator(lex);
 }
 
-static int read_ident(Lexer *lex) {
+static Token read_ident(Lexer *lex) {
     TODO("lexer: read_ident");
 }
 
-static int read_num(Lexer *lex) {
+static Token read_num(Lexer *lex) {
     TODO("lexer: read_num");
 }
 
-static int read_str(Lexer *lex) {
+static Token read_str(Lexer *lex) {
     TODO("lexer: read_str");
 }
 

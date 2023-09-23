@@ -46,4 +46,4 @@ bool sb_push(StringBuffer *sb, char c);
 /// Clears the data in the string buffer
 void sb_clear(StringBuffer *sb);
 
-void sb_get(const StringBuffer *sb);
+String sb_get(const StringBuffer *sb);

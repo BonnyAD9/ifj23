@@ -60,7 +60,12 @@ void sb_free(StringBuffer *sb) {
 bool sb_push(StringBuffer *sb, char c) {
     if (sb->len >= sb->alloc) {
         size_t new_size = sb->len * 2;
-        char *new_str = realloc(sb->str, new_size);
+
+        if (new_size == 0) {
+            new_size = 1;
+        }
+
+        char *new_str = realloc(sb->str, sizeof(*new_str) * (new_size + 1));
         if (!new_str) {
             return false;
         }
@@ -79,6 +84,6 @@ void sb_clear(StringBuffer *sb) {
     sb->str[0] = 0;
 }
 
-void sb_get(const StringBuffer *sb) {
+String sb_get(const StringBuffer *sb) {
     return (String) { .str = sb->str, .len = sb->len };
 }
