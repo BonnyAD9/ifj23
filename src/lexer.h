@@ -1,6 +1,7 @@
 #include <stdio.h> // EOF, FILE
 
 #include "str.h" // String
+#include "stream.h"
 
 typedef enum {
     /// An error occured
@@ -41,7 +42,7 @@ typedef enum {
 } Token;
 
 typedef struct {
-    FILE *in;
+    Stream in;
     /// The last readed char
     int cur_chr;
     /// The last returned token, T_ERR if no lex_next was never called.
@@ -60,8 +61,8 @@ typedef struct {
     int subtype;
 } Lexer;
 
-/// Crates new lexer, takes ownership of the file
-Lexer lex_new(FILE *in);
+/// Crates new lexer
+Lexer lex_new(Stream in);
 
 /// Gets the next token, returns T_ERR on error
 Token lex_next(Lexer *lex);

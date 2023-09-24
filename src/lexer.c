@@ -1,5 +1,5 @@
 #include "lexer.h" // FILE, Lexer, NUL_STR, Token (and its values), NULL,
-                   // sb_new, sb_free
+                   // sb_new, sb_free, Stream, NUL_STREAM, stream_is_invalid
 
 #include <ctype.h> // isspace
 
@@ -18,7 +18,7 @@ static int next_chr(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the OLD char
 static int chr_next(Lexer *lex);
 
-Lexer lex_new(FILE *in) {
+Lexer lex_new(Stream in) {
     return (Lexer) {
         .in = in,
         .cur_chr = ' ',
@@ -30,12 +30,11 @@ Lexer lex_new(FILE *in) {
 }
 
 void lex_free(Lexer *lex) {
-    if (!lex->in) {
+    if (stream_is_invalid(&lex->in)) {
         return;
     }
 
-    fclose(lex->in);
-    lex->in = NULL;
+    lex->in = NUL_STREAM;
     sb_free(&lex->buffer);
     lex->str = NUL_STR;
 }
@@ -83,7 +82,7 @@ static Token read_operator(Lexer *lex) {
 }
 
 static int next_chr(Lexer *lex) {
-    return lex->cur_chr = fgetc(lex->in);
+    return lex->cur_chr = stream_get(&lex->in);
 }
 
 static int chr_next(Lexer *lex) {
