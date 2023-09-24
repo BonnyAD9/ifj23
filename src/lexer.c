@@ -105,6 +105,7 @@ static bool skip_comment(Lexer *lex) {
         while (next_chr(lex) != '*') {
             if (lex->cur_chr == EOF) {
                 lex->subtype = ERR_LEX;
+                EPRINTF("Unexpected end of file, expected '*/'");
                 return false;
             }
         }
