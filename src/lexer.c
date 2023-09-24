@@ -13,7 +13,7 @@ static Token read_num(Lexer *lex);
 static Token read_str(Lexer *lex);
 /// Reads operator or EOF
 static Token read_operator(Lexer *lex);
-/// Reads operator or EOF
+/// Skips line or block comment, returns false if error occured
 static bool skip_comment(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the NEW char
 static int next_chr(Lexer *lex);
@@ -96,7 +96,7 @@ static Token read_operator(Lexer *lex) {
 
 static bool skip_comment(Lexer *lex) {
     if (lex->cur_chr == '/') {
-        while (next_chr(lex) != '\n' || lex->cur_chr != EOF)
+        while (next_chr(lex) != '\n' && lex->cur_chr != EOF)
             ;
         return true;
     }
