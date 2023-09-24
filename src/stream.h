@@ -28,7 +28,7 @@ Stream stream_from_file(FILE *f);
 int stream_get(Stream *s);
 
 /// Peeks at the next char in the stream
-int stream_peek(const Stream *s);
+int stream_peak(const Stream *s);
 
 /// Checks whether the stream is sinvalid
 bool stream_is_invalid(const Stream *s);

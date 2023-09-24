@@ -34,7 +34,7 @@ int stream_get(Stream *s) {
     return ret;
 }
 
-int stream_peek(const Stream *s) {
+int stream_peak(const Stream *s) {
     return s->cur;
 }
 
@@ -48,7 +48,6 @@ FilePos stream_get_pos(const Stream *s) {
     if (s->cur == EOF) {
         ++pos.column;
     } else if (pos.column == 0) {
-        ++pos.column;
         pos.column = s->last_column + 1;
         --pos.line;
     }
