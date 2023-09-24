@@ -1,5 +1,5 @@
 #include "lexer.h" // FILE, Lexer, NUL_STR, Token (and its values), NULL,
-                   // sb_new, sb_free
+                   // sb_new, sb_free, true, false, bool
 
 #include <ctype.h> // isspace
 
@@ -13,6 +13,8 @@ static Token read_num(Lexer *lex);
 static Token read_str(Lexer *lex);
 /// Reads operator or EOF
 static Token read_operator(Lexer *lex);
+/// Reads operator or EOF
+static bool skip_comment(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the NEW char
 static int next_chr(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the OLD char
@@ -62,6 +64,16 @@ Token lex_next(Lexer *lex) {
         return lex->cur;
     }
 
+    if (lex->cur_chr == '/') {
+        if (next_chr(lex) == '/' || lex->cur_chr == '*') {
+            if (!skip_comment(lex)) {
+                return T_ERR;
+            }
+            return lex_next(lex);
+        }
+        return '/';
+    }
+
     lex->cur = read_operator(lex);
     return lex->cur;
 }
@@ -80,6 +92,25 @@ static Token read_str(Lexer *lex) {
 
 static Token read_operator(Lexer *lex) {
     TODO("lexer: read_operator");
+}
+
+static bool skip_comment(Lexer *lex) {
+    if (lex->cur_chr == '/') {
+        while (next_chr(lex) != '\n' || lex->cur_chr != EOF)
+            ;
+        return true;
+    }
+
+    do {
+        while (next_chr(lex) != '*') {
+            if (lex->cur_chr == EOF) {
+                lex->subtype = ERR_LEX;
+                return false;
+            }
+        }
+    } while (next_chr(lex) != '/');
+
+    return true;
 }
 
 static int next_chr(Lexer *lex) {
