@@ -21,6 +21,10 @@ bool str_eq(const String a, const String b) {
     return memcmp(a.str, b.str, a.len) == 0;
 }
 
+bool str_eq_const_str(const String a, const char *string) {
+    return strcmp(a.str, string) == 0;
+}
+
 String str_clone(const String s) {
     char *str = malloc(sizeof(*str) * (s.len + 1));
     if (!str) {

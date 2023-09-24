@@ -26,6 +26,9 @@ typedef struct {
 /// Checks whether the two strings are the same
 bool str_eq(const String a, const String b);
 
+/// Checks whether String is equal to const char
+bool str_eq_const_str(const String a, const char *string);
+
 /// Copies the data of the string to newly allocated string.
 /// Returns invalid string when fails.
 String str_clone(const String s);

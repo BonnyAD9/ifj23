@@ -40,6 +40,24 @@ typedef enum {
     T_TYPE,
 } Token;
 
+typedef enum {
+    INT_TYPE,
+    INT_TYPE_WITH_QST, // Int?
+    DOUBLE_TYPE,
+    DOUBLE_TYPE_WITH_QST, // Double?
+    STRING_TYPE,
+    STRING_TYPE_WITH_QST // String?
+    // TODO add operators types here
+} Subtype;
+
+typedef struct {
+    bool is_decimal_num; // if false => integer number
+    bool with_exponent;
+    unsigned long int integer_num;
+    double decimal_num;
+    long int exponent_num;
+} Number;
+
 typedef struct {
     FILE *in;
     /// The last readed char
@@ -52,12 +70,10 @@ typedef struct {
     /// String of the last token (string is owned by lexer, clone it to store
     /// it elsewhere)
     String str;
-    /// The parsed token data
-    double d_num;
-    /// The parsed token data
-    int i_num;
+    /// The parsed token data of number
+    Number number;
     /// More detailed type of the token
-    int subtype;
+    Subtype subtype;
 } Lexer;
 
 /// Crates new lexer, takes ownership of the file
