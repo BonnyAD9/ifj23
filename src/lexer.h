@@ -21,7 +21,7 @@ typedef enum {
     /// Int literal
     T_ILIT,
     /// Double literal
-    T_DELIT,
+    T_DLIT,
 
     /// The '->' token
     T_RETURNS,
