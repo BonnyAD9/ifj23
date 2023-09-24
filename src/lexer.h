@@ -33,10 +33,13 @@ typedef enum {
     T_WHILE,
     T_RETURN,
 
-    /// the keyword 'let' or 'var'
+    /// The keyword 'let' or 'var'
     T_DECL,
 
-    /// any of the types (Int, String, Double)
+    /// Generic value for operator
+    T_OPER,
+
+    /// Any of the types (Int, String, Double)
     T_TYPE,
 } Token;
 
@@ -48,15 +51,7 @@ typedef enum {
     STRING_TYPE,
     STRING_TYPE_WITH_QST // String?
     // TODO add operators types here
-} Subtype;
-
-typedef struct {
-    bool is_decimal_num; // if false => integer number
-    bool with_exponent;
-    unsigned long int integer_num;
-    double decimal_num;
-    long int exponent_num;
-} Number;
+} Subtype_for_types;
 
 typedef struct {
     FILE *in;
@@ -70,10 +65,12 @@ typedef struct {
     /// String of the last token (string is owned by lexer, clone it to store
     /// it elsewhere)
     String str;
-    /// The parsed token data of number
-    Number number;
+    /// The parsed token data
+    double d_num;
+    /// The parsed token data
+    int i_num;
     /// More detailed type of the token
-    Subtype subtype;
+    int subtype;
 } Lexer;
 
 /// Crates new lexer, takes ownership of the file

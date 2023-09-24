@@ -42,6 +42,9 @@ StringBuffer sb_new();
 /// Frees the string buffer
 void sb_free(StringBuffer *sb);
 
+/// Appends string to string buffer
+bool sb_push_str(StringBuffer *sb, const char *str);
+
 /// Appends to the string buffer
 /// Returns false when fails.
 bool sb_push(StringBuffer *sb, char c);

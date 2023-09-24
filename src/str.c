@@ -61,6 +61,11 @@ void sb_free(StringBuffer *sb) {
     sb->alloc = 0;
 }
 
+bool sb_push_str(StringBuffer *sb, const char *str) {
+    for (size_t i = 0; i < strlen(str); ++i)
+        sb_push(sb, str[i]);
+}
+
 bool sb_push(StringBuffer *sb, char c) {
     if (sb->len >= sb->alloc) {
         size_t new_size = sb->len * 2;
