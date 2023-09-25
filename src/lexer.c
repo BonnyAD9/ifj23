@@ -69,23 +69,9 @@ Token lex_next(Lexer *lex) {
     return lex->cur;
 }
 
-bool is_valid_ident(String string) {
-    // Error case when ident is only "_"
-    if (str_eq(string, STR("_")) == true)
-        return false;
-
-    size_t index;
-    for (index = string.len; index >= 0; --index) {
-        if (isalnum(string.str[index]) == 0 || string.str[index] == '_')
-            break;
-    }
-    // If we iterate to the end, it's valid ident
-    return index == 0;
-}
-
 static Token read_ident(Lexer *lex) {
     // Load whole ident into buffer
-    while (isspace(lex->cur_chr) == 0) {
+    while (isalnum(lex->cur_chr) || lex->cur_chr == '_' || lex->cur_chr == '?') {
         sb_push(&lex->buffer, lex->cur_chr);
         next_chr(lex);
     }
@@ -93,10 +79,15 @@ static Token read_ident(Lexer *lex) {
     // Store token data
     lex->str = sb_get(&lex->buffer);
 
+    // Check if loaded ident contains '?'
+    char *qmark = strchr(lex->str.str, '?');
+    // Check '?' is only at the end of ident name
+    if (qmark && strlen(qmark) > 1)
+        return T_ERR;
+
     if (str_eq(lex->str, STR("Double")) || str_eq(lex->str, STR("Double?"))) {
         // Check if last char is "?"
-        lex->subtype = ((lex->str.str[lex->str.len] == '?') ?
-            DOUBLE_TYPE_WITH_QST : DOUBLE_TYPE);
+        lex->subtype = ((qmark) ? DOUBLE_TYPE_WITH_QST : DOUBLE_TYPE);
         return T_TYPE;
     }
     else if (str_eq(lex->str, STR("else")))
@@ -107,8 +98,7 @@ static Token read_ident(Lexer *lex) {
         return T_IF;
     else if (str_eq(lex->str, STR("Int")) || str_eq(lex->str, STR("Int?"))) {
         // Check if last char is "?"
-        lex->subtype = ((lex->str.str[lex->str.len] == '?') ?
-            INT_TYPE_WITH_QST : INT_TYPE);
+        lex->subtype = ((qmark) ? INT_TYPE_WITH_QST : INT_TYPE);
         return T_TYPE;
     }
     else if (str_eq(lex->str, STR("let")))
@@ -119,40 +109,52 @@ static Token read_ident(Lexer *lex) {
         return T_RETURN;
     else if (str_eq(lex->str, STR("String")) || str_eq(lex->str, STR("String?"))) {
         // Check if last char is "?"
-        lex->subtype = ((lex->str.str[lex->str.len] == '?') ?
-            STRING_TYPE_WITH_QST : STRING_TYPE);
+        lex->subtype = ((qmark) ? STRING_TYPE_WITH_QST : STRING_TYPE);
         return T_TYPE;
     }
     else if (str_eq(lex->str, STR("var")))
         return T_DECL;
     else if (str_eq(lex->str, STR("while")))
         return T_WHILE;
-    else {
-        // Check if ident contains only alpha-numerical values
-        if (is_valid_ident(lex->str))
-            return T_IDENT;
-        lex->str = NUL_STR;
-        return T_ERR;
-    }
+    // Generic ident
+    return T_IDENT;
 }
 
 bool is_valid_number(char current, char prev) {
+    if (prev == '\0' && isdigit(current))
+        return true;
+
     if (!isdigit(current)) {
-        // Non-digit char
-        // If initial char is not number -> false
-        if (prev != '\0') {
-            if (isdigit(prev)) {
-                // Previous char was digit
-                if (current == '.' || current == 'e' || current == 'E')
+        // Avoid double usage of these chars
+        static bool plus_minus_used = false;
+        static bool exponent_used = false;
+        static bool decimal_sign_used = false;
+
+        // Non-numerical value
+        switch (current) {
+            case 'e':
+            case 'E':
+                if (isdigit(prev) && !exponent_used) {
+                    exponent_used = true;
                     return true;
-            }
-            else {
-                // Previous char was non-digit
-                if (current == 'e' || current == 'E' || current == '+' || current == '-')
+                }
+                return false;
+            case '+':
+            case '-':
+                if ((prev == 'e' || prev == 'E') && !plus_minus_used) {
+                    plus_minus_used = true;
                     return true;
-            }
+                }
+                return false;
+            case '.':
+                if (prev != '\0' && !decimal_sign_used) {
+                    decimal_sign_used = true;
+                    return true;
+                }
+                return false;
+            default:
+                return false;
         }
-        return false;
     }
     return true;
 }
@@ -184,8 +186,7 @@ static Token read_num(Lexer *lex) {
                     return T_ERR;
                 return T_DLIT;
         }
-        else
-            return T_ERR;
+        return T_ERR;
     }
     // Integer number
     else {
@@ -216,7 +217,6 @@ static Token read_str(Lexer *lex) {
                         next_chr(lex);
                         // Read 8 hexa values at max
                         for (; lex->cur_chr != '}' && temp.len < 8; ) {
-                            sb_push(&temp, lex->cur_chr);
                             if (!isxdigit(lex->cur_chr)) {
                                 // Unexpected char provided, f.e. \u{65K
                                 // Current approach is to push all of this to string, don't remove it
@@ -228,6 +228,7 @@ static Token read_str(Lexer *lex) {
                                 sb_free(&temp);
                                 break;
                             }
+                            sb_push(&temp, lex->cur_chr);
                             next_chr(lex);
                         }
 
@@ -236,7 +237,12 @@ static Token read_str(Lexer *lex) {
                             sb_push(&lex->buffer, strtol(temp.str, NULL, 16));
                             sb_free(&temp);
                         }
+                        else
+                            // Push remaining
+                            sb_push_str(&lex->buffer, "\\u{}");
                     }
+                    // Push remaining
+                    sb_push_str(&lex->buffer, "\\u");
                     break;
                 case '"':
                     sb_push(&lex->buffer, '"');
@@ -259,6 +265,7 @@ static Token read_str(Lexer *lex) {
                     sb_push(&lex->buffer, lex->cur_chr);
                     break;
             }
+            next_chr(lex);
         }
         else {
             sb_push(&lex->buffer, lex->cur_chr);
