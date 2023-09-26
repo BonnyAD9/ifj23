@@ -199,14 +199,49 @@ static Token read_num(Lexer *lex) {
 }
 
 static Token read_str(Lexer *lex) {
-    TODO("Triple-uvozovky case");
+    // Triple double quotes case
+    bool triple = false;
+    if (next_chr(lex) == '"') {
+        // Empty string
+        if (next_chr(lex) != '"') {
+            lex->str = STR("");
+            return T_SLIT;
+        }
 
-    // Skip initial '"'
-    next_chr(lex);
+        triple = true;
+        // Skips new line after quotes
+        if (next_chr(lex) == '\n') {
+            next_chr(lex);
+        }
+    }
 
     // Load whole string into buffer
-    while (lex->cur_chr != '\n' && lex->cur_chr != EOF) {
-        if (lex->cur_chr == '\\') {
+    while (lex->cur_chr != EOF) {
+        // Double quote occured
+        if (lex->cur_chr == '"') {
+            if (!triple)
+                break;
+
+            if (next_chr(lex) == '"' && next_chr(lex) == '"')
+                break;
+        }
+        // New line occured
+        if (lex->cur_chr == '\n') {
+            if (!triple)
+                return T_ERR;
+
+            if (next_chr(lex) == '"' &&
+                next_chr(lex) == '"' &&
+                next_chr(lex) == '"')
+                break;
+            sb_push(&lex->buffer, lex->cur_chr);
+            next_chr(lex);
+        }
+        else if (lex->cur_chr != '\\') {
+            sb_push(&lex->buffer, lex->cur_chr);
+            next_chr(lex);
+        }
+        else if (lex->cur_chr == '\\') {
             // '\' char
             next_chr(lex);
             switch (lex->cur_chr) {
@@ -266,12 +301,6 @@ static Token read_str(Lexer *lex) {
                     break;
             }
             next_chr(lex);
-        }
-        else {
-            sb_push(&lex->buffer, lex->cur_chr);
-            next_chr(lex);
-            if (lex->cur_chr == '"')
-                break;
         }
     }
 
