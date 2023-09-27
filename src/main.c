@@ -1,8 +1,19 @@
 #include <stdio.h>
 
 #include "utils.h"
-#include "str.h"
+#include "lexer.h"
 
 int main(void) {
-    TODO("ifj project");
+    FILE* file = fopen("test/testInput.txt", "r");
+    if (!file)
+        EPRINTF("Error opening input file");
+
+    // Init mock lexer, let him read input and output parsed tokens
+    Lexer lexer = lex_new(file);
+    Token token = lex_next(&lexer);
+
+    while (token != T_ERR && token != EOF) {
+        fprintf(stdout, "Token %c [%s] \n", token, lexer.str.str);
+        token = lex_next(&lexer);
+    }
 }

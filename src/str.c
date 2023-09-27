@@ -58,9 +58,10 @@ void sb_free(StringBuffer *sb) {
 }
 
 bool sb_push_str(StringBuffer *sb, const char *str) {
-    for (size_t i = 0; i < strlen(str); ++i)
+    for (size_t i = 0; i < strlen(str); ++i) {
         if (!sb_push(sb, str[i]))
             return false;
+    }
     return true;
 }
 
