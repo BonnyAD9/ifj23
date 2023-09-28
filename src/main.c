@@ -13,7 +13,8 @@ int main(void) {
     Token token = lex_next(&lexer);
 
     while (token != T_ERR && token != EOF) {
-        fprintf(stdout, "Token %c [%s] \n", token, lexer.str.str);
+        fprintf(stdout, "Token %c|%d [%s] \n", token, token, lexer.str.str);
         token = lex_next(&lexer);
     }
+    lex_free(&lexer);
 }

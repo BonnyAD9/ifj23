@@ -76,5 +76,5 @@ Lexer lex_new(FILE *in);
 /// Gets the next token, returns T_ERR on error
 Token lex_next(Lexer *lex);
 
-/// frees the lexer
+/// frees the lexer - owner's responsibility!
 void lex_free(Lexer *lex);

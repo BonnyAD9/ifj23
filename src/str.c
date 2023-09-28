@@ -47,10 +47,6 @@ StringBuffer sb_new() {
 }
 
 void sb_free(StringBuffer *sb) {
-    if (!sb->str) {
-        return;
-    }
-
     free(sb->str);
     sb->str = NULL;
     sb->len = 0;

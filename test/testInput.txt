@@ -2,6 +2,8 @@ let a=a??0
 
 5*(5+i)
 
+let i = 5-(i+5)
+
 func concat(_ x : String, with y : String) -> String {
     let x = x + y
     return x + " " + y

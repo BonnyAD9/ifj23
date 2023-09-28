@@ -10,7 +10,8 @@
 // Avoid double usage of these chars for number parsing
 bool plus_minus_used = false,
      exponent_used = false,
-     decimal_sign_used = false;
+     decimal_sign_used = false,
+     two_char_operator_used = false;
 
 /// Reads identifier, keyword or the '_' token
 static Token read_ident(Lexer *lex);
@@ -51,7 +52,6 @@ void lex_free(Lexer *lex) {
 Token lex_error(Lexer *lex, char *msg) {
     EPRINTF(msg);
     lex->subtype = ERR_LEX;
-    lex_free(lex);
     return T_ERR;
 }
 
@@ -61,11 +61,8 @@ Token lex_next(Lexer *lex) {
 
     // Skip white-spaces and unprintable chars
     while (isspace(lex->cur_chr) || !isprint(lex->cur_chr)) {
-        // EOF reached
-        if (lex->cur_chr == EOF) {
-            lex_free(lex);
+        if (lex->cur_chr == EOF)
             return T_EOF;
-        }
         next_chr(lex);
     }
 
@@ -76,10 +73,6 @@ Token lex_next(Lexer *lex) {
 
     if (isdigit(lex->cur_chr)) {
         lex->cur = read_num(lex);
-        // Reset to default values
-        plus_minus_used = false;
-        exponent_used = false;
-        decimal_sign_used = false;
 
         return lex->cur;
     }
@@ -125,6 +118,8 @@ static Token read_ident(Lexer *lex) {
         return T_DECL;
     else if (str_eq(lex->str, STR("while")))
         return T_WHILE;
+    else if (str_eq(lex->str, STR("_")))
+        return '_';
     // Generic ident
     return T_IDENT;
 }
@@ -132,6 +127,10 @@ static Token read_ident(Lexer *lex) {
 int is_valid_number(Lexer* lex, char prev) {
     if (isdigit(lex->cur_chr))
         return true;
+
+    // Skip noprintable chars
+    if (!isprint(lex->cur_chr))
+        return false;
 
     // Non-numerical value
     switch (lex->cur_chr) {
@@ -145,12 +144,11 @@ int is_valid_number(Lexer* lex, char prev) {
         case ')':
         case '*':
         case '/':
-            // We don't want to throw error
+            if (isalpha(prev))
+                // f.e. "2E " is error
+                return lex_error(lex, "Invalid number format \n");
             // f.e. "5<="" isn't error
-            if (isdigit(prev))
-                return false;
-            // "2E " is error
-            return lex_error(lex, "Invalid number format \n");
+            return false;
         case 'e':
         case 'E':
             if (isdigit(prev) && !exponent_used) {
@@ -181,6 +179,12 @@ int is_valid_number(Lexer* lex, char prev) {
 static Token read_num(Lexer *lex) {
     int val;
     char c = '\0';
+
+    // Reset to default values
+    plus_minus_used = false;
+    exponent_used = false;
+    decimal_sign_used = false;
+
     // Load whole number into buffer
     while ((val = is_valid_number(lex, c))) {
         // Error in number format
@@ -190,9 +194,6 @@ static Token read_num(Lexer *lex) {
         sb_push(&lex->buffer, lex->cur_chr);
         // Store previous char
         c = chr_next(lex);
-        // Avoid noprintable chars throwing an error
-        if (!isprint(lex->cur_chr))
-            break;
     }
     // Store token data
     lex->str = sb_get(&lex->buffer);
@@ -303,79 +304,43 @@ static Token read_str(Lexer *lex) {
     return T_SLIT;
 }
 
+Token ret_operator(Lexer *lex, char symbol, Token ret_val) {
+    char old = chr_next(lex);
+    if (lex->cur_chr == symbol) {
+        next_chr(lex);
+        return ret_val;
+    }
+
+    return old;
+}
+
 static Token read_operator(Lexer *lex) {
-    bool two_char_operator_used = false,
-         break_cycle = false,
-         skip = false;
-    char old = '\0';
-
-    while (!break_cycle) {
-        switch (lex->cur_chr) {
-            case '=':
-            case '!':
-            case '<':
-            case '>':
-            case '-':
-            case '?':
-                sb_push(&lex->buffer, lex->cur_chr);
-                // Avoid triple operators, f.e. "==="
-                if (two_char_operator_used)
-                    return lex_error(lex, "Invalid operator provided \n");
-                if (lex->buffer.len > 1)
-                    two_char_operator_used = true;
-                break;
-            case '+':
-            case '*':
-            case '/':
-            case '(':
-            case ')':
-            case '{':
-            case '}':
-            case ':':
-            case ',':
-            case '_':
-                if (two_char_operator_used || lex->buffer.len) {
-                    // f.e. case of "==" followed by "+" -> process "==" now and "+" next time
-                    break_cycle = true;
-                    break;
-                }
-                old = chr_next(lex);
-                // Return single operator by its ASCII value
-                return old;
-            default:
-                return lex_error(lex, "Invalid operator provided \n");
-        }
-        // Load next to check for two-sized operators
-        old = chr_next(lex);
-        if (isalnum(lex->cur_chr) || isspace(lex->cur_chr)) {
-            if (!two_char_operator_used)
-                sb_clear(&lex->buffer);
-            skip = true;
-            break;
-        }
+    switch (lex->cur_chr) {
+        case '+':
+        case '*':
+        case '/':
+        case '(':
+        case ')':
+        case '{':
+        case '}':
+        case ':':
+        case ',':
+            return chr_next(lex);
+        case '=':
+            return ret_operator(lex, '=', T_EQUALS);
+        case '!':
+            return ret_operator(lex, '=', T_DIFFERS);
+        case '<':
+            return ret_operator(lex, '=', T_LESS_OR_EQUAL);
+        case '>':
+            return ret_operator(lex, '=', T_GREATER_OR_EQUAL);
+        case '-':
+            return ret_operator(lex, '>', T_RETURNS);
+        case '?':
+            return ret_operator(lex, '?', T_DOUBLE_QUES);
+        default:
+            return lex_error(lex, "Invalid operator provided \n");
     }
-
-    if (two_char_operator_used) {
-        // Store string
-        lex->str = sb_get(&lex->buffer);
-
-        if (str_eq(lex->str, STR("==")))
-            return T_EQUALS;
-        else if (str_eq(lex->str, STR(">=")))
-            return T_GREATER_OR_EQUAL;
-        else if (str_eq(lex->str, STR("<=")))
-            return T_LESS_OR_EQUAL;
-        else if (str_eq(lex->str, STR("!=")))
-            return T_DIFFERS;
-        else if (str_eq(lex->str, STR("??")))
-            return T_DOUBLE_QUES;
-        else if (str_eq(lex->str, STR("->")))
-            return T_RETURNS;
-        // Invalid operator
-        return lex_error(lex, "Invalid operator provided \n");
-    }
-    // When current char is unprintable, f.e. line break, avoid returning it
-    return ((skip) ? old : lex->cur_chr);
 }
 
 static int next_chr(Lexer *lex) {
