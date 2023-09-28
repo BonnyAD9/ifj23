@@ -10,8 +10,7 @@
 // Avoid double usage of these chars for number parsing
 bool plus_minus_used = false,
      exponent_used = false,
-     decimal_sign_used = false,
-     two_char_operator_used = false;
+     decimal_sign_used = false;
 
 /// Reads identifier, keyword or the '_' token
 static Token read_ident(Lexer *lex);
