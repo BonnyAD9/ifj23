@@ -130,27 +130,8 @@ int is_valid_number(Lexer* lex, char prev) {
     if (isdigit(lex->cur_chr))
         return true;
 
-    // Skip noprintable chars
-    if (!isprint(lex->cur_chr))
-        return false;
-
     // Non-numerical value
     switch (lex->cur_chr) {
-        case '=':
-        case '>':
-        case '<':
-        case '!':
-        case ',':
-        case ' ':
-        case '(':
-        case ')':
-        case '*':
-        case '/':
-            if (isalpha(prev))
-                // f.e. "2E " is error
-                return lex_error(lex, "Invalid number format \n");
-            // f.e. "5<="" isn't error
-            return false;
         case 'e':
         case 'E':
             if (isdigit(prev) && !exponent_used) {
@@ -174,7 +155,9 @@ int is_valid_number(Lexer* lex, char prev) {
                 return false;
             }
         default:
-            return lex_error(lex, "Invalid number format \n");
+            if (isalpha(lex->cur_chr))
+                return lex_error(lex, "Invalid number format \n");
+            return false;
     }
 }
 
