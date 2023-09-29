@@ -1,5 +1,5 @@
 #include "lexer.h" // FILE, Lexer, NUL_STR, Token (and its values), NULL,
-                   // sb_new, sb_free
+                   // sb_new, sb_free, true, false, bool
 
 #include <ctype.h> // isspace, isalnum, isdigit
 #include <string.h> // strchr, strlen, strtod, strtol,
@@ -20,6 +20,8 @@ static Token read_num(Lexer *lex);
 static Token read_str(Lexer *lex);
 /// Reads operator
 static Token read_operator(Lexer *lex);
+/// Skips line or block comment, returns false if error occured
+static bool skip_comment(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the NEW char
 static int next_chr(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the OLD char
@@ -82,6 +84,16 @@ Token lex_next(Lexer *lex) {
     if (lex->cur_chr == '"') {
         lex->cur = read_str(lex);
         return lex->cur;
+    }
+
+    if (lex->cur_chr == '/') {
+        if (next_chr(lex) == '/' || lex->cur_chr == '*') {
+            if (!skip_comment(lex)) {
+                return T_ERR;
+            }
+            return lex_next(lex);
+        }
+        return '/';
     }
 
     lex->cur = read_operator(lex);
@@ -326,6 +338,26 @@ static Token read_operator(Lexer *lex) {
         default:
             return lex_error(lex, "Invalid operator provided \n");
     }
+}
+
+static bool skip_comment(Lexer *lex) {
+    if (lex->cur_chr == '/') {
+        while (next_chr(lex) != '\n' && lex->cur_chr != EOF)
+            ;
+        return true;
+    }
+
+    do {
+        while (next_chr(lex) != '*') {
+            if (lex->cur_chr == EOF) {
+                lex->subtype = ERR_LEX;
+                EPRINTF("Unexpected end of file, expected '*/'");
+                return false;
+            }
+        }
+    } while (next_chr(lex) != '/');
+
+    return true;
 }
 
 static int next_chr(Lexer *lex) {
