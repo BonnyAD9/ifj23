@@ -18,7 +18,7 @@ static Token read_ident(Lexer *lex);
 static Token read_num(Lexer *lex);
 /// Reads string (single or triple quoted)
 static Token read_str(Lexer *lex);
-/// Reads operator or EOF
+/// Reads operator
 static Token read_operator(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the NEW char
 static int next_chr(Lexer *lex);
@@ -55,15 +55,19 @@ Token lex_error(Lexer *lex, char *msg) {
 }
 
 Token lex_next(Lexer *lex) {
-    if (lex->buffer.str)
-        sb_clear(&lex->buffer);
+    sb_clear(&lex->buffer);
 
-    // Skip white-spaces and unprintable chars
-    while (isspace(lex->cur_chr) || !isprint(lex->cur_chr)) {
-        if (lex->cur_chr == EOF)
-            return T_EOF;
+    // End if EOF reached
+    if (lex->cur_chr == EOF)
+        return T_EOF;
+
+    // Skip white-spaces
+    while (isspace(lex->cur_chr))
         next_chr(lex);
-    }
+
+    // Throw error on nonprintable character
+    if (!isprint(lex->cur_chr))
+        return lex_error(lex, "Nonprintable character in input file \n");
 
     if (lex->cur_chr == '_' || isalpha(lex->cur_chr)) {
         lex->cur = read_ident(lex);
@@ -72,7 +76,6 @@ Token lex_next(Lexer *lex) {
 
     if (isdigit(lex->cur_chr)) {
         lex->cur = read_num(lex);
-
         return lex->cur;
     }
 

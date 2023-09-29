@@ -85,7 +85,8 @@ bool sb_push(StringBuffer *sb, char c) {
 
 void sb_clear(StringBuffer *sb) {
     sb->len = 0;
-    sb->str[0] = 0;
+    if (sb->str)
+        sb->str[0] = 0;
 }
 
 String sb_get(const StringBuffer *sb) {
