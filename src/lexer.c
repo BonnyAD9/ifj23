@@ -57,10 +57,6 @@ Token lex_error(Lexer *lex, char *msg) {
 Token lex_next(Lexer *lex) {
     sb_clear(&lex->buffer);
 
-    // End if EOF reached
-    if (lex->cur_chr == EOF)
-        return T_EOF;
-
     // Skip white-spaces
     while (isspace(lex->cur_chr))
         next_chr(lex);
@@ -68,6 +64,10 @@ Token lex_next(Lexer *lex) {
     // Throw error on nonprintable character
     if (!isprint(lex->cur_chr))
         return lex_error(lex, "Nonprintable character in input file \n");
+
+    // End if EOF reached
+    if (lex->cur_chr == EOF)
+        return T_EOF;
 
     if (lex->cur_chr == '_' || isalpha(lex->cur_chr)) {
         lex->cur = read_ident(lex);
