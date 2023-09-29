@@ -1,0 +1,53 @@
+% Autor: Tomáš Daniel           <xdanie14@stud.fit.vutbr.cz>
+% Autor: Martin Slezák          <xsleza26@stud.fit.vutbr.cz>
+% Autor: Jakub Antonín Štigler  <xstigl00@stud.fit.vutbr.cz>
+% Autor: Milan Vrbas            <xvrbas01@stud.fit.vutbr.cz>
+
+\documentclass[a4paper, 11pt]{article} % definice třídy dokumentu a nastavení vlastností
+
+% balíčky
+\usepackage[utf8]{inputenc} % nastavení kódování
+\usepackage{times} % font
+\usepackage[czech]{babel} % čeština
+\usepackage[IL2]{fontenc} % nastavení kódování fontů
+\usepackage[left=2cm, text={17cm, 24cm}, top=3cm]{geometry} % nastavení rozměrů stránky
+\usepackage{graphics} % obrázky
+\usepackage[unicode]{hyperref} % odkazy
+
+% dokument
+\begin{document}
+
+% úvodní strana
+	\begin{titlepage}
+		\begin{center}
+      \scalebox{0.15}{\includegraphics{pictures/FIT_logo.png}} \\
+			\vspace{\stretch{0.382}}
+			\Huge{Projektová dokumentace} \\
+			\LARGE{\textbf{Implementace překladače imperativního jazyka IFJ23}} \\
+			\Large{Tým xdanie14, varianta X}
+			\vspace{\stretch{0.618}}
+		\end{center}
+
+    {\Large \today \hfill
+    \Large
+    \begin{tabular}{l l l}
+      \textbf{Tomáš Daniel} & \quad \textbf{xdanie14} & \quad X\,\% \\
+      Martin Slezák         & \quad xsleza26          & \quad X\,\% \\
+      Jakub Antonín Štigler & \quad xstigl00          & \quad X\,\% \\
+      Milan Vrbas           & \quad xvrbas01          & \quad X\,\% \\
+    \end{tabular}
+    }
+  \end{titlepage}
+
+% obsah
+  \tableofcontents
+  \thispagestyle{empty}
+  \newpage
+
+% 1. strana
+  \setcounter{page}{1}
+  \section{Úvod}
+  TODO
+  \section{Návrh a implementace}
+  
+\end{document}

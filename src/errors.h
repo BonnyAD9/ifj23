@@ -17,7 +17,7 @@
 /// Semantic error - undefined variable
 #define ERR_UNDEF_VAR 5
 
-/// Semantic error - function returns incorecctly
+/// Semantic error - function returns incorrectly
 #define ERR_INVALID_RETURN 6
 
 /// Semantic error - incompatible types in aritmetic operation

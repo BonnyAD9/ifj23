@@ -26,6 +26,16 @@ typedef enum {
 
     /// The '->' token
     T_RETURNS,
+    /// The '==' token
+    T_EQUALS,
+    /// The '!=' token
+    T_DIFFERS,
+    /// The '<=' token
+    T_LESS_OR_EQUAL,
+    /// The '=>' token
+    T_GREATER_OR_EQUAL,
+    /// The '??' token
+    T_DOUBLE_QUES,
 
     T_FUNC,
 
@@ -34,10 +44,10 @@ typedef enum {
     T_WHILE,
     T_RETURN,
 
-    /// the keyword 'let' or 'var'
+    /// The keyword 'let' or 'var'
     T_DECL,
 
-    /// any of the types (Int, String, Double)
+    /// Any of the types (Int, String, Double)
     T_TYPE,
 } Token;
 
@@ -67,5 +77,5 @@ Lexer lex_new(Stream in);
 /// Gets the next token, returns T_ERR on error
 Token lex_next(Lexer *lex);
 
-/// frees the lexer
+/// frees the lexer - owner's responsibility!
 void lex_free(Lexer *lex);

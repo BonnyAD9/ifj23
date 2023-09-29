@@ -47,14 +47,18 @@ StringBuffer sb_new() {
 }
 
 void sb_free(StringBuffer *sb) {
-    if (!sb->str) {
-        return;
-    }
-
     free(sb->str);
     sb->str = NULL;
     sb->len = 0;
     sb->alloc = 0;
+}
+
+bool sb_push_str(StringBuffer *sb, const char *str) {
+    for (size_t i = 0; i < strlen(str); ++i) {
+        if (!sb_push(sb, str[i]))
+            return false;
+    }
+    return true;
 }
 
 bool sb_push(StringBuffer *sb, char c) {
@@ -81,7 +85,8 @@ bool sb_push(StringBuffer *sb, char c) {
 
 void sb_clear(StringBuffer *sb) {
     sb->len = 0;
-    sb->str[0] = 0;
+    if (sb->str)
+        sb->str[0] = 0;
 }
 
 String sb_get(const StringBuffer *sb) {
