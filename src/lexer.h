@@ -25,6 +25,16 @@ typedef enum {
 
     /// The '->' token
     T_RETURNS,
+    /// The '==' token
+    T_EQUALS,
+    /// The '!=' token
+    T_DIFFERS,
+    /// The '<=' token
+    T_LESS_OR_EQUAL,
+    /// The '=>' token
+    T_GREATER_OR_EQUAL,
+    /// The '??' token
+    T_DOUBLE_QUES,
 
     T_FUNC,
 
@@ -36,22 +46,9 @@ typedef enum {
     /// The keyword 'let' or 'var'
     T_DECL,
 
-    /// Generic value for operator
-    T_OPER,
-
     /// Any of the types (Int, String, Double)
     T_TYPE,
 } Token;
-
-typedef enum {
-    INT_TYPE,
-    INT_TYPE_WITH_QST, // Int?
-    DOUBLE_TYPE,
-    DOUBLE_TYPE_WITH_QST, // Double?
-    STRING_TYPE,
-    STRING_TYPE_WITH_QST // String?
-    // TODO add operators types here
-} Subtype_for_types;
 
 typedef struct {
     FILE *in;
@@ -79,5 +76,5 @@ Lexer lex_new(FILE *in);
 /// Gets the next token, returns T_ERR on error
 Token lex_next(Lexer *lex);
 
-/// frees the lexer
+/// frees the lexer - owner's responsibility!
 void lex_free(Lexer *lex);

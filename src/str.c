@@ -21,10 +21,6 @@ bool str_eq(const String a, const String b) {
     return memcmp(a.str, b.str, a.len) == 0;
 }
 
-bool str_eq_const_str(const String a, const char *string) {
-    return strcmp(a.str, string) == 0;
-}
-
 String str_clone(const String s) {
     char *str = malloc(sizeof(*str) * (s.len + 1));
     if (!str) {
@@ -51,10 +47,6 @@ StringBuffer sb_new() {
 }
 
 void sb_free(StringBuffer *sb) {
-    if (!sb->str) {
-        return;
-    }
-
     free(sb->str);
     sb->str = NULL;
     sb->len = 0;
@@ -62,9 +54,10 @@ void sb_free(StringBuffer *sb) {
 }
 
 bool sb_push_str(StringBuffer *sb, const char *str) {
-    for (size_t i = 0; i < strlen(str); ++i)
+    for (size_t i = 0; i < strlen(str); ++i) {
         if (!sb_push(sb, str[i]))
             return false;
+    }
     return true;
 }
 
@@ -92,7 +85,8 @@ bool sb_push(StringBuffer *sb, char c) {
 
 void sb_clear(StringBuffer *sb) {
     sb->len = 0;
-    sb->str[0] = 0;
+    if (sb->str)
+        sb->str[0] = 0;
 }
 
 String sb_get(const StringBuffer *sb) {
