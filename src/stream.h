@@ -1,3 +1,6 @@
+#ifndef STREAM_H_INCLUDED
+#define STREAM_H_INCLUDED
+
 #include <stdio.h>   // FILE, EOF
 #include <stdbool.h> // bool
 
@@ -35,3 +38,5 @@ bool stream_is_invalid(const Stream *s);
 
 /// Gets the position of the last char returned by stream_get
 FilePos stream_get_pos(const Stream *s);
+
+#endif // STREAM_H_INCLUDED
