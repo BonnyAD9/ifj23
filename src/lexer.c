@@ -331,7 +331,7 @@ static Token read_operator(Lexer *lex) {
 static int next_chr(Lexer *lex) {
     if (lex && lex->in)
         return lex->cur_chr = fgetc(lex->in);
-    return '\0';
+    return EOF;
 }
 
 static int chr_next(Lexer *lex) {
