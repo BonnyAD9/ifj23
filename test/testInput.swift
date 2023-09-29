@@ -2,6 +2,7 @@ let a=a??0
 
 5*(5+i)
 
+// This was once issue while parsing
 let i = 5-(i+5)
 
 func concat(_ x : String, with y : String) -> String {
@@ -22,7 +23,7 @@ func decrement(of n: Int, by m: Int) -> Int {
     return n - m
 }
 
-func factorial(_ n : Int) -> Int {
+func factorial(_ n : Int /* comments anywhere */) -> Int {
     var result : Int?
     if (n < 2) {
         result = 2.5E5

@@ -85,14 +85,12 @@ Token lex_next(Lexer *lex) {
         return lex->cur;
     }
 
-    if (lex->cur_chr == '/') {
-        if (next_chr(lex) == '/' || lex->cur_chr == '*') {
-            if (!skip_comment(lex)) {
-                return T_ERR;
-            }
-            return lex_next(lex);
+    int next_chr = stream_peak(&lex->in);
+    if (lex->cur_chr == '/' && (next_chr == '/' || next_chr == '*')) {
+        if (!skip_comment(lex)) {
+            return T_ERR;
         }
-        return '/';
+        return lex_next(lex);
     }
 
     lex->cur = read_operator(lex);
@@ -340,6 +338,8 @@ static Token read_operator(Lexer *lex) {
 }
 
 static bool skip_comment(Lexer *lex) {
+    next_chr(lex); // skip the '/'
+
     if (lex->cur_chr == '/') {
         while (next_chr(lex) != '\n' && lex->cur_chr != EOF)
             ;
@@ -355,6 +355,8 @@ static bool skip_comment(Lexer *lex) {
             }
         }
     } while (next_chr(lex) != '/');
+
+    next_chr(lex); // skip the last '/'
 
     return true;
 }
