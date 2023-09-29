@@ -61,13 +61,13 @@ Token lex_next(Lexer *lex) {
     while (isspace(lex->cur_chr))
         next_chr(lex);
 
-    // Throw error on nonprintable character
-    if (!isprint(lex->cur_chr))
-        return lex_error(lex, "Nonprintable character in input file \n");
-
     // End if EOF reached
     if (lex->cur_chr == EOF)
         return T_EOF;
+
+    // Throw error on nonprintable character
+    if (!isprint(lex->cur_chr))
+        return lex_error(lex, "Nonprintable character in input file \n");
 
     if (lex->cur_chr == '_' || isalpha(lex->cur_chr)) {
         lex->cur = read_ident(lex);
