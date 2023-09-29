@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#define DEBUG_FILE "test/testInput.swift"
+
 #include "utils.h"
 #include "lexer.h"
 #include "stream.h"
 
 int main(void) {
-    FILE* file = fopen("test/testInput.swift", "r");
+    FILE* file = fopen(DEBUG_FILE, "r");
     if (!file)
         EPRINTF("Error opening input file\n");
 
@@ -18,10 +20,23 @@ int main(void) {
 
     while (token != T_ERR && token != EOF) {
         if (isprint(token)) {
-            fprintf(stdout, "Token %c|%d [%s] \n", token, token, lexer.str.str);
+            printf(
+                DEBUG_FILE ":%zu:%zu: Token %c|%d [%s]\n",
+                lexer.token_start.line,
+                lexer.token_start.column,
+                token,
+                token,
+                lexer.str.str
+            );
         }
         else {
-            fprintf(stdout, "Token |%d [%s] \n", token, lexer.str.str);
+            printf(
+                DEBUG_FILE ":%zu:%zu: Token |%d [%s]\n",
+                lexer.token_start.line,
+                lexer.token_start.column,
+                token,
+                lexer.str.str
+            );
         }
         token = lex_next(&lexer);
     }
