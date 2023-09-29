@@ -51,7 +51,7 @@ void lex_free(Lexer *lex) {
 // Lexer error
 Token lex_error(Lexer *lex, char *msg) {
     EPRINTF(
-        ":%zu:%zu: error: %s",
+        ":%zu:%zu: error: %s\n",
         lex->token_start.line,
         lex->token_start.column,
         msg
