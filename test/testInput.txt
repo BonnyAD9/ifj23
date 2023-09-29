@@ -1,7 +1,6 @@
 let a=a??0
 
 5*(5+i)
-12hello
 
 let i = 5-(i+5)
 

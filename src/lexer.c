@@ -155,7 +155,7 @@ int is_valid_number(Lexer* lex, char prev) {
                 return false;
             }
         default:
-            if (isalpha(lex->cur_chr))
+            if (isalpha(lex->cur_chr) || lex->cur_chr == '_')
                 return lex_error(lex, "Invalid number format \n");
             return false;
     }
