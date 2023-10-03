@@ -15,6 +15,7 @@ typedef struct {
     FILE *inner;
     int cur;
     size_t last_column;
+    const char *filename;
     /// Internal tracking of position, may be different from real.
     /// Use stream_get_pos to get the correct position.
     FilePos pos;
@@ -22,7 +23,7 @@ typedef struct {
 
 /// Creates new stream from FILE, doesn't take ownership of file, you
 /// need to close it yourself.
-Stream stream_from_file(FILE *f);
+Stream stream_from_file(FILE *f, const char *filename);
 
 /// Reads single char from stream
 int stream_get(Stream *s);
@@ -35,3 +36,6 @@ bool stream_is_invalid(const Stream *s);
 
 /// Gets the position of the last char returned by stream_get
 FilePos stream_get_pos(const Stream *s);
+
+/// Returns filename of currently opened file
+const char *get_filename(const Stream *s);

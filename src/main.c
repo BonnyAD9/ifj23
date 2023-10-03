@@ -9,7 +9,7 @@ int main(void) {
         EPRINTF("Error opening input file");
 
     // Init mock lexer, let him read input and output parsed tokens
-    Lexer lexer = lex_new(file);
+    Lexer lexer = lex_new(stream_from_file(file, "test/testInput.txt"));
     Token token = lex_next(&lexer);
 
     while (token != T_ERR && token != EOF) {
@@ -17,4 +17,5 @@ int main(void) {
         token = lex_next(&lexer);
     }
     lex_free(&lexer);
+    fclose(file);
 }

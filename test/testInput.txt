@@ -17,7 +17,11 @@ write(ct, a)
 write("Ahoj\n\"Sve'te \\\u{22}")
 
 let inp : Int? = readInt()
+
 // pomocna funkce pro dekrementaci celeho cisla o zadane cislo
+/* multiline comment
+here*/
+
 func decrement(of n: Int, by m: Int) -> Int {
     return n - m
 }

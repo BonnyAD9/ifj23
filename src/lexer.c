@@ -50,7 +50,8 @@ void lex_free(Lexer *lex) {
 
 // Lexer error
 Token lex_error(Lexer *lex, char *msg) {
-    EPRINTF(msg);
+    FilePos pos = stream_get_pos(&lex->in);
+    EPRINTF("%s:%zu:%zu %s \n", get_filename(&lex->in), pos.line, pos.column, msg);
     lex->subtype = ERR_LEX;
     return T_ERR;
 }
@@ -65,10 +66,10 @@ Token lex_next(Lexer *lex) {
     // End if EOF reached
     if (lex->cur_chr == EOF)
         return T_EOF;
+
     // Throw error on nonprintable character
     if (!isprint(lex->cur_chr))
         return lex_error(lex, "Nonprintable character in input file \n");
-
     if (lex->cur_chr == '_' || isalpha(lex->cur_chr)) {
         lex->cur = read_ident(lex);
         return lex->cur;
@@ -348,8 +349,7 @@ static bool skip_comment(Lexer *lex) {
     do {
         while (next_chr(lex) != '*') {
             if (lex->cur_chr == EOF) {
-                lex->subtype = ERR_LEX;
-                EPRINTF("Unexpected end of file, expected '*/'");
+                lex_error(lex, "Unexpected end of file, expected '*/'");
                 return false;
             }
         }
