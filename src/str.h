@@ -1,3 +1,6 @@
+#ifndef STR_H_INCLUDED
+#define STR_H_INCLUDED
+
 #include <stddef.h>  // size_t
 #include <stdbool.h> // bool
 
@@ -50,3 +53,5 @@ bool sb_push(StringBuffer *sb, char c);
 void sb_clear(StringBuffer *sb);
 
 String sb_get(const StringBuffer *sb);
+
+#endif // STR_H_INCLUDED

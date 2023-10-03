@@ -5,7 +5,7 @@
 #include <string.h> // strchr, strlen, strtod, strtol,
 #include <errno.h>
 
-#include "utils.h" // TODO
+#include "utils.h" // DEBUG_FILE
 
 // Avoid double usage of these chars for number parsing
 bool plus_minus_used = false,
@@ -50,7 +50,13 @@ void lex_free(Lexer *lex) {
 
 // Lexer error
 Token lex_error(Lexer *lex, char *msg) {
-    EPRINTF(msg);
+    EPRINTF(
+        ":%zu:%zu: error: %s\n",
+        lex->token_start.line,
+        lex->token_start.column,
+        msg
+    );
+
     lex->subtype = ERR_LEX;
     return T_ERR;
 }
@@ -61,6 +67,8 @@ Token lex_next(Lexer *lex) {
     // Skip white-spaces
     while (isspace(lex->cur_chr))
         next_chr(lex);
+
+    lex->token_start = stream_get_pos(&lex->in);
 
     // End if EOF reached
     if (lex->cur_chr == EOF)
@@ -85,14 +93,12 @@ Token lex_next(Lexer *lex) {
         return lex->cur;
     }
 
-    if (lex->cur_chr == '/') {
-        if (next_chr(lex) == '/' || lex->cur_chr == '*') {
-            if (!skip_comment(lex)) {
-                return T_ERR;
-            }
-            return lex_next(lex);
+    int next_chr = stream_peak(&lex->in);
+    if (lex->cur_chr == '/' && (next_chr == '/' || next_chr == '*')) {
+        if (!skip_comment(lex)) {
+            return T_ERR;
         }
-        return '/';
+        return lex_next(lex);
     }
 
     lex->cur = read_operator(lex);
@@ -340,6 +346,8 @@ static Token read_operator(Lexer *lex) {
 }
 
 static bool skip_comment(Lexer *lex) {
+    next_chr(lex); // skip the '/'
+
     if (lex->cur_chr == '/') {
         while (next_chr(lex) != '\n' && lex->cur_chr != EOF)
             ;
@@ -350,11 +358,13 @@ static bool skip_comment(Lexer *lex) {
         while (next_chr(lex) != '*') {
             if (lex->cur_chr == EOF) {
                 lex->subtype = ERR_LEX;
-                EPRINTF("Unexpected end of file, expected '*/'");
+                lex_error(lex, "Unexpected end of file, expected '*/'");
                 return false;
             }
         }
     } while (next_chr(lex) != '/');
+
+    next_chr(lex); // skip the last '/'
 
     return true;
 }
