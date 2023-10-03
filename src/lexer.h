@@ -1,3 +1,6 @@
+#ifndef LEXER_H_INCLUDED
+#define LEXER_H_INCLUDED
+
 #include <stdio.h> // EOF, FILE
 
 #include "str.h" // String
@@ -59,6 +62,8 @@ typedef struct {
     Token cur;
     /// Internal buffer
     StringBuffer buffer;
+    /// Position (in file) of the last token
+    FilePos token_start;
 
     /// String of the last token (string is owned by lexer, clone it to store
     /// it elsewhere)
@@ -79,3 +84,5 @@ Token lex_next(Lexer *lex);
 
 /// frees the lexer - owner's responsibility!
 void lex_free(Lexer *lex);
+
+#endif // LEXER_H_INCLUDED

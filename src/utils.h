@@ -1,3 +1,6 @@
+#ifndef UTILS_H_INCLUDED
+#define UTILS_H_INCLUDED
+
 #include <stdio.h>  // fprintf, stderr
 #include <stdlib.h> // exit
 
@@ -19,3 +22,5 @@
 #define DPRINTF(fmt, ...) EPRINTF("debug: " fmt "\n", ##__VA_ARGS__)
 
 #endif // NDEBUG
+
+#endif // UTILS_H_INCLUDED
