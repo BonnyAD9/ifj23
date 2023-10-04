@@ -198,9 +198,42 @@ static Token read_num(Lexer *lex) {
     }
 }
 
+static Token read_triple_str(Lexer *lex) {
+    // Skips new line after triple quotes
+    if (next_chr(lex) == '\n')
+        next_chr(lex);
+
+    int quote_cnt = 0;
+    bool new_line = false;
+    // Reads till end of file
+    while (lex->cur_chr != EOF) {
+        if (lex->cur_chr == '"') {
+            ++quote_cnt;
+            // End of multiline string
+            if (quote_cnt == 3)
+                return T_SLIT;
+        } else {
+            if (new_line) {
+                sb_push(&lex->buffer, '\n');
+                new_line = false;
+            }
+
+            // Previous quotes
+            for (; quote_cnt > 0; --quote_cnt)
+                sb_push(&lex->buffer, '"');
+
+            if (lex->cur_chr == '\n')
+                new_line = true;
+            else
+                sb_push(&lex->buffer, lex->cur_chr);
+        }
+        next_chr(lex);
+    }
+    return lex_error(lex, "String is missing ending triple quotes\n");
+}
+
 static Token read_str(Lexer *lex) {
     // Triple double quotes case
-    bool triple = false;
     if (next_chr(lex) == '"') {
         // Empty string
         if (next_chr(lex) != '"') {
@@ -208,108 +241,88 @@ static Token read_str(Lexer *lex) {
             return T_SLIT;
         }
 
-        triple = true;
-        // Skips new line after quotes
-        if (next_chr(lex) == '\n') {
-            next_chr(lex);
-        }
+        return read_triple_str(lex);
     }
 
     // Load whole string into buffer
-    while (lex->cur_chr != EOF) {
-        // Double quote occured
-        if (lex->cur_chr == '"') {
-            if (!triple)
-                break;
-
-            if (next_chr(lex) == '"' && next_chr(lex) == '"')
-                break;
-        }
-        // New line occured
-        if (lex->cur_chr == '\n') {
-            if (!triple)
-                return T_ERR;
-
-            if (next_chr(lex) == '"' &&
-                next_chr(lex) == '"' &&
-                next_chr(lex) == '"')
+    while (lex->cur_chr != '\n' && lex->cur_chr != EOF) {
+        next_chr(lex);
+        // case of "aa\{56}"
+        if (lex->cur_chr != '\\') {
+            if (lex->cur_chr == '"')
                 break;
             sb_push(&lex->buffer, lex->cur_chr);
-            next_chr(lex);
+            continue;
         }
-        else if (lex->cur_chr != '\\') {
-            sb_push(&lex->buffer, lex->cur_chr);
-            next_chr(lex);
-        }
-        else if (lex->cur_chr == '\\') {
-            // '\' char
-            next_chr(lex);
-            switch (lex->cur_chr) {
-                case 'u':
+        // '\' char
+        next_chr(lex);
+        switch (lex->cur_chr) {
+            case 'u':
+                next_chr(lex);
+                if (lex->cur_chr == '{') {
+                    StringBuffer temp = sb_new();
                     next_chr(lex);
-                    if (lex->cur_chr == '{') {
-                        StringBuffer temp = sb_new();
-                        next_chr(lex);
-                        // Read 8 hexa values at max
-                        for (; lex->cur_chr != '}' && temp.len < 8; ) {
-                            if (!isxdigit(lex->cur_chr)) {
-                                // Unexpected char provided, f.e. \u{65K
-                                // Current approach is to push all of this to string, don't remove it
-                                char *user_str = "\\u{";
-                                // Link together with buffer values
-                                strcat(user_str, temp.str);
-                                // Push it to lexor's buffer
-                                sb_push_str(&lex->buffer, user_str);
-                                sb_free(&temp);
-                                break;
-                            }
-                            sb_push(&temp, lex->cur_chr);
-                            next_chr(lex);
-                        }
-
-                        if (temp.len != 0) {
-                            // Evaluate what's stored inside and push it to buffer
-                            sb_push(&lex->buffer, strtol(temp.str, NULL, 16));
+                    // Read 8 hexa values at max
+                    for (; lex->cur_chr != '}' && temp.len < 8; ) {
+                        if (!isxdigit(lex->cur_chr)) {
+                            // Unexpected char provided, f.e. \u{65K
+                            // Current approach is to push all of this to string, don't remove it
+                            sb_push_str(&lex->buffer, "\\u{");
+                            sb_push_str(&lex->buffer, temp.str);
+                            sb_push(&lex->buffer, lex->cur_chr);
                             sb_free(&temp);
+                            break;
                         }
-                        else
-                            // Push remaining
-                            sb_push_str(&lex->buffer, "\\u{}");
+                        sb_push(&temp, lex->cur_chr);
+                        next_chr(lex);
                     }
-                    // Push remaining
+
+                    // Temp is non-empty
+                    if (temp.len)
+                        // Evaluate what's stored inside and push it to buffer (limit range 0-255)
+                        sb_push(&lex->buffer, (strtol(temp.str, NULL, 16) % 256));
+                    else if (temp.str)
+                        // Push remaining
+                        sb_push_str(&lex->buffer, "\\u{}");
+                    sb_free(&temp);
+                }
+                // Push remaining
+                else
                     sb_push_str(&lex->buffer, "\\u");
-                    break;
-                case '"':
-                    sb_push(&lex->buffer, '"');
-                    break;
-                case 'n':
-                    sb_push(&lex->buffer, '\n');
-                    break;
-                case 'r':
-                    sb_push(&lex->buffer, '\r');
-                    break;
-                case 't':
-                    sb_push(&lex->buffer, '\t');
-                    break;
-                case '\\':
-                    sb_push(&lex->buffer, '\\');
-                    break;
-                default:
-                    // If not matched just push it to buffer as it is
-                    sb_push(&lex->buffer, '\\');
-                    sb_push(&lex->buffer, lex->cur_chr);
-                    break;
-            }
-            next_chr(lex);
+                break;
+            case '"':
+                sb_push(&lex->buffer, '"');
+                break;
+            case 'n':
+                sb_push(&lex->buffer, '\n');
+                break;
+            case 'r':
+                sb_push(&lex->buffer, '\r');
+                break;
+            case 't':
+                sb_push(&lex->buffer, '\t');
+                break;
+            case '\\':
+                sb_push(&lex->buffer, '\\');
+                break;
+            default:
+                // If not matched just push it to buffer as it is
+                sb_push(&lex->buffer, '\\');
+                sb_push(&lex->buffer, lex->cur_chr);
+                break;
         }
     }
 
     // String is not properly ended
     if (lex->cur_chr != '"')
-        return T_ERR;
+        return lex_error(lex, "String is missing ending pair symbol \" \n");
+
+    // Skip '"' from being processed next time by lexer
+    next_chr(lex);
 
     // Store string
     lex->str = sb_get(&lex->buffer);
+
     return T_SLIT;
 }
 
