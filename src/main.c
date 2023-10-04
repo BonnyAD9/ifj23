@@ -12,7 +12,7 @@ int main(void) {
     if (!file)
         EPRINTF("Error opening input file\n");
 
-    Stream in = stream_from_file(file);
+    Stream in = stream_from_file(file, DEBUG_FILE);
 
     // Init mock lexer, let him read input and output parsed tokens
     Lexer lexer = lex_new(in);

@@ -1,6 +1,6 @@
 #include "stream.h" // Stream, FILE, NUL_STREAM, fgetc, EOF
 
-Stream stream_from_file(FILE *f) {
+Stream stream_from_file(FILE *f, const char *filename) {
     if (!f) {
         return NUL_STREAM;
     }
@@ -8,6 +8,7 @@ Stream stream_from_file(FILE *f) {
         .inner = f,
         .cur = fgetc(f),
         .last_column = 0,
+        .filename = filename,
         .pos = { .line = 1, .column = 0 }
     };
 }
@@ -53,4 +54,8 @@ FilePos stream_get_pos(const Stream *s) {
     }
 
     return pos;
+}
+
+const char *get_filename(const Stream *s) {
+    return s->filename;
 }

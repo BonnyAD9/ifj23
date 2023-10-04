@@ -51,7 +51,8 @@ void lex_free(Lexer *lex) {
 // Lexer error
 Token lex_error(Lexer *lex, char *msg) {
     EPRINTF(
-        ":%zu:%zu: error: %s\n",
+        "%s:%zu:%zu: error: %s\n",
+        get_filename(&lex->in),
         lex->token_start.line,
         lex->token_start.column,
         msg
@@ -77,7 +78,6 @@ Token lex_next(Lexer *lex) {
     // Throw error on nonprintable character
     if (!isprint(lex->cur_chr))
         return lex_error(lex, "Nonprintable character in input file \n");
-
     if (lex->cur_chr == '_' || isalpha(lex->cur_chr)) {
         lex->cur = read_ident(lex);
         return lex->cur;
