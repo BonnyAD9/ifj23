@@ -1,11 +1,16 @@
 #include "lexer.h" // FILE, Lexer, NUL_STR, Token (and its values), NULL,
-                   // sb_new, sb_free
+                   // sb_new, sb_free, Stream, NUL_STREAM, stream_is_invalid
 
 #include <ctype.h> // isspace, isalnum, isdigit
 #include <string.h> // strchr, strlen, strtod, strtol,
 #include <errno.h>
 
-#include "utils.h" // TODO
+#include "utils.h" // DEBUG_FILE
+
+// Avoid double usage of these chars for number parsing
+bool plus_minus_used = false,
+     exponent_used = false,
+     decimal_sign_used = false;
 
 /// Reads identifier, keyword or the '_' token
 static Token read_ident(Lexer *lex);
@@ -13,14 +18,16 @@ static Token read_ident(Lexer *lex);
 static Token read_num(Lexer *lex);
 /// Reads string (single or triple quoted)
 static Token read_str(Lexer *lex);
-/// Reads operator or EOF
+/// Reads operator
 static Token read_operator(Lexer *lex);
+/// Skips line or block comment, returns false if error occured
+static bool skip_comment(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the NEW char
 static int next_chr(Lexer *lex);
 /// Reads next char, sets cur_char to the next char and returns the OLD char
 static int chr_next(Lexer *lex);
 
-Lexer lex_new(FILE *in) {
+Lexer lex_new(Stream in) {
     return (Lexer) {
         .in = in,
         .cur_chr = ' ',
@@ -32,24 +39,45 @@ Lexer lex_new(FILE *in) {
 }
 
 void lex_free(Lexer *lex) {
-    if (!lex->in) {
+    if (stream_is_invalid(&lex->in)) {
         return;
     }
 
-    fclose(lex->in);
-    lex->in = NULL;
+    lex->in = NUL_STREAM;
     sb_free(&lex->buffer);
     lex->str = NUL_STR;
+}
+
+// Lexer error
+Token lex_error(Lexer *lex, char *msg) {
+    EPRINTF(
+        "%s:%zu:%zu: error: %s\n",
+        get_filename(&lex->in),
+        lex->token_start.line,
+        lex->token_start.column,
+        msg
+    );
+
+    lex->subtype = ERR_LEX;
+    return T_ERR;
 }
 
 Token lex_next(Lexer *lex) {
     sb_clear(&lex->buffer);
 
-    // Skip white-spaces and unprintable chars
-    while (isspace(lex->cur_chr) || !isprint(lex->cur_chr)) {
+    // Skip white-spaces
+    while (isspace(lex->cur_chr))
         next_chr(lex);
-    }
 
+    lex->token_start = stream_get_pos(&lex->in);
+
+    // End if EOF reached
+    if (lex->cur_chr == EOF)
+        return T_EOF;
+
+    // Throw error on nonprintable character
+    if (!isprint(lex->cur_chr))
+        return lex_error(lex, "Nonprintable character in input file \n");
     if (lex->cur_chr == '_' || isalpha(lex->cur_chr)) {
         lex->cur = read_ident(lex);
         return lex->cur;
@@ -65,13 +93,21 @@ Token lex_next(Lexer *lex) {
         return lex->cur;
     }
 
+    int next_chr = stream_peak(&lex->in);
+    if (lex->cur_chr == '/' && (next_chr == '/' || next_chr == '*')) {
+        if (!skip_comment(lex)) {
+            return T_ERR;
+        }
+        return lex_next(lex);
+    }
+
     lex->cur = read_operator(lex);
     return lex->cur;
 }
 
 static Token read_ident(Lexer *lex) {
     // Load whole ident into buffer
-    while (isalnum(lex->cur_chr) || lex->cur_chr == '_' || lex->cur_chr == '?') {
+    while (isalnum(lex->cur_chr) || lex->cur_chr == '_') {
         sb_push(&lex->buffer, lex->cur_chr);
         next_chr(lex);
     }
@@ -79,90 +115,84 @@ static Token read_ident(Lexer *lex) {
     // Store token data
     lex->str = sb_get(&lex->buffer);
 
-    // Check if loaded ident contains '?'
-    char *qmark = strchr(lex->str.str, '?');
-    // Check '?' is only at the end of ident name
-    if (qmark && strlen(qmark) > 1)
-        return T_ERR;
-
-    if (str_eq(lex->str, STR("Double")) || str_eq(lex->str, STR("Double?"))) {
-        // Check if last char is "?"
-        lex->subtype = ((qmark) ? DOUBLE_TYPE_WITH_QST : DOUBLE_TYPE);
+    if (str_eq(lex->str, STR("Double")))
         return T_TYPE;
-    }
     else if (str_eq(lex->str, STR("else")))
         return T_ELSE;
     else if (str_eq(lex->str, STR("func")))
         return T_FUNC;
     else if (str_eq(lex->str, STR("if")))
         return T_IF;
-    else if (str_eq(lex->str, STR("Int")) || str_eq(lex->str, STR("Int?"))) {
-        // Check if last char is "?"
-        lex->subtype = ((qmark) ? INT_TYPE_WITH_QST : INT_TYPE);
+    else if (str_eq(lex->str, STR("Int")))
         return T_TYPE;
-    }
     else if (str_eq(lex->str, STR("let")))
         return T_DECL;
     else if (str_eq(lex->str, STR("nil")))
         return T_NIL;
     else if (str_eq(lex->str, STR("return")))
         return T_RETURN;
-    else if (str_eq(lex->str, STR("String")) || str_eq(lex->str, STR("String?"))) {
-        // Check if last char is "?"
-        lex->subtype = ((qmark) ? STRING_TYPE_WITH_QST : STRING_TYPE);
+    else if (str_eq(lex->str, STR("String")))
         return T_TYPE;
-    }
     else if (str_eq(lex->str, STR("var")))
         return T_DECL;
     else if (str_eq(lex->str, STR("while")))
         return T_WHILE;
+    else if (str_eq(lex->str, STR("_")))
+        return '_';
     // Generic ident
     return T_IDENT;
 }
 
-bool is_valid_number(char current, char prev) {
-    if (prev == '\0' && isdigit(current))
+int is_valid_number(Lexer* lex, char prev) {
+    if (isdigit(lex->cur_chr))
         return true;
 
-    if (!isdigit(current)) {
-        // Avoid double usage of these chars
-        static bool plus_minus_used = false;
-        static bool exponent_used = false;
-        static bool decimal_sign_used = false;
-
-        // Non-numerical value
-        switch (current) {
-            case 'e':
-            case 'E':
-                if (isdigit(prev) && !exponent_used) {
-                    exponent_used = true;
-                    return true;
-                }
-                return false;
-            case '+':
-            case '-':
-                if ((prev == 'e' || prev == 'E') && !plus_minus_used) {
-                    plus_minus_used = true;
-                    return true;
-                }
-                return false;
-            case '.':
-                if (prev != '\0' && !decimal_sign_used) {
+    // Non-numerical value
+    switch (lex->cur_chr) {
+        case 'e':
+        case 'E':
+            if (isdigit(prev) && !exponent_used) {
+                exponent_used = true;
+                return true;
+            }
+            return false;
+        case '+':
+        case '-':
+            if ((prev == 'e' || prev == 'E') && !plus_minus_used) {
+                plus_minus_used = true;
+                return true;
+            }
+            return false;
+        case '.':
+            if (isdigit(prev) && !exponent_used) {
+                if (!decimal_sign_used) {
                     decimal_sign_used = true;
                     return true;
                 }
                 return false;
-            default:
-                return false;
-        }
+            }
+        default:
+            if (isalpha(lex->cur_chr) || lex->cur_chr == '_')
+                return lex_error(lex, "Invalid number format \n");
+            return false;
     }
-    return true;
 }
 
 static Token read_num(Lexer *lex) {
+    int val;
     char c = '\0';
+
+    // Reset to default values
+    plus_minus_used = false;
+    exponent_used = false;
+    decimal_sign_used = false;
+
     // Load whole number into buffer
-    while (is_valid_number(lex->cur_chr, c)) {
+    while ((val = is_valid_number(lex, c))) {
+        // Error in number format
+        if (val == T_ERR)
+            return T_ERR;
+
         sb_push(&lex->buffer, lex->cur_chr);
         // Store previous char
         c = chr_next(lex);
@@ -170,30 +200,25 @@ static Token read_num(Lexer *lex) {
     // Store token data
     lex->str = sb_get(&lex->buffer);
 
-    char *ret = strchr(lex->str.str, '.');
     char *endval;
     // Reset before use
     errno = 0;
 
     // Decimal number
-    if (ret) {
-        if (strlen(ret) > 1 && // '.' is not at the end of number
-            ret != lex->str.str) { // '.' is not at the begging of number, could be also done via strlen() comparison
-                // Store decimal number
-                lex->d_num = strtod(lex->str.str, &endval);
-                // Error if no value was parsed or errno occured
-                if (endval == lex->str.str || errno != 0)
-                    return T_ERR;
-                return T_DLIT;
-        }
-        return T_ERR;
+    if (decimal_sign_used || exponent_used) {
+            // Store decimal number
+            lex->d_num = strtod(lex->str.str, &endval);
+            // Error if no value was parsed or errno occured
+            if (endval == lex->str.str || errno != 0)
+                return lex_error(lex, "Error while converting number \n");
+            return T_DLIT;
     }
-    // Integer number
     else {
+        // Integer number
         // Store integer number of base 10
         lex->i_num = strtol(lex->str.str, &endval, 10);
         if (endval == lex->str.str || errno != 0)
-            return T_ERR;
+            return lex_error(lex, "Error while converting number \n");
         return T_ILIT;
     }
 }
@@ -326,21 +351,73 @@ static Token read_str(Lexer *lex) {
     return T_SLIT;
 }
 
-static Token read_operator(Lexer *lex) {
-    // Load whole operator into buffer
-    // Operator should NOT be number/alpha
-    while (!isalpha(lex->cur_chr) && !isdigit(lex->cur_chr)) {
-        sb_push(&lex->buffer, lex->cur_chr);
+Token ret_operator(Lexer *lex, char symbol, Token ret_val) {
+    char old = chr_next(lex);
+    if (lex->cur_chr == symbol) {
         next_chr(lex);
+        return ret_val;
     }
 
-    // Store string
-    lex->str = sb_get(&lex->buffer);
-    return T_OPER;
+    return old;
+}
+
+static Token read_operator(Lexer *lex) {
+    switch (lex->cur_chr) {
+        case '+':
+        case '*':
+        case '/':
+        case '(':
+        case ')':
+        case '{':
+        case '}':
+        case ':':
+        case ',':
+            return chr_next(lex);
+        case '=':
+            return ret_operator(lex, '=', T_EQUALS);
+        case '!':
+            return ret_operator(lex, '=', T_DIFFERS);
+        case '<':
+            return ret_operator(lex, '=', T_LESS_OR_EQUAL);
+        case '>':
+            return ret_operator(lex, '=', T_GREATER_OR_EQUAL);
+        case '-':
+            return ret_operator(lex, '>', T_RETURNS);
+        case '?':
+            return ret_operator(lex, '?', T_DOUBLE_QUES);
+        default:
+            return lex_error(lex, "Invalid operator provided \n");
+    }
+}
+
+static bool skip_comment(Lexer *lex) {
+    next_chr(lex); // skip the '/'
+
+    if (lex->cur_chr == '/') {
+        while (next_chr(lex) != '\n' && lex->cur_chr != EOF)
+            ;
+        return true;
+    }
+
+    do {
+        while (next_chr(lex) != '*') {
+            if (lex->cur_chr == EOF) {
+                lex->subtype = ERR_LEX;
+                lex_error(lex, "Unexpected end of file, expected '*/'");
+                return false;
+            }
+        }
+    } while (next_chr(lex) != '/');
+
+    next_chr(lex); // skip the last '/'
+
+    return true;
 }
 
 static int next_chr(Lexer *lex) {
-    return lex->cur_chr = fgetc(lex->in);
+    if (lex)
+        return lex->cur_chr = stream_get(&lex->in);
+    return EOF;
 }
 
 static int chr_next(Lexer *lex) {

@@ -1,3 +1,6 @@
+#ifndef STR_H_INCLUDED
+#define STR_H_INCLUDED
+
 #include <stddef.h>  // size_t
 #include <stdbool.h> // bool
 
@@ -26,9 +29,6 @@ typedef struct {
 /// Checks whether the two strings are the same
 bool str_eq(const String a, const String b);
 
-/// Checks whether String is equal to const char
-bool str_eq_const_str(const String a, const char *string);
-
 /// Copies the data of the string to newly allocated string.
 /// Returns invalid string when fails.
 String str_clone(const String s);
@@ -53,3 +53,5 @@ bool sb_push(StringBuffer *sb, char c);
 void sb_clear(StringBuffer *sb);
 
 String sb_get(const StringBuffer *sb);
+
+#endif // STR_H_INCLUDED

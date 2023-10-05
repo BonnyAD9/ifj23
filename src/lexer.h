@@ -1,6 +1,10 @@
+#ifndef LEXER_H_INCLUDED
+#define LEXER_H_INCLUDED
+
 #include <stdio.h> // EOF, FILE
 
 #include "str.h" // String
+#include "stream.h"
 
 typedef enum {
     /// An error occured
@@ -25,6 +29,16 @@ typedef enum {
 
     /// The '->' token
     T_RETURNS,
+    /// The '==' token
+    T_EQUALS,
+    /// The '!=' token
+    T_DIFFERS,
+    /// The '<=' token
+    T_LESS_OR_EQUAL,
+    /// The '=>' token
+    T_GREATER_OR_EQUAL,
+    /// The '??' token
+    T_DOUBLE_QUES,
 
     T_FUNC,
 
@@ -36,31 +50,20 @@ typedef enum {
     /// The keyword 'let' or 'var'
     T_DECL,
 
-    /// Generic value for operator
-    T_OPER,
-
     /// Any of the types (Int, String, Double)
     T_TYPE,
 } Token;
 
-typedef enum {
-    INT_TYPE,
-    INT_TYPE_WITH_QST, // Int?
-    DOUBLE_TYPE,
-    DOUBLE_TYPE_WITH_QST, // Double?
-    STRING_TYPE,
-    STRING_TYPE_WITH_QST // String?
-    // TODO add operators types here
-} Subtype_for_types;
-
 typedef struct {
-    FILE *in;
+    Stream in;
     /// The last readed char
     int cur_chr;
     /// The last returned token, T_ERR if no lex_next was never called.
     Token cur;
     /// Internal buffer
     StringBuffer buffer;
+    /// Position (in file) of the last token
+    FilePos token_start;
 
     /// String of the last token (string is owned by lexer, clone it to store
     /// it elsewhere)
@@ -73,11 +76,13 @@ typedef struct {
     int subtype;
 } Lexer;
 
-/// Crates new lexer, takes ownership of the file
-Lexer lex_new(FILE *in);
+/// Crates new lexer
+Lexer lex_new(Stream in);
 
 /// Gets the next token, returns T_ERR on error
 Token lex_next(Lexer *lex);
 
-/// frees the lexer
+/// frees the lexer - owner's responsibility!
 void lex_free(Lexer *lex);
+
+#endif // LEXER_H_INCLUDED

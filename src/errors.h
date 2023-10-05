@@ -1,3 +1,5 @@
+#ifndef ERRORS_H_INCLUDED
+#define ERRORS_H_INCLDUED
 
 /// no error
 #define SUCCESS
@@ -31,3 +33,5 @@
 
 /// Other error
 #define ERR_OTHER 99
+
+#endif // ERRORS_H_INCLDUED
