@@ -224,49 +224,85 @@ static Token read_num(Lexer *lex) {
 }
 
 static Token read_triple_str(Lexer *lex) {
+    StringBuffer str = sb_new();
+
     // Skips new line after triple quotes
-    if (next_chr(lex) == '\n')
-        next_chr(lex);
+    if (next_chr(lex) != '\n') {
+        return lex_error(
+            lex,
+            "Error: no new line after opening triple quotes"
+        );
+    }
+    next_chr(lex);
 
     int quote_cnt = 0;
-    bool new_line = false;
-    // Reads till end of file
-    while (lex->cur_chr != EOF) {
+    // Reads string to buffer
+    while (true) {
         if (lex->cur_chr == '"') {
             ++quote_cnt;
             // End of multiline string
             if (quote_cnt == 3)
-                return T_SLIT;
+                break;
         } else {
-            if (new_line) {
-                sb_push(&lex->buffer, '\n');
-                new_line = false;
-            }
-
             // Previous quotes
             for (; quote_cnt > 0; --quote_cnt)
-                sb_push(&lex->buffer, '"');
+                sb_push(&str, '"');
 
-            if (lex->cur_chr == '\n')
-                new_line = true;
-            else
-                sb_push(&lex->buffer, lex->cur_chr);
+            sb_push(&str, lex->cur_chr);
         }
         next_chr(lex);
+
+        // Multiline string not ended properly
+        if (lex->cur_chr == EOF)
+            return lex_error(lex, "Error: multiline string not closed");
     }
-    return lex_error(lex, "String is missing ending triple quotes\n");
+
+    // Checks indentation count
+    int indent = str.len - 1;
+    for (indent; str.str[indent] != '\n'; --indent) {
+        if (str.str[indent] != ' ') {
+            return lex_error(
+                lex,
+                "Error: no new line before closing triple quotes"
+            );
+        }
+    }
+    indent = str.len - indent - 1;
+
+    // Removes indentation
+    bool new_line = true;
+    for (int i = 0; i < str.len - indent; ++i) {
+        if (new_line) {
+            for (int j = 0; j < indent; ++j) {
+                if (str.str[i++] != ' ') {
+                    return lex_error(
+                        lex,
+                        "Error: invalid indenation in mutliline string"
+                    );
+                }
+            }
+            --i;
+        } else if (str.str[i] == '\n')
+            new_line = true;
+        else {
+            sb_push(&lex->buffer, str.str[i]);
+        }
+    }
+
+
+
+    return T_SLIT;
 }
 
 static Token read_str(Lexer *lex) {
     // Triple double quotes case
     if (next_chr(lex) == '"') {
-        // Empty string
-        if (next_chr(lex) != '"') {
-            lex->str = STR("");
-            return T_SLIT;
-        }
+        if (next_chr(lex) == '"')
+            return read_triple_str(lex);
 
-        return read_triple_str(lex);
+        // Empty string
+        lex->str = STR("");
+        return T_SLIT;
     }
 
     // Load whole string into buffer
