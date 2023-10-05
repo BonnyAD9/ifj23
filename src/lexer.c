@@ -289,8 +289,6 @@ static Token read_triple_str(Lexer *lex) {
         }
     }
 
-
-
     return T_SLIT;
 }
 
