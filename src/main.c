@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "lexer.h"
 #include "stream.h"
+#include "symtable.h"
 
 int main(void) {
     FILE* file = fopen(DEBUG_FILE, "r");
@@ -18,10 +19,11 @@ int main(void) {
     Lexer lexer = lex_new(in);
     Token token = lex_next(&lexer);
 
+    printf(DEBUG_FILE ":\n");
     while (token != T_ERR && token != EOF) {
         if (isprint(token)) {
             printf(
-                DEBUG_FILE ":%zu:%zu: Token %c|%d [%s]\n",
+                "   %zu:%zu: Token %c|%d [%s]\n",
                 lexer.token_start.line,
                 lexer.token_start.column,
                 token,
@@ -31,7 +33,7 @@ int main(void) {
         }
         else {
             printf(
-                DEBUG_FILE ":%zu:%zu: Token |%d [%s]\n",
+                "   %zu:%zu: Token |%d [%s]\n",
                 lexer.token_start.line,
                 lexer.token_start.column,
                 token,
@@ -41,4 +43,31 @@ int main(void) {
         token = lex_next(&lexer);
     }
     lex_free(&lexer);
+    printf("----------------------------------------\n");
+
+    // Symtable - tree tests
+    Tree tree = tree_new();
+    NodeData data;
+    //////////////// Insertion ////////////////
+    tree_insert(&tree, "A", data);
+    tree_insert(&tree, "B", data);
+    tree_insert(&tree, "C", data);
+    tree_insert(&tree, "D", data);
+    tree_insert(&tree, "E", data);
+    tree_insert(&tree, "F", data);
+    // Print tree content
+    tree_visualise(&tree);
+    fprintf(stdout, "\n");
+    //////////////// Deletion ////////////////
+    tree_remove(&tree, "C");
+    tree_remove(&tree, "E");
+    tree_remove(&tree, "@");
+    // Print tree content
+    tree_visualise(&tree);
+    bool found = tree_find(&tree, "F", &data);
+    fprintf(stdout, "Node 'F' %s\n", ((found) ? "found" : "NOT found"));
+    found = tree_find(&tree, "#", &data);
+    fprintf(stdout, "Node '#' %s", ((found) ? "found" : "NOT found"));
+
+    tree_free(&tree);
 }
