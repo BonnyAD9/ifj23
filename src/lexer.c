@@ -288,6 +288,7 @@ static Token read_triple_str(Lexer *lex) {
             sb_push(&lex->buffer, str.str[i]);
         }
     }
+    sb_free(&str);
 
     return T_SLIT;
 }
