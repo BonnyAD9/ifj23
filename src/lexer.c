@@ -228,6 +228,7 @@ static Token read_triple_str(Lexer *lex) {
 
     // Skips new line after triple quotes
     if (next_chr(lex) != '\n') {
+        sb_free(&str);
         return lex_error(
             lex,
             "Error: no new line after opening triple quotes"
@@ -253,14 +254,17 @@ static Token read_triple_str(Lexer *lex) {
         next_chr(lex);
 
         // Multiline string not ended properly
-        if (lex->cur_chr == EOF)
+        if (lex->cur_chr == EOF) {
+            sb_free(&str);
             return lex_error(lex, "Error: multiline string not closed");
+        }
     }
 
     // Checks indentation count
     int indent = str.len - 1;
     for (indent; str.str[indent] != '\n'; --indent) {
         if (str.str[indent] != ' ') {
+            sb_free(&str);
             return lex_error(
                 lex,
                 "Error: no new line before closing triple quotes"
@@ -275,6 +279,7 @@ static Token read_triple_str(Lexer *lex) {
         if (new_line) {
             for (int j = 0; j < indent; ++j) {
                 if (str.str[i++] != ' ') {
+                    sb_free(&str);
                     return lex_error(
                         lex,
                         "Error: invalid indenation in mutliline string"
