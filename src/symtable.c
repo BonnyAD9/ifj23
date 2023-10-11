@@ -69,7 +69,7 @@ void tree_free(Tree *tree) {
 static NodeData *_tree_find(TreeNode *node, const char *key) {
     // Search failed
     if (!node)
-        return false;
+        return NULL;
     int strcmp_val = strcmp(key, node->key);
     // Matching node found
     if (!strcmp_val)
@@ -78,9 +78,7 @@ static NodeData *_tree_find(TreeNode *node, const char *key) {
     if (strcmp_val > 0)
         return _tree_find(node->right_node, key);
     // Key value is < node's key (in ASCII) -> go to left subtree
-    else
-        return _tree_find(node->left_node, key);
-    return NULL;
+    return _tree_find(node->left_node, key);
 }
 
 NodeData *tree_find(Tree *tree, const char *key) {
