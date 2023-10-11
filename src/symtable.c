@@ -73,7 +73,6 @@ static NodeData *_tree_find(TreeNode *node, const char *key) {
     int strcmp_val = strcmp(key, node->key);
     // Matching node found
     if (!strcmp_val)
-        // Return
         return &node->data;
     // Key value is > node's key (in ASCII) -> go to right subtree
     if (strcmp_val > 0)
