@@ -8,6 +8,15 @@
 #include "stream.h"
 #include "symtable.h"
 
+void print_node_data(Tree *tree, NodeData **data, const char *key) {
+    *data = tree_find(tree, key);
+    if (*data)
+        // Also print data stored in found node
+        fprintf(stdout, "Node %s found, data.layer=%d\n", key, (*data)->layer);
+    else
+        fprintf(stdout, "Node %s NOT found\n", key);
+}
+
 int main(void) {
     FILE* file = fopen(DEBUG_FILE, "r");
     if (!file)
@@ -19,11 +28,10 @@ int main(void) {
     Lexer lexer = lex_new(in);
     Token token = lex_next(&lexer);
 
-    printf(DEBUG_FILE ":\n");
     while (token != T_ERR && token != EOF) {
         if (isprint(token)) {
             printf(
-                "   %zu:%zu: Token %c|%d [%s]\n",
+                DEBUG_FILE ":%zu:%zu: Token %c|%d [%s]\n",
                 lexer.token_start.line,
                 lexer.token_start.column,
                 token,
@@ -33,7 +41,7 @@ int main(void) {
         }
         else {
             printf(
-                "   %zu:%zu: Token |%d [%s]\n",
+                DEBUG_FILE ":%zu:%zu: Token |%d [%s]\n",
                 lexer.token_start.line,
                 lexer.token_start.column,
                 token,
@@ -47,14 +55,13 @@ int main(void) {
 
     // Symtable - tree tests
     Tree tree = tree_new();
-    NodeData data;
     //////////////// Insertion ////////////////
-    tree_insert(&tree, "A", data);
-    tree_insert(&tree, "B", data);
-    tree_insert(&tree, "C", data);
-    tree_insert(&tree, "D", data);
-    tree_insert(&tree, "E", data);
-    tree_insert(&tree, "F", data);
+    tree_insert(&tree, "A", (NodeData){.layer = 1});
+    tree_insert(&tree, "B", (NodeData){.layer = 2});
+    tree_insert(&tree, "C", (NodeData){.layer = 3});
+    tree_insert(&tree, "D", (NodeData){.layer = 4});
+    tree_insert(&tree, "E", (NodeData){.layer = 5});
+    tree_insert(&tree, "F", (NodeData){.layer = 6});
     // Print tree content
     tree_visualise(&tree);
     fprintf(stdout, "\n");
@@ -64,10 +71,20 @@ int main(void) {
     tree_remove(&tree, "@");
     // Print tree content
     tree_visualise(&tree);
-    bool found = tree_find(&tree, "F", &data);
-    fprintf(stdout, "Node 'F' %s\n", ((found) ? "found" : "NOT found"));
-    found = tree_find(&tree, "#", &data);
-    fprintf(stdout, "Node '#' %s", ((found) ? "found" : "NOT found"));
+    //////////////// Lookup ////////////////
+    NodeData *data;
+    print_node_data(&tree, &data, "F");
+    // Try to modify node's data, layer=6 -> layer=0
+    if (data)
+        data->layer = 0;
+    // Print again and expect data.layer value change
+    print_node_data(&tree, &data, "F");
+    // Modify node's layer by insertion
+    tree_insert(&tree, "F", (NodeData){.layer = 1});
+    print_node_data(&tree, &data, "F");
+    // Try to find non-existing node
+    print_node_data(&tree, &data, "@");
 
     tree_free(&tree);
+    fclose(file);
 }

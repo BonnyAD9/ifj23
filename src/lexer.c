@@ -43,7 +43,6 @@ void lex_free(Lexer *lex) {
         return;
     }
 
-    fclose(lex->in.inner);
     lex->in = NUL_STREAM;
     sb_free(&lex->buffer);
     lex->str = NUL_STR;

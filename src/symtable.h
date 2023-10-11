@@ -61,8 +61,8 @@ void tree_insert(Tree *tree, const char *key, NodeData data);
 /// Removes tree node by given key
 void tree_remove(Tree *tree, const char *key);
 
-/// Returns found node data in the tree, for non-existing node, NULL is returned
-bool tree_find(Tree *tree, const char *key, NodeData *data);
+/// Returns pointer to data of found node, if not found NULL
+NodeData *tree_find(Tree *tree, const char *key);
 
 /// Frees the tree - owner's responsibility!
 void tree_free(Tree *tree);

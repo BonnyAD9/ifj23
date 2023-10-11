@@ -19,7 +19,7 @@ static int _update_height_ret_balance(TreeNode *node);
 /// Recursively delete tree
 static void _tree_free(TreeNode *node);
 /// Recursively search for node with given key
-static bool _tree_find(TreeNode *node, const char *key, NodeData *data);
+static NodeData *_tree_find(TreeNode *node, const char *key);
 /// Inserts new node into current tree
 static TreeNode *_tree_insert(TreeNode *node, const char *key, NodeData data);
 /// Deletes node in current tree
@@ -66,27 +66,26 @@ void tree_free(Tree *tree) {
     _tree_free(tree->root_node);
 }
 
-static bool _tree_find(TreeNode *node, const char *key, NodeData *data) {
+static NodeData *_tree_find(TreeNode *node, const char *key) {
     // Search failed
     if (!node)
         return false;
+    int strcmp_val = strcmp(key, node->key);
     // Matching node found
-    if (!strcmp(key, node->key)) {
-        // Copy node's data and retur true
-        *data = node->data;
-        return true;
-    }
+    if (!strcmp_val)
+        // Return
+        return &node->data;
     // Key value is > node's key (in ASCII) -> go to right subtree
-    if (strcmp(key, node->key) > 0)
-        return _tree_find(node->right_node, key, data);
+    if (strcmp_val > 0)
+        return _tree_find(node->right_node, key);
     // Key value is < node's key (in ASCII) -> go to left subtree
     else
-        return _tree_find(node->left_node, key, data);
-    return false;
+        return _tree_find(node->left_node, key);
+    return NULL;
 }
 
-bool tree_find(Tree *tree, const char *key, NodeData *data) {
-    return _tree_find(tree->root_node, key, data);
+NodeData *tree_find(Tree *tree, const char *key) {
+    return _tree_find(tree->root_node, key);
 }
 
 static TreeNode *create_node(const char *key, NodeData data) {
@@ -140,11 +139,12 @@ static TreeNode *_tree_insert(TreeNode *node, const char *key, NodeData data) {
     if (!node)
         return create_node(key, data);
 
+    int strcmp_val = strcmp(key, node->key);
     // Key value > node's key (in ASCII) -> go to right subtree
-    if (strcmp(key, node->key) > 0)
+    if (strcmp_val > 0)
         node->right_node = _tree_insert(node->right_node, key, data);
     // Key value < node's key (in ASCII) -> go to left subtree
-    else  if (strcmp(key, node->key) < 0)
+    else  if (strcmp_val < 0)
         node->left_node = _tree_insert(node->left_node, key, data);
     // Update node's value
     else
@@ -155,21 +155,23 @@ static TreeNode *_tree_insert(TreeNode *node, const char *key, NodeData data) {
     // node_balance > 1 or < -1
     if (abs(n_balance) > 1) {
         if (n_balance > 1) {
+            strcmp_val = strcmp(key, node->left_node->key);
             // Key value < node left's key
-            if (strcmp(key, node->left_node->key) < 0)
+            if (strcmp_val < 0)
                 return right_rotate(node);
             // Key value > node left's key
-            if (strcmp(key, node->left_node->key) > 0) {
+            if (strcmp_val > 0) {
                 node->left_node = left_rotate(node->left_node);
                 return right_rotate(node);
             }
         }
         if (n_balance < -1) {
+            strcmp_val = strcmp(key, node->right_node->key);
             // Key value > node right's key
-            if (strcmp(key, node->right_node->key) > 0)
+            if (strcmp_val > 0)
                 return left_rotate(node);
             // Key value < node right's key
-            if (strcmp(key, node->right_node->key) < 0) {
+            if (strcmp_val < 0) {
                 node->right_node = right_rotate(node->right_node);
                 return left_rotate(node);
             }
@@ -188,11 +190,12 @@ static TreeNode *_tree_remove(TreeNode *node, const char *key) {
     if (!node)
         return node;
 
+    int strcmp_val = strcmp(key, node->key);
     // Key value > node's key (in ASCII) -> go to right subtree
-    if (strcmp(key, node->key) > 0)
+    if (strcmp_val > 0)
         node->right_node = _tree_remove(node->right_node, key);
     // Key value < node's key (in ASCII) -> go to left subtree
-    else  if (strcmp(key, node->key) < 0)
+    else  if (strcmp_val < 0)
         node->left_node = _tree_remove(node->left_node, key);
     // We found node for deletion
     else {
@@ -251,6 +254,7 @@ static TreeNode *_tree_remove(TreeNode *node, const char *key) {
     }
     return node;
 }
+
 void tree_remove(Tree *tree, const char *key) {
     tree->root_node = _tree_remove(tree->root_node, key);
     if (!tree->root_node)
@@ -266,6 +270,7 @@ static void _visualise_tree(TreeNode *node) {
         _visualise_tree(node->right_node);
     }
 }
+
 void tree_visualise(Tree *tree) {
     fprintf(stdout, "[root] - ");
     _visualise_tree(tree->root_node);
