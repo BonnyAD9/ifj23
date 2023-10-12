@@ -33,10 +33,6 @@ String str_clone(const String s) {
 }
 
 void str_free(String *s) {
-    if (!s->str) {
-        return;
-    }
-
     free(s->str);
     s->str = NULL;
     s->len = 0;
