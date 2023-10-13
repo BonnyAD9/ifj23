@@ -1,8 +1,5 @@
 #include "test_utils.h"
 
-
-#include <stdio.h>
-
 void code_insert(char* test_code ) {
     FILE* test_file = fopen(TEST_FILE, "w");
     if (!test_file) {
@@ -10,54 +7,117 @@ void code_insert(char* test_code ) {
     }
 
     fputs(test_code, test_file);
-    //printf("TESTING WITH:\n%s\n", test_code);
     fclose(test_file);
 }
 
-void print_location( bool which_to_print ) {
+void check_position( char *line_or_column, int correct_position[] ) {
     FILE* test_file = fopen(TEST_FILE, "r");
     if (!test_file) {
         EPRINTF("Error opening testing input file\n");
     }
 
     Stream in = stream_from_file(test_file, TEST_FILE);
-
     Lexer lexer = lex_new(in);
-    Token token = lex_next(&lexer);
 
-    while (token != T_ERR && token != EOF) {
-        if(which_to_print) {
-            printf("Token line [%zu]\n", lexer.token_start.line);
+    Token token = lex_next(&lexer);
+    bool test_flag = true;
+
+    for (int i = 0; token != T_ERR && token != EOF; i++) {
+        if (strcmp(line_or_column, "line") == 0) {
+            if (lexer.token_start.line == correct_position[i]) {
+                token = lex_next(&lexer);
+                continue;
+            }
+            else {
+                test_flag = false;
+                printf("\033[0;31m");
+                printf("Expected line: %d\n"
+                       "Acquired line: %zu\n\n", 
+                       correct_position[i], lexer.token_start.line);
+                printf("\033[0m");
+            }
+        }
+        else if (strcmp(line_or_column, "column") == 0) {
+            if (lexer.token_start.column == correct_position[i]) {
+                token = lex_next(&lexer);
+                continue;
+            }
+            else {
+                test_flag = false;
+                printf("\033[0;31m");
+                printf("Expected column: %d\n"
+                       "Acquired column: %zu\n\n", 
+                       correct_position[i], lexer.token_start.column);
+                printf("\033[0m");
+            }
         }
         else {
-            printf("Token column:[%zu]\n", lexer.token_start.column);
+            test_flag = false;
+            printf("\033[0;31mPlease enter whether to compare "
+                   "line or column, test skipped\033[0m\n");
+            break;
         }
         token = lex_next(&lexer);
     }
+
     lex_free(&lexer);
     fclose(test_file);
+
+    test_eval(test_flag);
 }
 
-void print_token() {
+void check ( char *correct_tokens[] ) {
     FILE* test_file = fopen(TEST_FILE, "r");
-      if (!test_file) {
-        EPRINTF("Error opening testing input file\n");
+        if (!test_file) {
+            EPRINTF("Error opening testing input file\n");
     }
 
     Stream in = stream_from_file(test_file, TEST_FILE);
-
     Lexer lexer = lex_new(in);
-    Token token = lex_next(&lexer);
 
-    while (token != T_ERR && token != EOF) {
-        if (isprint(token)) {
-            printf("Token: [%c | %d] [%s]\n", token, token, lexer.str.str);
+    Token token = lex_next(&lexer);
+    bool test_flag = true;
+
+    for (int i = 0; token != T_ERR && token != EOF; i++) {
+        if (token == correct_tokens[i][0] || 
+            strcmp(lexer.str.str, correct_tokens[i]) == 0) {
+                token = lex_next(&lexer);
+                continue;
         }
         else {
-            printf("Token: [  | %d] [%s]\n", token, lexer.str.str);
+            test_flag = false;
+            printf("\033[0;31m");
+            if (isprint(token)) {
+                printf("Expected token: %c\n"
+                       "Acquired token: %c\n\n", 
+                       correct_tokens[i][0], token);
+            }
+            else {
+                printf("Expected token: %s\n"
+                       "Acquired token: %s\n\n", 
+                       correct_tokens[i], lexer.str.str);
+            }
+            printf("\033[0m");
         }
         token = lex_next(&lexer);
     }
     lex_free(&lexer);
     fclose(test_file);
+
+    test_eval(test_flag);
+}
+
+void run_test( char *correct_tokens[], char* test_code ) {
+    code_insert(test_code);
+    check(correct_tokens);
+}
+
+void test_eval( bool test_flag ) {
+    if (test_flag) {
+        printf("\033[0;32mTEST OK");
+    }
+    else {
+        printf("\033[0;31mTEST FAILED");
+    }
+    printf("\033[0m");
 }

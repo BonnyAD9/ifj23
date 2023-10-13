@@ -13,7 +13,7 @@ DOBJTEST:=$(patsubst src/%.c,obj/debug/%.o,$(filter-out src/main.c,$(SRC)))
 
 .DEFAULT_GOAL:=debug
 
-.PHONY: debug release clean rel deb test testrun
+.PHONY: debug release clean rel deb test
 
 
 debug:
@@ -47,9 +47,3 @@ test: $(TOBJ) $(DOBJTEST)
 
 obj/debug/%.o: test/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-
-testrun: lex_test
-	@./lex_test > test/current_lex_test
-	@echo "\nTest output differences:"
-	@diff -u --report-identical-files --text --color test/correct_lex_test test/current_lex_test
-	@rm -f test/current_lex_test

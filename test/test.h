@@ -1,14 +1,7 @@
 #ifndef LEXER_TEST
 #define LEXER_TEST
 
-// Vlastní hlavičkové soubory
-#include "../src/utils.h"
-#include "../src/lexer.h"
-#include "../src/stream.h"
-
-// Externí hlavičkové soubory
-#include <ctype.h>
-#include <stdio.h>
+#include "test_utils.h"
 
 #define TEST_FILE "test/test_file.swift"
 /**
