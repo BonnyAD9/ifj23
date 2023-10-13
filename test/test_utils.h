@@ -42,7 +42,7 @@ void run_test( char *correct_tokens[], char *test_code );
 
 /**
  * Pomocná funkce, která řekne, jak test dopadl
- * @param test_flag Dopadl dobře nebo špatně? 
+ * @param test_flag Dopadl dobře nebo špatně?
  */
 void test_eval( bool test_flag );
 
