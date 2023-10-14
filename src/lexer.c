@@ -231,7 +231,7 @@ static Token read_triple_str(Lexer *lex) {
         sb_free(&str);
         return lex_error(
             lex,
-            "Error: no new line after opening triple quotes"
+            "no new line after opening triple quotes"
         );
     }
     next_chr(lex);
@@ -256,9 +256,11 @@ static Token read_triple_str(Lexer *lex) {
         // Multiline string not ended properly
         if (lex->cur_chr == EOF) {
             sb_free(&str);
-            return lex_error(lex, "Error: multiline string not closed");
+            return lex_error(lex, "multiline string not closed");
         }
     }
+
+    lex_next(lex); // skip the last '"'
 
     // Checks indentation count
     int indent = str.len - 1;
@@ -267,7 +269,7 @@ static Token read_triple_str(Lexer *lex) {
             sb_free(&str);
             return lex_error(
                 lex,
-                "Error: no new line before closing triple quotes"
+                "no new line before closing triple quotes"
             );
         }
     }
@@ -282,11 +284,12 @@ static Token read_triple_str(Lexer *lex) {
                     sb_free(&str);
                     return lex_error(
                         lex,
-                        "Error: invalid indenation in mutliline string"
+                        "invalid indenation in mutliline string"
                     );
                 }
             }
             --i;
+            new_line = false;
         } else if (str.str[i] == '\n')
             new_line = true;
         else {

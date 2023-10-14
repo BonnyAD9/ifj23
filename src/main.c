@@ -36,7 +36,7 @@ int main(void) {
                 lexer.token_start.column,
                 token,
                 token,
-                lexer.str.str
+                lexer.buffer.str
             );
         }
         else {
@@ -45,7 +45,7 @@ int main(void) {
                 lexer.token_start.line,
                 lexer.token_start.column,
                 token,
-                lexer.str.str
+                lexer.buffer.str
             );
         }
         token = lex_next(&lexer);
