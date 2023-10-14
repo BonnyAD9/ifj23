@@ -7,6 +7,7 @@
 #include "lexer.h"
 #include "stream.h"
 #include "symtable.h"
+#include "vec.h"
 
 void print_node_data(Tree *tree, NodeData **data, const char *key) {
     *data = tree_find(tree, key);
@@ -87,4 +88,28 @@ int main(void) {
 
     tree_free(&tree);
     fclose(file);
+
+    printf("----------------------------------------\n");
+    // vector test
+    Vec v = VEC_NEW(int);
+
+    VEC_PUSH_BACK(&v, int, 5);
+    VEC_PUSH_BACK(&v, int, 4);
+    VEC_PUSH_BACK(&v, int, 3);
+    VEC_PUSH_BACK(&v, int, 2);
+    VEC_PUSH_BACK(&v, int, 1);
+    VEC_PUSH_BACK(&v, int, 0);
+
+    VEC_FOR_EACH(&v, int, item) {
+        printf("%zu: %d\n", item.i, *item.v);
+    }
+
+    vec_pop_back(&v, NULL);
+    printf("pop\n");
+
+    VEC_FOR_EACH(&v, int, item) {
+        printf("%zu: %d\n", item.i, *item.v);
+    }
+
+    vec_free(&v);
 }
