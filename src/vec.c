@@ -1,6 +1,6 @@
-#include "vec.h" // Vec, bool, size_t, NULL, true, false
+#include "vec.h" // Vec, bool, size_t, NULL, true, false, Span, FreeFun
 
-#include <stdlib.h> // free, realloc
+#include <stdlib.h> // free, realloc, malloc
 #include <string.h> // memcpy
 
 Vec vec_new(size_t item_size) {
@@ -52,13 +52,6 @@ void vec_clear(Vec *vec) {
     vec->len = 0;
 }
 
-/// runs the given function for each item
-void vec_for_each(Vec *vec, IterFun fun) {
-    for (size_t i = 0; i < vec->len; ++i) {
-        fun(vec_at(vec, i));
-    }
-}
-
 bool vec_reserve(Vec *vec, size_t len) {
     if (len <= vec->allocated) {
         return true;
@@ -86,7 +79,66 @@ bool vec_reserve(Vec *vec, size_t len) {
     return true;
 }
 
-void vec_free_with(Vec *vec, IterFun free) {
-    vec_for_each(vec, free);
+void vec_free_with(Vec *vec, FreeFun free) {
+    for (size_t i = 0; i < vec->len; ++i) {
+        free(vec_at(vec, i));
+    }
     vec_free(vec);
+}
+
+Span vec_as_span(Vec *vec) {
+    return span_new(vec->items, vec->item_size, vec->len);
+}
+
+Span vec_slice(Vec *vec, size_t start, size_t len) {
+    return span_new(vec_at(vec, start), vec->item_size, vec->len - start);
+}
+
+bool vec_push_span(Vec *vec, Span span) {
+    if (vec->item_size != span.item_size
+        || !vec_reserve(vec, vec->len + span.len)
+    ) {
+        return false;
+    }
+
+    memcpy(vec_at(vec, vec->len), span.items, span.len * span.item_size);
+    vec->len += span.len;
+
+    return true;
+}
+
+Vec vec_clone(Vec *vec) {
+    return span_to_vec(vec_as_span(vec));
+}
+
+Span span_new(void *data, size_t item_size, size_t len) {
+    return (Span) {
+        .items = data,
+        .item_size = item_size,
+        .len = len,
+    };
+}
+
+void *span_at(Span span, size_t index) {
+    return span.items + index * span.item_size;
+}
+
+Span span_slice(Span span, size_t start, size_t len) {
+    return span_new(span_at(span, start), span.item_size, span.len - start);
+}
+
+Vec span_to_vec(Span span) {
+    Vec res = {
+        .allocated = span.len,
+        .item_size = span.item_size,
+        .items = malloc(span.item_size * span.len),
+        .len = span.len,
+    };
+
+    if (!res.items) {
+        return vec_new(span.item_size);
+    }
+
+    memcpy(res.items, span.items, res.len * res.item_size);
+    return res;
 }

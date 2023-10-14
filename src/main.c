@@ -112,5 +112,24 @@ int main(void) {
         printf("%zu: %d\n", item.i, *item.v);
     }
 
+    printf("push tail of vec to the vec\n");
+
+    Span tail = vec_slice(&v, 1, v.len - 1);
+
+
+    printf("tail of vec:\n");
+    SPAN_FOR_EACH(tail, int, item) {
+        printf("%zu: %d\n", item.i, *item.v);
+    }
+
+    Vec v2 = span_to_vec(tail);
+    vec_push_span(&v, vec_as_span(&v2));
+    vec_free(&v2);
+
+    printf("Vec:\n");
+    VEC_FOR_EACH(&v, int, item) {
+        printf("%zu: %d\n", item.i, *item.v);
+    }
+
     vec_free(&v);
 }

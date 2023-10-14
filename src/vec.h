@@ -34,6 +34,24 @@
     ++name.i \
 )
 
+/// Creates new span
+#define SPAN_NEW(data, len) span_new(data, sizeof(*data), len)
+
+/// Creates new span from array with size known at compile time
+#define SPAN_ARR(arr) span_new(arr, sizeof(*arr), sizeof(arr) / sizeof(*arr))
+
+/// Gets the item at the given index
+#define SPAN_AT(span, type, index) (((type *)((span).items))[index])
+
+/// For each loop
+#define SPAN_FOR_EACH(_span, type, name) for ( \
+    struct { size_t i; type *v; Span span; } name \
+        = { .i = 0, .span = _span }; \
+    name.i < name.span.len \
+        && (name.v = &SPAN_AT(name.span, type, name.i), true); \
+    ++name.i \
+)
+
 /// generic vector
 typedef struct {
     char *items;
@@ -44,11 +62,15 @@ typedef struct {
     size_t len;
 } Vec;
 
-struct VecIterator {
-    size_t index;
-};
+/// Span of borrowed generic data
+typedef struct {
+    char *items;
+    size_t item_size;
+    size_t len;
+} Span;
 
-typedef void (*IterFun)(void *);
+/// Function that frees object
+typedef void (*FreeFun)(void *data);
 
 /// creates new vector
 Vec vec_new(size_t item_size);
@@ -57,7 +79,7 @@ Vec vec_new(size_t item_size);
 void vec_free(Vec *vec);
 
 /// frees all items and the vector
-void vec_free_with(Vec *vec, IterFun free);
+void vec_free_with(Vec *vec, FreeFun free);
 
 /// adds item to the end of the vector, returns false on failure
 bool vec_push_back(Vec *vec, void *item);
@@ -76,11 +98,33 @@ void *vec_last(Vec *vec);
 /// pops all items from the vector
 void vec_clear(Vec *vec);
 
-/// runs the given function for each item
-void vec_for_each(Vec *vec, IterFun fun);
-
 /// makes sure that the vector can contain at least len elements before realloc
 /// returns false if fails
 bool vec_reserve(Vec *vec, size_t len);
+
+/// creates span of the whole vector. THE SPAN IS VALID ONLY UNTIL PUSH
+Span vec_as_span(Vec *vec);
+
+/// creates slice of the vector. THE SPAN IS VALID ONLY UNTIL PUSH
+Span vec_slice(Vec *vec, size_t start, size_t len);
+
+/// Pushes a span to the end of te vector.
+/// THIS IS NOT VALID FOR SPAN OF THE SAME VEC
+bool vec_push_span(Vec *vec, Span span);
+
+/// Copies the vector, returns empty vector when fails
+Vec vec_clone(Vec *vec);
+
+/// creates new span
+Span span_new(void *data, size_t item_size, size_t len);
+
+/// gets pointer to value at the given index
+void *span_at(Span span, size_t index);
+
+/// Slices te span
+Span span_slice(Span span, size_t start, size_t len);
+
+/// Copies the data into a new vector, returns empty vector if fails
+Vec span_to_vec(Span span);
 
 #endif // VECTOR_H_INCLUDED
