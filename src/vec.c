@@ -33,15 +33,13 @@ bool vec_push_back(Vec *vec, void *item) {
 
 /// gets pointer to item at the given index, NULL if index is out of bounds
 void *vec_at(Vec *vec, size_t index) {
-    return vec->items + index * vec->len;
+    return vec->items + index * vec->item_size;
 }
 
 /// removes the last item from the vector and writes its data to popped
-void vec_pop_back(Vec *vec, void *popped) {
-    if (popped) {
-        memcpy(vec_last(vec), popped, vec->item_size);
-    }
+void *vec_pop_back(Vec *vec) {
     --vec->len;
+    return vec_at(vec, vec->len);
 }
 
 /// gets pointer to the last item in the vector
@@ -55,7 +53,7 @@ void vec_clear(Vec *vec) {
 }
 
 /// runs the given function for each item
-void vec_for_each(Vec *vec, void *data, void (*fun)(void *item)) {
+void vec_for_each(Vec *vec, IterFun fun) {
     for (size_t i = 0; i < vec->len; ++i) {
         fun(vec_at(vec, i));
     }
@@ -86,4 +84,9 @@ bool vec_reserve(Vec *vec, size_t len) {
     vec->items = new_data;
 
     return true;
+}
+
+void vec_free_with(Vec *vec, IterFun free) {
+    vec_for_each(vec, free);
+    vec_free(vec);
 }

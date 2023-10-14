@@ -104,8 +104,9 @@ int main(void) {
         printf("%zu: %d\n", item.i, *item.v);
     }
 
-    vec_pop_back(&v, NULL);
-    printf("pop\n");
+    printf("pop %d, set [3]=10 and set last = 7\n", VEC_POP_BACK(&v, int));
+    VEC_AT(&v, int, 3) = 10;
+    VEC_LAST(&v, int) = 7;
 
     VEC_FOR_EACH(&v, int, item) {
         printf("%zu: %d\n", item.i, *item.v);
