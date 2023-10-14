@@ -93,11 +93,8 @@ int main(void) {
     // vector test
     Vec v = VEC_NEW(int);
 
-    VEC_PUSH_BACK(&v, int, 5);
-    VEC_PUSH_BACK(&v, int, 4);
-    VEC_PUSH_BACK(&v, int, 3);
-    VEC_PUSH_BACK(&v, int, 2);
-    VEC_PUSH_BACK(&v, int, 1);
+    vec_push_span(&v, SPAN_ARR(((int []) { 5, 4, 3, 2, 1 })));
+
     VEC_PUSH_BACK(&v, int, 0);
 
     VEC_FOR_EACH(&v, int, item) {
