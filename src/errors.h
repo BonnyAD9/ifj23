@@ -1,5 +1,5 @@
 #ifndef ERRORS_H_INCLUDED
-#define ERRORS_H_INCLDUED
+#define ERRORS_H_INCLUDED
 
 /// no error
 #define SUCCESS

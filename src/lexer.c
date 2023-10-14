@@ -262,7 +262,7 @@ static Token read_triple_str(Lexer *lex) {
 
     // Checks indentation count
     int indent = str.len - 1;
-    for (indent; str.str[indent] != '\n'; --indent) {
+    for (; str.str[indent] != '\n'; --indent) {
         if (str.str[indent] != ' ') {
             sb_free(&str);
             return lex_error(
