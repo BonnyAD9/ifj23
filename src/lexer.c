@@ -303,7 +303,8 @@ static Token read_triple_str(Lexer *lex) {
 
 static Token read_str(Lexer *lex) {
     // Triple double quotes case
-    if (next_chr(lex) == '"') {
+    if (stream_peak(&lex->in) == '"') {
+        next_chr(lex);
         if (next_chr(lex) == '"')
             return read_triple_str(lex);
 
