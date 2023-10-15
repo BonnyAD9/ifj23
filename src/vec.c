@@ -31,23 +31,19 @@ bool vec_push_back(Vec *vec, void *item) {
     return true;
 }
 
-/// gets pointer to item at the given index, NULL if index is out of bounds
 void *vec_at(Vec *vec, size_t index) {
     return vec->items + index * vec->item_size;
 }
 
-/// removes the last item from the vector and writes its data to popped
 void *vec_pop_back(Vec *vec) {
     --vec->len;
     return vec_at(vec, vec->len);
 }
 
-/// gets pointer to the last item in the vector
 void *vec_last(Vec *vec) {
     return vec_at(vec, vec->len - 1);
 }
 
-/// pops all items from the vector
 void vec_clear(Vec *vec) {
     vec->len = 0;
 }
