@@ -15,7 +15,7 @@
 
 /// removes the last item from the vector and returns it.
 /// segfault if vector is empty.
-#define VEC_POP(vec, type) (*(type *)vec_pop_back(vec))
+#define VEC_POP(vec, type) (*(type *)vec_pop(vec))
 
 /// Adds value to the vector
 #define VEC_PUSH(_vec, type, value) do { \
