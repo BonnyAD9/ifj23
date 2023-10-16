@@ -10,6 +10,10 @@ func concat(_ x : String, with y : String) -> String {
     return x + " " + y
 }
 
+let tq = """
+    triple quote test
+    """
+
 let a = "ahoj "
 var ct : String
 ct = concat(a, with: "svete")

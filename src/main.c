@@ -7,6 +7,7 @@
 #include "lexer.h"
 #include "stream.h"
 #include "symtable.h"
+#include "vec.h"
 
 void print_node_data(Tree *tree, NodeData **data, const char *key) {
     *data = tree_find(tree, key);
@@ -36,7 +37,7 @@ int main(void) {
                 lexer.token_start.column,
                 token,
                 token,
-                lexer.str.str
+                lexer.buffer.str
             );
         }
         else {
@@ -45,7 +46,7 @@ int main(void) {
                 lexer.token_start.line,
                 lexer.token_start.column,
                 token,
-                lexer.str.str
+                lexer.buffer.str
             );
         }
         token = lex_next(&lexer);
@@ -87,4 +88,45 @@ int main(void) {
 
     tree_free(&tree);
     fclose(file);
+
+    printf("----------------------------------------\n");
+    // vector test
+    Vec v = VEC_NEW(int);
+
+    vec_push_span(&v, SPAN_ARR(((int []) { 5, 4, 3, 2, 1 })));
+
+    VEC_PUSH(&v, int, 0);
+
+    VEC_FOR_EACH(&v, int, item) {
+        printf("%zu: %d\n", item.i, *item.v);
+    }
+
+    printf("pop %d, set [3]=10 and set last = 7\n", VEC_POP(&v, int));
+    VEC_AT(&v, int, 3) = 10;
+    VEC_LAST(&v, int) = 7;
+
+    VEC_FOR_EACH(&v, int, item) {
+        printf("%zu: %d\n", item.i, *item.v);
+    }
+
+    printf("push tail of vec to the vec\n");
+
+    Span tail = vec_slice(&v, 1, v.len - 1);
+
+
+    printf("tail of vec:\n");
+    SPAN_FOR_EACH(tail, int, item) {
+        printf("%zu: %d\n", item.i, *item.v);
+    }
+
+    Vec v2 = span_to_vec(tail);
+    vec_push_span(&v, vec_as_span(&v2));
+    vec_free(&v2);
+
+    printf("Vec:\n");
+    VEC_FOR_EACH(&v, int, item) {
+        printf("%zu: %d\n", item.i, *item.v);
+    }
+
+    vec_free(&v);
 }
