@@ -20,7 +20,7 @@ void vec_free(Vec *vec) {
 }
 
 /// adds item to the end of the vector
-bool vec_push_back(Vec *vec, void *item) {
+bool vec_push(Vec *vec, void *item) {
     if (!vec_reserve(vec, vec->len + 1)) {
         return false;
     }
@@ -35,7 +35,7 @@ void *vec_at(Vec *vec, size_t index) {
     return vec->items + index * vec->item_size;
 }
 
-void *vec_pop_back(Vec *vec) {
+void *vec_pop(Vec *vec) {
     --vec->len;
     return vec_at(vec, vec->len);
 }
@@ -87,7 +87,7 @@ Span vec_as_span(Vec *vec) {
 }
 
 Span vec_slice(Vec *vec, size_t start, size_t len) {
-    return span_new(vec_at(vec, start), vec->item_size, vec->len - start);
+    return span_new(vec_at(vec, start), vec->item_size, len);
 }
 
 bool vec_push_span(Vec *vec, Span span) {
@@ -120,7 +120,7 @@ void *span_at(Span span, size_t index) {
 }
 
 Span span_slice(Span span, size_t start, size_t len) {
-    return span_new(span_at(span, start), span.item_size, span.len - start);
+    return span_new(span_at(span, start), span.item_size, len);
 }
 
 Vec span_to_vec(Span span) {

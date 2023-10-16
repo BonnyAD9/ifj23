@@ -15,10 +15,10 @@
 
 /// removes the last item from the vector and returns it.
 /// segfault if vector is empty.
-#define VEC_POP_BACK(vec, type) (*(type *)vec_pop_back(vec))
+#define VEC_POP(vec, type) (*(type *)vec_pop_back(vec))
 
 /// Adds value to the vector
-#define VEC_PUSH_BACK(_vec, type, value) do { \
+#define VEC_PUSH(_vec, type, value) do { \
     Vec *vec = _vec; \
     if (vec_reserve(vec, vec->len + 1)) { \
         VEC_AT(vec, type, vec->len) = value; \
@@ -82,7 +82,7 @@ void vec_free(Vec *vec);
 void vec_free_with(Vec *vec, FreeFun free);
 
 /// adds item to the end of the vector, returns false on failure
-bool vec_push_back(Vec *vec, void *item);
+bool vec_push(Vec *vec, void *item);
 
 /// gets pointer to item at the given index, DOESN'T CHECK BOUNDS
 void *vec_at(Vec *vec, size_t index);
@@ -90,7 +90,7 @@ void *vec_at(Vec *vec, size_t index);
 /// removes the last item from the vector and returns pointer to it.
 /// Returns NULL if vector is empty.
 /// THE POINTER IS VALID ONLY UNTIL PUSH OR FREE.
-void *vec_pop_back(Vec *vec);
+void *vec_pop(Vec *vec);
 
 /// gets pointer to the last item in the vector, NULL if vector is empty
 void *vec_last(Vec *vec);
@@ -105,7 +105,8 @@ bool vec_reserve(Vec *vec, size_t len);
 /// creates span of the whole vector. THE SPAN IS VALID ONLY UNTIL PUSH
 Span vec_as_span(Vec *vec);
 
-/// creates slice of the vector. THE SPAN IS VALID ONLY UNTIL PUSH
+/// creates slice of the vector. THE SPAN IS VALID ONLY UNTIL PUSH.
+/// It doesn't check the bounds.
 Span vec_slice(Vec *vec, size_t start, size_t len);
 
 /// Pushes a span to the end of te vector.
@@ -118,7 +119,7 @@ Vec vec_clone(Vec *vec);
 /// creates new span
 Span span_new(void *data, size_t item_size, size_t len);
 
-/// gets pointer to value at the given index
+/// gets pointer to value at the given index. DOESN'T CHECK BOUNDS
 void *span_at(Span span, size_t index);
 
 /// Slices te span

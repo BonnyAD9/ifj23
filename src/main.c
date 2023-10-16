@@ -95,13 +95,13 @@ int main(void) {
 
     vec_push_span(&v, SPAN_ARR(((int []) { 5, 4, 3, 2, 1 })));
 
-    VEC_PUSH_BACK(&v, int, 0);
+    VEC_PUSH(&v, int, 0);
 
     VEC_FOR_EACH(&v, int, item) {
         printf("%zu: %d\n", item.i, *item.v);
     }
 
-    printf("pop %d, set [3]=10 and set last = 7\n", VEC_POP_BACK(&v, int));
+    printf("pop %d, set [3]=10 and set last = 7\n", VEC_POP(&v, int));
     VEC_AT(&v, int, 3) = 10;
     VEC_LAST(&v, int) = 7;
 
