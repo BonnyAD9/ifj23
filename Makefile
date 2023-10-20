@@ -4,8 +4,11 @@ RFLAGS:=-std=c17 -DNDEBUG -O3
 
 SRC:=$(wildcard src/*.c)
 SRCTEST:=$(wildcard test/*.c)
+SRCTEST:=$(wildcard test/*.c)
 DOBJ:=$(patsubst src/%.c, obj/debug/%.o, $(SRC))
 ROBJ:=$(patsubst src/%.c, obj/release/%.o, $(SRC))
+TOBJ:=$(patsubst test/%.c, obj/debug/%.o, $(SRCTEST))
+DOBJTEST:=$(patsubst src/%.c,obj/debug/%.o,$(filter-out src/main.c,$(SRC)))
 TOBJ:=$(patsubst test/%.c, obj/debug/%.o, $(SRCTEST))
 DOBJTEST:=$(patsubst src/%.c,obj/debug/%.o,$(filter-out src/main.c,$(SRC)))
 
@@ -13,6 +16,7 @@ DOBJTEST:=$(patsubst src/%.c,obj/debug/%.o,$(filter-out src/main.c,$(SRC)))
 
 .DEFAULT_GOAL:=debug
 
+.PHONY: debug release clean rel deb test
 .PHONY: debug release clean rel deb test
 
 

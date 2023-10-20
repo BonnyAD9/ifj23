@@ -132,3 +132,12 @@ void test_eval( bool test_flag ) {
     }
     printf("\033[0m");
 }
+void test_eval( bool test_flag ) {
+    if (test_flag) {
+        printf("\033[0;32mTEST OK");
+    }
+    else {
+        printf("\033[0;31mTEST FAILED");
+    }
+    printf("\033[0m");
+}
