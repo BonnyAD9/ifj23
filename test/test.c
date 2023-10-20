@@ -113,10 +113,6 @@ ENDTEST
 
 TEST(Tripple_quotes, "Testing tripple quote string")
 
-
-
-
-
     test_code = "let tq = \"\"\"\n"
     "   triple quote test\n"
     "   \"\"\"";
