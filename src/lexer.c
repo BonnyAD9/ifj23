@@ -298,6 +298,9 @@ static Token read_triple_str(Lexer *lex) {
     }
     sb_free(&str);
 
+    // Store string
+    lex->str = sb_get(&lex->buffer);
+
     return T_SLIT;
 }
 
@@ -435,7 +438,7 @@ static Token read_operator(Lexer *lex) {
 }
 
 static bool skip_comment(Lexer *lex) {
-    next_chr(lex); // skip the '/'
+    next_chr(lex); // skip and move to comment content
 
     if (lex->cur_chr == '/') {
         while (next_chr(lex) != '\n' && lex->cur_chr != EOF)
@@ -443,15 +446,33 @@ static bool skip_comment(Lexer *lex) {
         return true;
     }
 
+    // Initially we already loaded '/*' once
+    unsigned int comment_parenthese_count = 1;
+
     do {
-        while (next_chr(lex) != '*') {
+        char chr = next_chr(lex);
+        while (chr != '*' && chr != '/') {
             if (lex->cur_chr == EOF) {
                 lex->subtype = ERR_LEX;
                 lex_error(lex, "Unexpected end of file, expected '*/'");
                 return false;
             }
+            chr = next_chr(lex);
         }
-    } while (next_chr(lex) != '/');
+        // '*' or '/' at input
+        switch (next_chr(lex)) {
+            case '*':
+                if (chr == '/') // -> '/*'
+                    ++comment_parenthese_count;
+                break;
+            case '/':
+                if (chr == '*') // -> '*/'
+                    --comment_parenthese_count;
+                break;
+            default:
+                break;
+        }
+    } while (comment_parenthese_count);
 
     next_chr(lex); // skip the last '/'
 
