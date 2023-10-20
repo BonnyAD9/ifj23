@@ -111,8 +111,7 @@ TEST(String_write_4, "write(\"Pozice retezce \\\"text\\\" v str2: \", i, \"\\n\"
     
 ENDTEST
 
-
- TEST(Tripple_quotes, "Testing tripple quote string")
+TEST(Tripple_quotes, "Testing tripple quote string")
 
     test_code = "let tq = \"\"\"\n"
     "   triple quote test\n"
