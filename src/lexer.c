@@ -260,7 +260,7 @@ static Token read_triple_str(Lexer *lex) {
         }
     }
 
-    lex_next(lex); // skip the last '"'
+    next_chr(lex); // skip the last '"'
 
     // Checks indentation count
     int indent = str.len - 1;
