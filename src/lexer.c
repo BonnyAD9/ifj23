@@ -260,7 +260,7 @@ static Token read_triple_str(Lexer *lex) {
         }
     }
 
-    lex_next(lex); // skip the last '"'
+    next_chr(lex); // skip the last '"'
 
     // Checks indentation count
     int indent = str.len - 1;
@@ -460,18 +460,12 @@ static bool skip_comment(Lexer *lex) {
             chr = next_chr(lex);
         }
         // '*' or '/' at input
-        switch (next_chr(lex)) {
-            case '*':
-                if (chr == '/') // -> '/*'
-                    ++comment_parenthese_count;
-                break;
-            case '/':
-                if (chr == '*') // -> '*/'
-                    --comment_parenthese_count;
-                break;
-            default:
-                break;
-        }
+        next_chr(lex);
+
+        if (chr == '/' && lex->cur_chr == '*') // -> '/*'
+            ++comment_parenthese_count;
+        else if (chr == '*' && lex->cur_chr == '/') // -> '*/'
+            --comment_parenthese_count;
     } while (comment_parenthese_count);
 
     next_chr(lex); // skip the last '/'
