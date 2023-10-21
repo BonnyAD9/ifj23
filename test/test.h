@@ -4,6 +4,8 @@
 #include "test_utils.h"
 
 #define TEST_FILE "test/test_file.swift"
+#define LEX_TEST_COUNT ((long int) (sizeof(lex_tests) / sizeof(*lex_tests)))
+
 /**
  * Vypíše do výstupního souboru nadpis k dannému testu
  * @param which_to_print Název testu
