@@ -31,6 +31,11 @@ func factorial(_ n : Int /* comments anywhere */) -> Int {
     var result : Int?
     if (n < 2) {
         result = 2.5E5
+        // Nested comments
+        /* START
+            /*BODY****A*/
+        END */
+        /*/*ON-LINE*/*/
     } else {
         let decremented_n = decrement(of: n, by: 1)
         let temp_result = factorial(decremented_n)
