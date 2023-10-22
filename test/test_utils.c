@@ -4,7 +4,7 @@ int code_insert(char* test_code ) {
     FILE* test_file = fopen(TEST_FILE, "w");
     if (!test_file) {
         EPRINTF("Error opening testing input file\n");
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
     fputs(test_code, test_file);
@@ -17,7 +17,7 @@ int check_position( LineOrCol line_or_column, int correct_position[] ) {
     FILE* test_file = fopen(TEST_FILE, "r");
     if (!test_file) {
         EPRINTF("Error opening testing input file\n");
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
     // Inicializace lexeru
@@ -74,7 +74,7 @@ int check ( TokenData correct_tokens[] ) {
     FILE* test_file = fopen(TEST_FILE, "r");
         if (!test_file) {
             EPRINTF("Error opening testing input file\n");
-            return EXIT_FAILURE;
+            exit(EXIT_FAILURE);
     }
 
     Stream in = stream_from_file(test_file, TEST_FILE);
@@ -108,7 +108,7 @@ int check ( TokenData correct_tokens[] ) {
             }
         }
 
-        // Pokud je 
+        // Pokud je NUMBER
         else if (correct_tokens[i].enum_type == NUMBER) {
             // INTEGER
             if (correct_tokens[i].cur == T_ILIT) {

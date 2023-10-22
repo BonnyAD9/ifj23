@@ -50,6 +50,7 @@ int code_insert( char *test_code );
 /**
  * Provádí a vypíše do stdout výsledky testu pozice
  * @param line_or_column Co chceme vytisknout na výstup a porovnat 
+ * @param correct_position Vstupní pole správných pozic
  */
 int check_position( LineOrCol line_or_column, int correct_position[] );
 
@@ -76,6 +77,8 @@ void test_eval( bool test_flag );
  * Pomocná funkce, která na výstup vytiskne oslišnost 
  * očekávaného tokenu od získaného a vrátí false 
  * @param enum_type Typ tokenu, ve kterém se vyskytla chyba
+ * @param lexer 
+ * @param correct_tokens Očekávané tokeny 
  */
 bool incorect_token_print ( EnumType enum_type, Lexer lexer, TokenData correct_tokens );
 

@@ -8,7 +8,7 @@
 
 /**
  * Vypíše do výstupního souboru nadpis k dannému testu
- * @param which_to_print Název testu
+ * @param NAME Název testu
  * @param DESCRIPTION Popis testu
  */
 #define TEST(NAME, DESCRIPTION)                     \

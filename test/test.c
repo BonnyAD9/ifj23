@@ -2,6 +2,8 @@
 
 char* test_code;
 
+/*===========================================================================*/
+
 TEST(Line_position, "Token position on the LINE")
 
     LineOrCol line_or_column = LINE;
@@ -80,13 +82,13 @@ ENDTEST
 /*===========================================================================*/
 //TEST(Comment_test_6, "Testing - Tokens with nested comments")
 
-    //test_code = "let res =  /* vnejsi/*ve Swift warning*/ vnejsi*/";
-    //TokenData correct_tokens[] = { 
-        //{.enum_type = STRING, .cur = T_DECL, .str = "let"},
-        //{.enum_type = STRING, .cur = T_IDENT, .str = "res"},
-        //{.enum_type = ENUM_VALUE, .cur = '='}
-        //};
-    //run_test(correct_tokens, test_code);
+  //  test_code = "let res =  /* vnejsi/*ve Swift warning*/ vnejsi*/";
+  //  TokenData correct_tokens[] = { 
+  //      {.enum_type = STRING, .cur = T_DECL, .str = "let"},
+  //      {.enum_type = STRING, .cur = T_IDENT, .str = "res"},
+  //      {.enum_type = ENUM_VALUE, .cur = '='}
+  //      };
+  //  run_test(correct_tokens, test_code);
 
 //ENDTEST 
 
@@ -556,6 +558,7 @@ TEST(Variables_var_5, "var myVariable: Int? = nil")
     
 ENDTEST
 
+
 /*===========================================================================*/
 
 
@@ -611,6 +614,7 @@ TEST(Variables_let3, "let ret = bar(with: par)")
 ENDTEST
 /*===========================================================================*/
 TEST(Variables_let4, "let x = x + y")
+
     test_code = "let x = x + y";
     TokenData correct_tokens[] = {
         {.enum_type = STRING, .cur = T_DECL, .str = "let"},
@@ -621,6 +625,7 @@ TEST(Variables_let4, "let x = x + y")
         {.enum_type = STRING, .cur = T_IDENT, .str = "y"},
         };
     run_test(correct_tokens, test_code);
+
 ENDTEST
 /*===========================================================================*/
 TEST(Variables_let5, "let a : Int? = readInt()")
@@ -651,6 +656,7 @@ void (*lex_tests[])(void) = {
     Comment_test_3,
     Comment_test_4,
     Comment_test_5,
+    //Comment_test_6,
     Tripple_quotes,
     String_write_1,
     String_write_2,
@@ -696,6 +702,7 @@ int main (void) {
 		lex_tests[lex_test_id]();
 	}
 
+    // Smazání testovacího souboru 
     if (remove(TEST_FILE)) {
         EPRINTF("Unable to remove %s.\n", TEST_FILE);
         return EXIT_FAILURE;
