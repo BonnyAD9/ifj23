@@ -80,17 +80,17 @@ TEST(Comment_test_5, "Testing - Tokens with /**/")
 
 ENDTEST
 /*===========================================================================*/
-//TEST(Comment_test_6, "Testing - Tokens with nested comments")
+TEST(Comment_test_6, "Testing - Tokens with nested comments")
 
-  //  test_code = "let res =  /* vnejsi/*ve Swift warning*/ vnejsi*/";
-  //  TokenData correct_tokens[] = { 
-  //      {.enum_type = STRING, .cur = T_DECL, .str = "let"},
-  //      {.enum_type = STRING, .cur = T_IDENT, .str = "res"},
-  //      {.enum_type = ENUM_VALUE, .cur = '='}
-  //      };
-  //  run_test(correct_tokens, test_code);
+    test_code = "let res = /* vnejsi/*ve Swift warning*/ vnejsi*/";
+    TokenData correct_tokens[] = { 
+        {.enum_type = STRING, .cur = T_DECL, .str = "let"},
+        {.enum_type = STRING, .cur = T_IDENT, .str = "res"},
+        {.enum_type = ENUM_VALUE, .cur = '='}
+        };
+    run_test(correct_tokens, test_code);
 
-//ENDTEST 
+ENDTEST 
 
 
 /*===========================================================================*/
@@ -656,7 +656,7 @@ void (*lex_tests[])(void) = {
     Comment_test_3,
     Comment_test_4,
     Comment_test_5,
-    //Comment_test_6,
+    Comment_test_6,
     Tripple_quotes,
     String_write_1,
     String_write_2,
