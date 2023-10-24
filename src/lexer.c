@@ -125,10 +125,18 @@ static Token read_ident(Lexer *lex) {
         return T_IF;
     else if (str_eq(lex->str, STR("Int")))
         return T_TYPE;
-    else if (str_eq(lex->str, STR("let")))
+    else if (str_eq(lex->str, STR("let"))) {
+        lex->subtype = TD_LET;
         return T_DECL;
-    else if (str_eq(lex->str, STR("nil")))
-        return T_NIL;
+    }
+    else if (str_eq(lex->str, STR("var"))) {
+        lex->subtype = TD_VAR;
+        return T_DECL;
+    }
+    else if (str_eq(lex->str, STR("nil"))){
+        lex->subtype = TL_NIL;
+        return T_LITERAL;
+    }
     else if (str_eq(lex->str, STR("return")))
         return T_RETURN;
     else if (str_eq(lex->str, STR("String")))
@@ -211,7 +219,8 @@ static Token read_num(Lexer *lex) {
             // Error if no value was parsed or errno occured
             if (endval == lex->str.str || errno != 0)
                 return lex_error(lex, "Error while converting number \n");
-            return T_DLIT;
+            lex->subtype = TL_DOUBLE;
+            return T_LITERAL;
     }
     else {
         // Integer number
@@ -219,7 +228,8 @@ static Token read_num(Lexer *lex) {
         lex->i_num = strtol(lex->str.str, &endval, 10);
         if (endval == lex->str.str || errno != 0)
             return lex_error(lex, "Error while converting number \n");
-        return T_ILIT;
+        lex->subtype = TL_INT;
+        return T_LITERAL;
     }
 }
 
@@ -301,7 +311,8 @@ static Token read_triple_str(Lexer *lex) {
     // Store string
     lex->str = sb_get(&lex->buffer);
 
-    return T_SLIT;
+    lex->subtype = TL_STRING;
+    return T_LITERAL;
 }
 
 static Token read_str(Lexer *lex) {
@@ -313,7 +324,8 @@ static Token read_str(Lexer *lex) {
 
         // Empty string
         lex->str = STR("");
-        return T_SLIT;
+        lex->subtype = TL_STRING;
+        return T_LITERAL;
     }
 
     // Load whole string into buffer
@@ -395,7 +407,8 @@ static Token read_str(Lexer *lex) {
     // Store string
     lex->str = sb_get(&lex->buffer);
 
-    return T_SLIT;
+    lex->subtype = T_LITERAL;
+    return TL_STRING;
 }
 
 Token ret_operator(Lexer *lex, char symbol, Token ret_val) {

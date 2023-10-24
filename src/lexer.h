@@ -18,14 +18,8 @@ typedef enum {
 
     /// Any identifier
     T_IDENT = 256,
-    /// The 'nil' keyword
-    T_NIL,
-    /// String literal
-    T_SLIT,
-    /// Int literal
-    T_ILIT,
-    /// Double literal
-    T_DLIT,
+    /// Number/String/nil
+    T_LITERAL,
 
     /// The '->' token
     T_RETURNS,
@@ -52,7 +46,28 @@ typedef enum {
 
     /// Any of the types (Int, String, Double)
     T_TYPE,
+
+    // the following are never returned by lexer, but they are used in parser
+
+    // e.g. in 'a = -a'
+    T_UNARY_MINUS,
+    // e.g. in 'a = +a'
+    T_UNARY_PLUS,
+    // '(' as expression, e.g. 'a = a * (a + b)' and not e.g. 'a = foo(a)'
+    T_EXPR_PAREN,
 } Token;
+
+typedef enum {
+    TL_INT,
+    TL_DOUBLE,
+    TL_STRING,
+    TL_NIL,
+} LiteralType;
+
+typedef enum {
+    TD_LET,
+    TD_VAR,
+} DeclType;
 
 typedef struct {
     Stream in;
