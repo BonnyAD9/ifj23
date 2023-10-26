@@ -25,41 +25,31 @@ int check_position( LineOrCol line_or_column, int correct_position[] ) {
     Lexer lexer = lex_new(in);
 
     Token token = lex_next(&lexer);
-    bool test_flag;
+    bool test_flag = true;
 
     // Prováděj, dokud nebude vstupní .swift soubor prázdný
     for (int i = 0; token != T_ERR && token != EOF; i++) {
-        test_flag = true;
         // Pokud chci zpátky dostat číslo řádku
-        if (line_or_column == LINE) {
-            if (lexer.token_start.line == correct_position[i]) {
-                token = lex_next(&lexer);
-                continue;
-            }
-            // Pokud jsou nějaké nesrovnalosti
-            else {
-                test_flag = false;
-                printf(C_RED(
-                    "Expected line: %d\n"
-                    "Acquired line: %zu\n\n"), 
-                    correct_position[i], lexer.token_start.line);
-            }
+        if (line_or_column == LINE && lexer.token_start.line == correct_position[i]) {
+            token = lex_next(&lexer);
+            continue;
         }
         // Pokud chci zpátky dostat číslo sloupce
-        else if (line_or_column == COLUMN) {
-            if (lexer.token_start.column == correct_position[i]) {
-                token = lex_next(&lexer);
-                continue;
-            }
-            // Pokud jsou nějaké nesrovnalosti
-            else {
-                test_flag = false;
-                printf(C_RED(
-                    "Expected column: %d\n"
-                    "Acquired column: %zu\n\n"), 
-                    correct_position[i], lexer.token_start.column);
-            }
+        if (line_or_column == COLUMN && lexer.token_start.column == correct_position[i]) {
+            token = lex_next(&lexer);
+            continue;
         }
+        // Pokud je chyba
+        test_flag = false;
+        printf(C_RED(
+                    "Expected %s: %d\n"
+                    "Acquired %s: %zu\n\n"), 
+                    (line_or_column == LINE) ? "line" : "column",
+                    correct_position[i],
+                    (line_or_column == LINE) ? "line" : "column",
+                    (line_or_column == LINE) ? lexer.token_start.line : lexer.token_start.column
+                    );
+   
         token = lex_next(&lexer);
     }
 
@@ -70,7 +60,7 @@ int check_position( LineOrCol line_or_column, int correct_position[] ) {
     return EXIT_SUCCESS;
 }
 
-int check ( TokenData correct_tokens[] ) {
+int check( TokenData correct_tokens[] ) {
     FILE* test_file = fopen(TEST_FILE, "r");
         if (!test_file) {
             EPRINTF("Error opening testing input file\n");
@@ -85,61 +75,47 @@ int check ( TokenData correct_tokens[] ) {
 
     // Prováděj, dokud nebude vstupní .swift soubor prázdný
     for (int i = 0; token != T_ERR && token != EOF; i++) {
+
+        switch(correct_tokens[i].enum_type) { 
         // Pokud je ENUM_TYPE:
-        if (correct_tokens[i].enum_type == ENUM_VALUE) {
-            if (correct_tokens[i].cur == lexer.cur) {
-                token = lex_next(&lexer);
-                continue;
-            }
-            else {
+        case ENUM_VALUE:
+            if (correct_tokens[i].cur != lexer.cur) {
                 test_flag = incorect_token_print(ENUM_VALUE, lexer, correct_tokens[i]);
             }
-        }
+            break;
 
         // Pokud je STRING
-        else if (correct_tokens[i].enum_type == STRING) {
-            if (correct_tokens[i].cur == lexer.cur && 
-                strcmp(correct_tokens[i].str, lexer.buffer.str) == 0) {
-                    token = lex_next(&lexer);
-                    continue;
-                }
-            else {
+        case STRING:
+            if (correct_tokens[i].cur != lexer.cur ||
+                strcmp(correct_tokens[i].str, lexer.buffer.str) != 0) {
+
                 test_flag = incorect_token_print(STRING, lexer, correct_tokens[i]);
             }
-        }
+            break;
 
         // Pokud je NUMBER
-        else if (correct_tokens[i].enum_type == NUMBER) {
-            // INTEGER
+        case NUMBER:
+           // INTEGER
             if (correct_tokens[i].cur == T_ILIT) {
-                if (correct_tokens[i].cur == lexer.cur && 
-                    correct_tokens[i].i_num == lexer.i_num) {
+                if (correct_tokens[i].cur != lexer.cur ||
+                    correct_tokens[i].i_num != lexer.i_num) {
 
-                    token = lex_next(&lexer);
-                    continue;
-                }
-                else {
                     test_flag = incorect_token_print(NUMBER, lexer, correct_tokens[i]);
                 }
             }
             // DOUBLE
             else if (correct_tokens[i].cur == T_DLIT) {
-                if (correct_tokens[i].cur == lexer.cur && 
-                    correct_tokens[i].d_num == lexer.d_num) {
+                if (correct_tokens[i].cur != lexer.cur || 
+                    correct_tokens[i].d_num != lexer.d_num) {
 
-                    token = lex_next(&lexer);
-                    continue;
-                }
-                else {
                     test_flag = incorect_token_print(NUMBER, lexer, correct_tokens[i]);
                 }
             }
-        }
+            break;
 
-        // Nekompletní vstupní pole (developer only)
-        else {
-            printf(C_RED("Incomplete correct input token [%d]\n"), 
-                         correct_tokens[i].cur);
+        default:
+        test_flag = incorect_token_print(correct_tokens[i].enum_type, 
+                                         lexer, correct_tokens[i]);
         }
 
         token = lex_next(&lexer);
@@ -167,7 +143,7 @@ void test_eval( bool test_flag ) {
     printf("\033[0m");
 }
 
-bool incorect_token_print ( EnumType enum_type, Lexer lexer, TokenData correct_tokens ) {
+bool incorect_token_print( EnumType enum_type, Lexer lexer, TokenData correct_tokens ) {
     if (enum_type == ENUM_VALUE) {
         printf(C_RED(
             "Expected token: .cur[%c]\n"

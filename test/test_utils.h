@@ -80,6 +80,6 @@ void test_eval( bool test_flag );
  * @param lexer 
  * @param correct_tokens Očekávané tokeny 
  */
-bool incorect_token_print ( EnumType enum_type, Lexer lexer, TokenData correct_tokens );
+bool incorect_token_print( EnumType enum_type, Lexer lexer, TokenData correct_tokens );
 
 #endif 

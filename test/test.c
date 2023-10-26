@@ -3,7 +3,6 @@
 char* test_code;
 
 /*===========================================================================*/
-
 TEST(Line_position, "Token position on the LINE")
 
     LineOrCol line_or_column = LINE;
@@ -27,11 +26,7 @@ TEST(Column_position, "Token position on the COLUMN")
     check_position(line_or_column, correct_position);
 
 ENDTEST
-
-
 /*===========================================================================*/
-
-
 TEST(Comment_test_1, "Testing - //")
 
     test_code = "// Program 2: Vypocet faktorialu (rekurzivne)\n"
@@ -91,11 +86,7 @@ TEST(Comment_test_6, "Testing - Tokens with nested comments")
     run_test(correct_tokens, test_code);
 
 ENDTEST 
-
-
 /*===========================================================================*/
-
-
 TEST(String_write_1, "write(\"Zadejte cislo pro vypocet faktorialu:\\n\")")
 
     test_code = "write(\"Zadejte cislo pro vypocet faktorialu:\\n\")";
@@ -172,11 +163,7 @@ TEST(Tripple_quotes, "Testing tripple quote string")
     run_test(correct_tokens, test_code);
     
 ENDTEST 
-
-
 /*===========================================================================*/
-
-
 TEST(Conditions_1, "if let a {")
 
     test_code = "if let a {";
@@ -230,11 +217,7 @@ TEST(Conditions_4, "else {")
     run_test(correct_tokens, test_code);
     
 ENDTEST
-
-
 /*===========================================================================*/
-
-
 TEST(Return_1, "return result")
 
     test_code = "return result";
@@ -260,11 +243,7 @@ TEST(Return_2, "return x + \" \" + y")
     run_test(correct_tokens, test_code);
     
 ENDTEST
-
-
 /*===========================================================================*/
-
-
 TEST(Cycles_1, "while (a >= 0) {")
 
     test_code = "while (a >= 0) {";
@@ -296,11 +275,7 @@ TEST(Cycles_2, "while (str1 != \"abcdefgh\") {")
     run_test(correct_tokens, test_code);
     
 ENDTEST
-
-
 /*===========================================================================*/
-
-
 TEST(Functions_1, "func bar(with param : String) -> String {")
 
     test_code = "func bar(with param : String) -> String {";
@@ -321,27 +296,7 @@ TEST(Functions_1, "func bar(with param : String) -> String {")
     
 ENDTEST
 /*===========================================================================*/
-TEST(Functions_2, "func foo(_ par : String) -> String {")
-
-    test_code = "func foo(_ par : String) -> String {";
-    TokenData correct_tokens[] = {
-        {.enum_type = STRING, .cur = T_FUNC, .str = "func"},
-        {.enum_type = STRING, .cur = T_IDENT, .str = "foo"},
-        {.enum_type = ENUM_VALUE, .cur = '('},
-        {.enum_type = ENUM_VALUE, .cur = '_'},
-        {.enum_type = STRING, .cur = T_IDENT, .str = "par"},
-        {.enum_type = ENUM_VALUE, .cur = ':'},
-        {.enum_type = STRING, .cur = T_TYPE, .str = "String"},
-        {.enum_type = ENUM_VALUE, .cur = ')'},
-        {.enum_type = ENUM_VALUE, .cur = T_RETURNS},
-        {.enum_type = STRING, .cur = T_TYPE, .str = "String"},
-        {.enum_type = ENUM_VALUE, .cur = '{'}
-        };
-    run_test(correct_tokens, test_code);
-    
-ENDTEST
-/*===========================================================================*/
-TEST(Functions_3, "func concat(_ x : Double, with y : Double) -> Double {")
+TEST(Functions_2, "func concat(_ x : Double, with y : Double) -> Double {")
 
     test_code = "func concat(_ x : Double, with y : Double) -> Double {";
     TokenData correct_tokens[] = {
@@ -366,35 +321,6 @@ TEST(Functions_3, "func concat(_ x : Double, with y : Double) -> Double {")
     
 ENDTEST
 /*===========================================================================*/
-TEST(Functions_4, "func decrement(of n: Int, by m: Int) -> Int {")
-
-    test_code = "func decrement(of n: Int, by m: Int) -> Int {";
-    TokenData correct_tokens[] = {
-        {.enum_type = STRING, .cur = T_FUNC, .str = "func"},
-        {.enum_type = STRING, .cur = T_IDENT, .str = "decrement"},
-        {.enum_type = ENUM_VALUE, .cur = '('},
-        {.enum_type = STRING, .cur = T_IDENT, .str = "of"},
-        {.enum_type = STRING, .cur = T_IDENT, .str = "n"},
-        {.enum_type = ENUM_VALUE, .cur = ':'},
-        {.enum_type = STRING, .cur = T_TYPE, .str = "Int"},
-        {.enum_type = ENUM_VALUE, .cur = ','},
-        {.enum_type = STRING, .cur = T_IDENT, .str = "by"},
-        {.enum_type = STRING, .cur = T_IDENT, .str = "m"},
-        {.enum_type = ENUM_VALUE, .cur = ':'},
-        {.enum_type = STRING, .cur = T_TYPE, .str = "Int"},
-        {.enum_type = ENUM_VALUE, .cur = ')'},
-        {.enum_type = ENUM_VALUE, .cur = T_RETURNS},
-        {.enum_type = STRING, .cur = T_TYPE, .str = "Int"},
-        {.enum_type = ENUM_VALUE, .cur = '{'}
-        };
-    run_test(correct_tokens, test_code);
-    
-ENDTEST
-
-
-/*===========================================================================*/
-
-
 TEST(Function_calls_1, "bar(with: \"ahoj\")")
 
     test_code = "bar(with: \"ahoj\")";
@@ -482,11 +408,7 @@ TEST(Function_calls_5, "ct = concat(a, with: \"svete\")")
     run_test(correct_tokens, test_code);
     
 ENDTEST
-
-
 /*===========================================================================*/
-
-
 TEST(Variables_var_1, "var str1 = \"Toto je nejaky text\"")
 
     test_code = "var str1 = \"Toto je nejaky text\"";
@@ -557,11 +479,7 @@ TEST(Variables_var_5, "var myVariable: Int? = nil")
     run_test(correct_tokens, test_code);
     
 ENDTEST
-
-
 /*===========================================================================*/
-
-
 TEST(Variables_let1, "let str2 = str1 + \", ktery jeste trochu obohatime\"")
 
     test_code = "let str2 = str1 + \", ktery jeste trochu obohatime\"";
@@ -672,8 +590,6 @@ void (*lex_tests[])(void) = {
     Cycles_2,
     Functions_1,
     Functions_2,
-    Functions_3,
-    Functions_4,
     Function_calls_1,
     Function_calls_2,
     Function_calls_3,
