@@ -77,18 +77,18 @@ typedef struct {
 
 typedef struct {
     struct Expressions* arg_value;
-    //struct ArgumentExpr* next;
+    struct Expression_list* next;
 } ArgumentExpr;
 
 typedef struct {
     struct Expressions* param_name;
     struct Expressions* param_type;
-    //struct ParameterExpr* next;
+    struct Expression_list* next;
 } ParameterExpr;
 
 typedef struct {
     struct Expressions* body;
-    struct AbstractSyntaxTree* next;
+    struct Expression_list* next;
 } BodyExpr;
 
 typedef enum {
@@ -115,16 +115,16 @@ typedef struct Expressions {
         char* variable_expr;                
         OperatorExpr operator_expr;        
         AssignExpr assign_expr;            
-        FunctionCallExpr* func_call_expr;   
-        FunctionDefExpr* func_def_expr;     
-        ReturnExpr* return_expr;            
-        ConditionsExpr* conditions_expr;   
-        WhileExpr* while_expr;              
-        VariableDefExpr* var_def_expr;      
-        VariableDecExpr* var_dec_expr;      
-        ArgumentExpr* argument_expr;        
-        ParameterExpr* parameter_expr;     
-        BodyExpr* body_expr;               
+        FunctionCallExpr func_call_expr;   
+        FunctionDefExpr func_def_expr;     
+        ReturnExpr return_expr;            
+        ConditionsExpr conditions_expr;   
+        WhileExpr while_expr;              
+        VariableDefExpr var_def_expr;      
+        VariableDecExpr var_dec_expr;      
+        ArgumentExpr argument_expr;        
+        ParameterExpr parameter_expr;     
+        BodyExpr body_expr;               
         VariableValue variable_value; 
     } ExpressionUnion;
 } AbstractSyntaxTree;   
@@ -174,8 +174,8 @@ AbstractSyntaxTree* make_variable_decExpr(char* var_dec_name_expr, AbstractSynta
 
 AbstractSyntaxTree* make_ArgumentExpr(AbstractSyntaxTree* arg_name);
 
-AbstractSyntaxTree* make_ParameterExpr(AbstractSyntaxTree* param_name, AbstractSyntaxTree* param_type);
+AbstractSyntaxTree* make_ParameterExpr(AbstractSyntaxTree* param_name, AbstractSyntaxTree* param_type, ASTList* next);
 
-AbstractSyntaxTree* make_BodyExpr(AbstractSyntaxTree* body, AbstractSyntaxTree* next);
+AbstractSyntaxTree* make_BodyExpr(AbstractSyntaxTree* body, ASTList* next);
 
 #endif
