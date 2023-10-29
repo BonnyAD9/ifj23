@@ -25,51 +25,55 @@ void free_ast(AbstractSyntaxTree* node) {
             break;
 
         case FUNCTION_CALL_EXPR:
-            free(node->ExpressionUnion.func_call_expr->func_call_name_expr);
-            free_ast_list(node->ExpressionUnion.func_call_expr->func_arguments);
+            free(node->ExpressionUnion.func_call_expr.func_call_name_expr);
+            free_ast_list(node->ExpressionUnion.func_call_expr.func_arguments);
             break;
 
         case FUNCTION_DEF_EXPR:
-            free(node->ExpressionUnion.func_def_expr->func_def_name_expr);
-            free_ast_list(node->ExpressionUnion.func_def_expr->func_parameters);
-            free_ast(node->ExpressionUnion.func_def_expr->func_body);
+            free(node->ExpressionUnion.func_def_expr.func_def_name_expr);
+            free_ast_list(node->ExpressionUnion.func_def_expr.func_parameters);
+            free_ast(node->ExpressionUnion.func_def_expr.func_body);
             break;
 
         case RETURN_EXPR:
-            free_ast(node->ExpressionUnion.return_expr->return_expr);
+            free_ast(node->ExpressionUnion.return_expr.return_expr);
             break;
 
         case CONDITIONS_EXPR:
-            free_ast(node->ExpressionUnion.conditions_expr->if_condition);
-            free_ast(node->ExpressionUnion.conditions_expr->if_body);
-            free_ast(node->ExpressionUnion.conditions_expr->else_body);
+        
+            free_ast(node->ExpressionUnion.conditions_expr.if_condition);
+            free_ast(node->ExpressionUnion.conditions_expr.if_body);
+            free_ast(node->ExpressionUnion.conditions_expr.else_body);
             break;
 
         case WHILE_EXPR:
-            free_ast(node->ExpressionUnion.while_expr->while_condition);
-            free_ast(node->ExpressionUnion.while_expr->while_body);
+            free_ast(node->ExpressionUnion.while_expr.while_condition);
+            free_ast(node->ExpressionUnion.while_expr.while_body);
             break;
 
         case VARIABLE_DEF_EXPR:
-            free(node->ExpressionUnion.var_def_expr->var_def_name_expr);
-            free_ast(node->ExpressionUnion.var_def_expr->variable_type);
-            free_ast(node->ExpressionUnion.var_def_expr->variable_value);
+            free(node->ExpressionUnion.var_def_expr.var_def_name_expr);
+            free_ast(node->ExpressionUnion.var_def_expr.variable_type);
+            free_ast(node->ExpressionUnion.var_def_expr.variable_value);
             break;
 
         case VARIABLE_DEC_EXPR:
-            free(node->ExpressionUnion.var_dec_expr->var_dec_name_expr);
-            free_ast(node->ExpressionUnion.var_dec_expr->variable_type);
-            free_ast(node->ExpressionUnion.var_dec_expr->variable_value);
+            free(node->ExpressionUnion.var_dec_expr.var_dec_name_expr);
+            free_ast(node->ExpressionUnion.var_dec_expr.variable_type);
+            free_ast(node->ExpressionUnion.var_dec_expr.variable_value);
             break;
 
         case FUNCTION_PARAM_EXPR:
-            free_ast(node->ExpressionUnion.parameter_expr->param_name);
-            free_ast(node->ExpressionUnion.parameter_expr->param_type);
+            free_ast(node->ExpressionUnion.parameter_expr.param_name);
+            free_ast(node->ExpressionUnion.parameter_expr.param_type);
             break;
 
         case FUNCTION_ARG_EXPR:
-            free_ast(node->ExpressionUnion.argument_expr->arg_value);
+            free_ast(node->ExpressionUnion.argument_expr.arg_value);
             break;
+
+        case BODY_EXPR:
+            free_ast(node->ExpressionUnion.body_expr.body);
 
         default:
             break;
@@ -111,7 +115,7 @@ void preorder_traversal(AbstractSyntaxTree* node) {
 
         case RETURN_EXPR:
             printf("Return expression\n");
-            preorder_traversal(node->ExpressionUnion.return_expr->return_expr);
+            preorder_traversal(node->ExpressionUnion.return_expr.return_expr);
             break;
 
         case ASSIGN_EXPR:
@@ -123,19 +127,19 @@ void preorder_traversal(AbstractSyntaxTree* node) {
         case WHILE_EXPR:
             printf("While expression\n");
             printf("While condition\n");
-            preorder_traversal(node->ExpressionUnion.while_expr->while_condition);
+            preorder_traversal(node->ExpressionUnion.while_expr.while_condition);
             printf("While body\n");
-            preorder_traversal(node->ExpressionUnion.while_expr->while_body);
+            preorder_traversal(node->ExpressionUnion.while_expr.while_body);
             break;
 
         case CONDITIONS_EXPR:
             printf("Condition expression\n");
             printf("If condition\n");
-            preorder_traversal(node->ExpressionUnion.conditions_expr->if_condition);
+            preorder_traversal(node->ExpressionUnion.conditions_expr.if_condition);
             printf("If body\n");
-            preorder_traversal(node->ExpressionUnion.conditions_expr->if_body);
+            preorder_traversal(node->ExpressionUnion.conditions_expr.if_body);
             printf("Else body\n");
-            preorder_traversal(node->ExpressionUnion.conditions_expr->else_body);
+            preorder_traversal(node->ExpressionUnion.conditions_expr.else_body);
             break;
 
         default:
@@ -267,7 +271,7 @@ AbstractSyntaxTree* make_returnExpr(AbstractSyntaxTree* return_value) {
     node_fail(node);
 
     node->expression_type = RETURN_EXPR;
-    node->ExpressionUnion.return_expr->return_expr = return_value;
+    node->ExpressionUnion.return_expr.return_expr = return_value;
     i++;
     return node;
 }
@@ -291,8 +295,8 @@ AbstractSyntaxTree* make_whileExpr(AbstractSyntaxTree* while_condition, Abstract
     node_fail(node);
 
     node->expression_type = WHILE_EXPR;
-    node->ExpressionUnion.while_expr->while_condition = while_condition;
-    node->ExpressionUnion.while_expr->while_body = while_body;
+    node->ExpressionUnion.while_expr.while_condition = while_condition;
+    node->ExpressionUnion.while_expr.while_body = while_body;
     i++;
     return node;
 }
@@ -303,9 +307,9 @@ AbstractSyntaxTree* make_conditionExpr(AbstractSyntaxTree* if_condition, Abstrac
     node_fail(node);
     
     node->expression_type = CONDITIONS_EXPR;
-    node->ExpressionUnion.conditions_expr->if_condition = if_condition;
-    node->ExpressionUnion.conditions_expr->if_body = if_body;
-    node->ExpressionUnion.conditions_expr->else_body = else_body;
+    node->ExpressionUnion.conditions_expr.if_condition = if_condition;
+    node->ExpressionUnion.conditions_expr.if_body = if_body;
+    node->ExpressionUnion.conditions_expr.else_body = else_body;
     i++;
     return node;
 }
@@ -316,8 +320,8 @@ AbstractSyntaxTree* make_function_callExpr(char* func_call_name_expr, ASTList* f
     node_fail(node);
 
     node->expression_type = FUNCTION_CALL_EXPR;
-    node->ExpressionUnion.func_call_expr->func_call_name_expr = func_call_name_expr;
-    node->ExpressionUnion.func_call_expr->func_arguments = func_arguments;
+    node->ExpressionUnion.func_call_expr.func_call_name_expr = func_call_name_expr;
+    node->ExpressionUnion.func_call_expr.func_arguments = func_arguments;
     i++;
     return node;
 }
@@ -328,9 +332,9 @@ AbstractSyntaxTree* make_function_defExpr(char* func_def_name_expr, ASTList* fun
     node_fail(node);
 
     node->expression_type = FUNCTION_DEF_EXPR;
-    node->ExpressionUnion.func_def_expr->func_def_name_expr = func_def_name_expr;
-    node->ExpressionUnion.func_def_expr->func_parameters = func_parameters;
-    node->ExpressionUnion.func_def_expr->func_body = func_body;
+    node->ExpressionUnion.func_def_expr.func_def_name_expr = func_def_name_expr;
+    node->ExpressionUnion.func_def_expr.func_parameters = func_parameters;
+    node->ExpressionUnion.func_def_expr.func_body = func_body;
     i++;
     return node;
 }
@@ -341,9 +345,9 @@ AbstractSyntaxTree* make_variable_defExpr(char* var_def_name_expr, AbstractSynta
     node_fail(node);
 
     node->expression_type = VARIABLE_DEF_EXPR;
-    node->ExpressionUnion.var_def_expr->var_def_name_expr = var_def_name_expr;
-    node->ExpressionUnion.var_def_expr->variable_type = varible_type;
-    node->ExpressionUnion.var_def_expr->variable_value = variable_value;
+    node->ExpressionUnion.var_def_expr.var_def_name_expr = var_def_name_expr;
+    node->ExpressionUnion.var_def_expr.variable_type = varible_type;
+    node->ExpressionUnion.var_def_expr.variable_value = variable_value;
     i++;
     return node;
 }
@@ -354,9 +358,9 @@ AbstractSyntaxTree* make_variable_decExpr(char* var_dec_name_expr, AbstractSynta
     node_fail(node);
 
     node->expression_type = VARIABLE_DEC_EXPR;
-    node->ExpressionUnion.var_dec_expr->var_dec_name_expr = var_dec_name_expr;
-    node->ExpressionUnion.var_dec_expr->variable_type = varible_type;
-    node->ExpressionUnion.var_dec_expr->variable_value = variable_value;
+    node->ExpressionUnion.var_dec_expr.var_dec_name_expr = var_dec_name_expr;
+    node->ExpressionUnion.var_dec_expr.variable_type = varible_type;
+    node->ExpressionUnion.var_dec_expr.variable_value = variable_value;
     i++;
     return node;
 }
@@ -367,34 +371,35 @@ AbstractSyntaxTree* make_ArgumentExpr(AbstractSyntaxTree* arg_name) {
     node_fail(node);
 
     node->expression_type = FUNCTION_ARG_EXPR;
-    node->ExpressionUnion.argument_expr->arg_value = arg_name;
+    node->ExpressionUnion.argument_expr.arg_value = arg_name;
     i++;
     return node;
 }
 
-AbstractSyntaxTree* make_ParameterExpr(AbstractSyntaxTree* param_name, AbstractSyntaxTree* param_type) {
+AbstractSyntaxTree* make_ParameterExpr(AbstractSyntaxTree* param_name, AbstractSyntaxTree* param_type, ASTList* next) {
     AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
 
     node_fail(node);
 
     node->expression_type = FUNCTION_PARAM_EXPR;
-    node->ExpressionUnion.parameter_expr->param_name = param_name;
-    node->ExpressionUnion.parameter_expr->param_type = param_type;
+    node->ExpressionUnion.parameter_expr.param_name = param_name;
+    node->ExpressionUnion.parameter_expr.param_type = param_type;
     i++;
     return node;
 }
 
-AbstractSyntaxTree* make_BodyExpr(AbstractSyntaxTree* body, AbstractSyntaxTree* next) {
+AbstractSyntaxTree* make_BodyExpr(AbstractSyntaxTree* body, ASTList* next) {
     AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
     node_fail(node);
 
     node->expression_type = BODY_EXPR;
-    node->ExpressionUnion.body_expr = (BodyExpr*)malloc(sizeof(BodyExpr));
-    node->ExpressionUnion.body_expr->body = body;
-    node->ExpressionUnion.body_expr->next = (struct AbstractSyntaxTree*)next;
+    node->ExpressionUnion.body_expr.body = body;
+    node->ExpressionUnion.body_expr.next = next;
 
     return node;
 }
+
+
 
 
 
@@ -410,16 +415,12 @@ int main(void) {
     //return 0
     //}  
 
-    AbstractSyntaxTree* node = make_assignExpr("=", make_variableExpr("b"), make_binaryExpr("+", make_variableExpr("b"), make_integerExpr(1)));
 
-    /*AbstractSyntaxTree* if_condition = make_binaryExpr("<", make_variableExpr("a"), make_integerExpr(2));
+   /* AbstractSyntaxTree* if_condition = make_binaryExpr("<", make_variableExpr("a"), make_integerExpr(2));
 
     AbstractSyntaxTree* if_body = make_BodyExpr(
         make_assignExpr("=", make_variableExpr("b"), make_binaryExpr("+", make_variableExpr("b"), make_integerExpr(1))),
-        make_BodyExpr(
-            make_assignExpr("=", make_variableExpr("a"), make_binaryExpr("+", make_variableExpr("a"), make_integerExpr(1))),
             NULL
-    )
     );
 
     AbstractSyntaxTree* else_body = make_BodyExpr(
@@ -427,12 +428,20 @@ int main(void) {
         NULL
     );
 
-    AbstractSyntaxTree* root = make_conditionExpr(if_condition, if_body, else_body); */
 
+    AbstractSyntaxTree* root = make_conditionExpr(if_condition, if_body, else_body);*/
+
+/* AbstractSyntaxTree* param1 = make_ParameterExpr(make_variableExpr("ahoj"), make_integerType(make_integerExpr(1)), NULL);
+
+AbstractSyntaxTree* param2 = make_ParameterExpr(make_variableExpr("ahoj"), make_integerType(make_integerExpr(1)), param1);
+
+ASTList* param = (ASTList*) param2;
+
+AbstractSyntaxTree* root = make_function_defExpr("funkce", param2, make_binaryExpr("<", make_variableExpr("a"), make_integerExpr(2))); */
 
 
     printf("Number of NODES: %d\n", i);
     printf("\nPOSTORDER TRAVERSAL:\n");
-    preorder_traversal(node);
-    free_ast(node);
+   // preorder_traversal(root);
+   // free_ast(root);
 }
