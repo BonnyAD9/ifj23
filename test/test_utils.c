@@ -41,13 +41,13 @@ int check_position( LineOrCol line_or_column, int correct_position[] ) {
         test_flag = false;
         printf(C_RED(
                     "Expected %s: %d\n"
-                    "Acquired %s: %zu\n\n"), 
+                    "Acquired %s: %zu\n\n"),
                     (line_or_column == LINE) ? "line" : "column",
                     correct_position[i],
                     (line_or_column == LINE) ? "line" : "column",
                     (line_or_column == LINE) ? lexer.token_start.line : lexer.token_start.column
                     );
-   
+
         token = lex_next(&lexer);
     }
 
@@ -75,11 +75,11 @@ int check( TokenData correct_tokens[] ) {
     // Perform until the input .swift file is empty
     for (int i = 0; token != T_ERR && token != EOF; i++) {
 
-        switch(correct_tokens[i].enum_type) { 
+        switch(correct_tokens[i].enum_type) {
         // If it is an ENUM_TYPE:
         case ENUM_VALUE:
             if (correct_tokens[i].cur != lexer.cur) {
-                test_flag = incorect_token_print(ENUM_VALUE, lexer, correct_tokens[i]);
+                test_flag = incorrect_token_print(ENUM_VALUE, lexer, correct_tokens[i]);
             }
             break;
 
@@ -88,7 +88,7 @@ int check( TokenData correct_tokens[] ) {
             if (correct_tokens[i].cur != lexer.cur ||
                 strcmp(correct_tokens[i].str, lexer.buffer.str) != 0) {
 
-                test_flag = incorect_token_print(STRING, lexer, correct_tokens[i]);
+                test_flag = incorrect_token_print(STRING, lexer, correct_tokens[i]);
             }
             break;
 
@@ -99,21 +99,21 @@ int check( TokenData correct_tokens[] ) {
                 if (correct_tokens[i].cur != lexer.cur ||
                     correct_tokens[i].i_num != lexer.i_num) {
 
-                    test_flag = incorect_token_print(NUMBER, lexer, correct_tokens[i]);
+                    test_flag = incorrect_token_print(NUMBER, lexer, correct_tokens[i]);
                 }
             }
             // If it is a DOUBLE
             else if (correct_tokens[i].cur == T_DLIT) {
-                if (correct_tokens[i].cur != lexer.cur || 
+                if (correct_tokens[i].cur != lexer.cur ||
                     correct_tokens[i].d_num != lexer.d_num) {
 
-                    test_flag = incorect_token_print(NUMBER, lexer, correct_tokens[i]);
+                    test_flag = incorrect_token_print(NUMBER, lexer, correct_tokens[i]);
                 }
             }
             break;
 
         default:
-        test_flag = incorect_token_print(correct_tokens[i].enum_type, 
+        test_flag = incorrect_token_print(correct_tokens[i].enum_type,
                                          lexer, correct_tokens[i]);
         }
 
@@ -142,7 +142,7 @@ void test_eval( bool test_flag ) {
     printf("\033[0m");
 }
 
-bool incorect_token_print( EnumType enum_type, Lexer lexer, TokenData correct_tokens ) {
+bool incorrect_token_print( EnumType enum_type, Lexer lexer, TokenData correct_tokens ) {
     if (enum_type == ENUM_VALUE) {
         printf(C_RED(
             "Expected token: .cur[%c]\n"
