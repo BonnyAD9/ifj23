@@ -1,447 +1,268 @@
 #include "ast.h"
 
-unsigned int i = 0;
-
-void free_ast_list(ASTList* list) {
-    if (list == NULL) {
+void free_ast_vec(Vec* vec) {
+    if (!vec)
         return;
-    }
-
-    //free_ast(list->node);
-    free_ast_list(list->next);
-    free(list);
+    VEC_FOR_EACH(vec, AbstractSyntaxTree*, item)
+        free_ast(*(item.v));
+    vec_free(vec);
 }
 
 void free_ast(AbstractSyntaxTree* node) {
-    if (node == NULL) {
+    if (!node)
         return;
-    }
-
+    // String type variables will be delivered to tree by Lexer and also freed, not here
     switch (node->expression_type) {
         case BINARY_OP_EXPR:
-        case ASSIGN_EXPR:
             free_ast(node->ExpressionUnion.operator_expr.left);
             free_ast(node->ExpressionUnion.operator_expr.right);
             break;
-
         case FUNCTION_CALL_EXPR:
-            free(node->ExpressionUnion.func_call_expr.func_call_name_expr);
-            free_ast_list(node->ExpressionUnion.func_call_expr.func_arguments);
+            free_ast_vec(node->ExpressionUnion.func_call_expr.func_arguments);
             break;
-
         case FUNCTION_DEF_EXPR:
-            free(node->ExpressionUnion.func_def_expr.func_def_name_expr);
-            free_ast_list(node->ExpressionUnion.func_def_expr.func_parameters);
-            free_ast(node->ExpressionUnion.func_def_expr.func_body);
+            free_ast_vec(node->ExpressionUnion.func_def_expr.func_parameters);
+            free_ast_vec(node->ExpressionUnion.func_def_expr.func_body);
             break;
-
         case RETURN_EXPR:
             free_ast(node->ExpressionUnion.return_expr.return_expr);
             break;
-
         case CONDITIONS_EXPR:
-        
             free_ast(node->ExpressionUnion.conditions_expr.if_condition);
-            free_ast(node->ExpressionUnion.conditions_expr.if_body);
-            free_ast(node->ExpressionUnion.conditions_expr.else_body);
+            free_ast_vec(node->ExpressionUnion.conditions_expr.if_body);
+            free_ast_vec(node->ExpressionUnion.conditions_expr.else_body);
             break;
-
         case WHILE_EXPR:
             free_ast(node->ExpressionUnion.while_expr.while_condition);
-            free_ast(node->ExpressionUnion.while_expr.while_body);
+            free_ast_vec(node->ExpressionUnion.while_expr.while_body);
             break;
-
-        case VARIABLE_DEF_EXPR:
-            free(node->ExpressionUnion.var_def_expr.var_def_name_expr);
-            free_ast(node->ExpressionUnion.var_def_expr.variable_type);
-            free_ast(node->ExpressionUnion.var_def_expr.variable_value);
-            break;
-
         case VARIABLE_DEC_EXPR:
-            free(node->ExpressionUnion.var_dec_expr.var_dec_name_expr);
-            free_ast(node->ExpressionUnion.var_dec_expr.variable_type);
-            free_ast(node->ExpressionUnion.var_dec_expr.variable_value);
+            free_ast(node->ExpressionUnion.var_expr.VarUnion.right_part);
             break;
-
-        case FUNCTION_PARAM_EXPR:
-            free_ast(node->ExpressionUnion.parameter_expr.param_name);
-            free_ast(node->ExpressionUnion.parameter_expr.param_type);
-            break;
-
-        case FUNCTION_ARG_EXPR:
-            free_ast(node->ExpressionUnion.argument_expr.arg_value);
-            break;
-
-        case BODY_EXPR:
-            free_ast(node->ExpressionUnion.body_expr.body);
-
         default:
             break;
     }
-
     free(node);
 }
 
 void preorder_traversal(AbstractSyntaxTree* node) {
-    if (node == NULL) {
+    if (!node)
         return;
-    }
 
     switch (node->expression_type) {
-        case INTEGER_TYPE_EXPR:
-            printf("Integer Type\n");
-            preorder_traversal(node->ExpressionUnion.integer_type);
-            break;
-
-        case DOUBLE_TYPE_EXPR:
-            printf("Double Type\n");
-            preorder_traversal(node->ExpressionUnion.double_type);
-            break;
-
-        case STRING_TYPE_EXPR:
-            printf("String Type\n");
-            preorder_traversal(node->ExpressionUnion.string_type);
-            break;
-
-        case VARIABLE_EXPR:
-            printf("Variable Expression: %s\n", node->ExpressionUnion.variable_expr);
-            break;
-
         case BINARY_OP_EXPR:
-            printf("Binary Operation: %s\n", node->ExpressionUnion.operator_expr.operator_expr);
+            printf("Binary Operation: %s\n", node->ExpressionUnion.operator_expr.operator_expr.str);
             preorder_traversal(node->ExpressionUnion.operator_expr.left);
             preorder_traversal(node->ExpressionUnion.operator_expr.right);
             break;
-
+        case FUNCTION_CALL_EXPR:
+            printf("Function call - function name: %s\n", node->ExpressionUnion.func_call_expr.func_name.str);
+            printf("Function arguments: \n");
+            VEC_FOR_EACH(node->ExpressionUnion.func_call_expr.func_arguments, AbstractSyntaxTree*, item)
+                preorder_traversal(*(item.v));
+            break;
+        case FUNCTION_DEF_EXPR:
+            printf("Function definition - function name: %s\n", node->ExpressionUnion.func_def_expr.func_name.str);
+            printf("Function params: \n");
+            VEC_FOR_EACH(node->ExpressionUnion.func_def_expr.func_parameters, AbstractSyntaxTree*, item)
+                preorder_traversal(*(item.v));
+            printf("Function body: \n");
+            VEC_FOR_EACH(node->ExpressionUnion.func_def_expr.func_body, AbstractSyntaxTree*, item)
+                preorder_traversal(*(item.v));
+            break;
         case RETURN_EXPR:
             printf("Return expression\n");
             preorder_traversal(node->ExpressionUnion.return_expr.return_expr);
             break;
-
-        case ASSIGN_EXPR:
-            printf("Assing expression: %s\n", node->ExpressionUnion.assign_expr.assign_expr);
-            preorder_traversal(node->ExpressionUnion.assign_expr.left);
-            preorder_traversal(node->ExpressionUnion.assign_expr.right);
+        case CONDITIONS_EXPR:
+            printf("Condition expression\n");
+            printf("If condition: \n");
+            preorder_traversal(node->ExpressionUnion.conditions_expr.if_condition);
+            printf("If body: \n");
+            VEC_FOR_EACH(node->ExpressionUnion.conditions_expr.if_body, AbstractSyntaxTree*, item)
+                preorder_traversal(*(item.v));
+            printf("Else body: \n");
+            VEC_FOR_EACH(node->ExpressionUnion.conditions_expr.else_body, AbstractSyntaxTree*, item)
+                preorder_traversal(*(item.v));
             break;
-        
         case WHILE_EXPR:
             printf("While expression\n");
             printf("While condition\n");
             preorder_traversal(node->ExpressionUnion.while_expr.while_condition);
             printf("While body\n");
-            preorder_traversal(node->ExpressionUnion.while_expr.while_body);
+            VEC_FOR_EACH(node->ExpressionUnion.while_expr.while_body, AbstractSyntaxTree*, item)
+                preorder_traversal(*(item.v));
             break;
-
-        case CONDITIONS_EXPR:
-            printf("Condition expression\n");
-            printf("If condition\n");
-            preorder_traversal(node->ExpressionUnion.conditions_expr.if_condition);
-            printf("If body\n");
-            preorder_traversal(node->ExpressionUnion.conditions_expr.if_body);
-            printf("Else body\n");
-            preorder_traversal(node->ExpressionUnion.conditions_expr.else_body);
+        case VARIABLE_DEC_EXPR:
+            printf("Variable expression - name: %s\n", node->ExpressionUnion.var_expr.name.str);
+            preorder_traversal(node->ExpressionUnion.var_expr.VarUnion.right_part);
             break;
-
+        case FUNCTION_PARAM_EXPR:
+            printf("Param expression - name: %s\n", node->ExpressionUnion.parameter_expr.param_name.str);
+            printf("Param expression - ident: %s\n", node->ExpressionUnion.parameter_expr.param_ident.str);
+            break;
+        case VARIABLE_VALUE:
+            if (node->ExpressionUnion.variable_value.type == INT_VALUE)
+                printf("Integer Expression: %d\n", node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.int_value);
+            else if (node->ExpressionUnion.variable_value.type == DOUBLE_VALUE)
+                printf("Double Expression: %f\n", node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.double_value);
+            else
+                printf("String Expression: %s\n", node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.string_value.str);
+            break;
         default:
-            switch (node->ExpressionUnion.variable_value.type)
-            {
-            case INT_VALUE:
-                printf("Integer Expression: %d\n", node->ExpressionUnion.variable_value.value.int_value);
-                break;
-                
-            case DOUBLE_VALUE:
-                printf("Double Expression: %f\n", node->ExpressionUnion.variable_value.value.double_value);
-                break;
-
-            case STRING_VALUE:
-                printf("String Expression: %s\n", node->ExpressionUnion.variable_value.value.string_value);
-                break;   
-
-            default:
-                break;
-            }
             break;
     }
 }
 
-// není kompletní - neuvolní celý strom
-void node_fail(AbstractSyntaxTree* node) {
-    if (node == NULL) {
-        EPRINTF("Malloc fail\n");
-        free_ast(node); // the functionality is quite weird, because when malloc fails to allocate 
-                        // memory for your tree, what this function should free with pointer pointing to NULL address?
-        exit(EXIT_FAILURE);
-    }
-}
+/*************************************************************************************************************/
+// "left operator_expr[<, >, ...] right"
 
-AbstractSyntaxTree* make_binaryExpr(char* operator_expr, AbstractSyntaxTree* left, AbstractSyntaxTree* right) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-    node_fail(node);
+AbstractSyntaxTree* make_binaryExpr(String operator_expr, AbstractSyntaxTree* left, AbstractSyntaxTree* right) {
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
 
     node->expression_type = BINARY_OP_EXPR;
     node->ExpressionUnion.operator_expr.operator_expr = operator_expr;
     node->ExpressionUnion.operator_expr.left = left;
     node->ExpressionUnion.operator_expr.right = right;
-    i++;
+
     return node;
 }
 
-AbstractSyntaxTree* make_variableExpr(char* variable_name) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-    node_fail(node);
-
-    node->expression_type = VARIABLE_EXPR;
-    node->ExpressionUnion.variable_expr = variable_name;
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_integerExpr(int value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
-    node->expression_type = VARIABLE_VALUE;
-    node->ExpressionUnion.variable_value.type = INT_VALUE;
-    node->ExpressionUnion.variable_value.value.int_value = value;
-
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_integerType(AbstractSyntaxTree* value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
-
-    node->expression_type = INTEGER_TYPE_EXPR;
-    node->ExpressionUnion.integer_type = value;
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_doubleExpr(double value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
-
-    node->expression_type = VARIABLE_VALUE;
-    node->ExpressionUnion.variable_value.type = DOUBLE_VALUE;
-    node->ExpressionUnion.variable_value.value.double_value = value;
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_doubleType(AbstractSyntaxTree* value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
-
-    node->expression_type = DOUBLE_TYPE_EXPR;
-    node->ExpressionUnion.double_type = value;
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_stringExpr(char* value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
-
-    node->expression_type = VARIABLE_VALUE;
-    node->ExpressionUnion.variable_value.type = STRING_VALUE;
-    node->ExpressionUnion.variable_value.value.string_value = value;
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_stringType(AbstractSyntaxTree* value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
-
-    node->expression_type = STRING_TYPE_EXPR;
-    node->ExpressionUnion.string_type = value;
-    i++;
-    return node;
-}
+/*************************************************************************************************************/
+// "return return_value"
 
 AbstractSyntaxTree* make_returnExpr(AbstractSyntaxTree* return_value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
 
     node->expression_type = RETURN_EXPR;
     node->ExpressionUnion.return_expr.return_expr = return_value;
-    i++;
+
     return node;
 }
 
-AbstractSyntaxTree* make_assignExpr(char* assign_expr, AbstractSyntaxTree* left, AbstractSyntaxTree* right) { // Potřebujeme?
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
+/*************************************************************************************************************/
+// "while (condition) { while_body }"
 
-    node_fail(node);
-
-    node->expression_type = ASSIGN_EXPR;
-    node->ExpressionUnion.assign_expr.assign_expr = assign_expr;
-    node->ExpressionUnion.assign_expr.left = left;
-    node->ExpressionUnion.assign_expr.right = right;
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_whileExpr(AbstractSyntaxTree* while_condition, AbstractSyntaxTree* while_body) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
+AbstractSyntaxTree* make_whileExpr(AbstractSyntaxTree* while_condition, Vec* while_body) {
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
 
     node->expression_type = WHILE_EXPR;
     node->ExpressionUnion.while_expr.while_condition = while_condition;
     node->ExpressionUnion.while_expr.while_body = while_body;
-    i++;
+
     return node;
 }
 
-AbstractSyntaxTree* make_conditionExpr(AbstractSyntaxTree* if_condition, AbstractSyntaxTree* if_body, AbstractSyntaxTree* else_body) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*) malloc(sizeof(AbstractSyntaxTree));
+/*************************************************************************************************************/
+// "if (condition) { if_body } else { else _body }"
 
-    node_fail(node);
-    
+AbstractSyntaxTree* make_conditionExpr(AbstractSyntaxTree* if_condition, Vec* if_body, Vec* else_body) {
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
+
     node->expression_type = CONDITIONS_EXPR;
     node->ExpressionUnion.conditions_expr.if_condition = if_condition;
     node->ExpressionUnion.conditions_expr.if_body = if_body;
     node->ExpressionUnion.conditions_expr.else_body = else_body;
-    i++;
+
     return node;
 }
 
-AbstractSyntaxTree* make_function_callExpr(char* func_call_name_expr, ASTList* func_arguments) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
+/*************************************************************************************************************/
+// "... func_name(params)"
 
-    node_fail(node);
+AbstractSyntaxTree* make_function_callExpr(String func_name, Vec* func_arguments) {
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
 
     node->expression_type = FUNCTION_CALL_EXPR;
-    node->ExpressionUnion.func_call_expr.func_call_name_expr = func_call_name_expr;
+    node->ExpressionUnion.func_call_expr.func_name = func_name;
     node->ExpressionUnion.func_call_expr.func_arguments = func_arguments;
-    i++;
+
     return node;
 }
 
-AbstractSyntaxTree* make_function_defExpr(char* func_def_name_expr, ASTList* func_parameters, AbstractSyntaxTree* func_body) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
+/*************************************************************************************************************/
+// "... pom(params) { func_body }"
 
-    node_fail(node);
+AbstractSyntaxTree* make_function_defExpr(String func_name, Vec* func_parameters, Vec* func_body, enum ValueType ret_val) {
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
 
     node->expression_type = FUNCTION_DEF_EXPR;
-    node->ExpressionUnion.func_def_expr.func_def_name_expr = func_def_name_expr;
+    node->ExpressionUnion.func_def_expr.func_name = func_name;
     node->ExpressionUnion.func_def_expr.func_parameters = func_parameters;
     node->ExpressionUnion.func_def_expr.func_body = func_body;
-    i++;
+    node->ExpressionUnion.func_def_expr.ret_val = ret_val;
+
     return node;
 }
 
-AbstractSyntaxTree* make_variable_defExpr(char* var_def_name_expr, AbstractSyntaxTree* varible_type, AbstractSyntaxTree* variable_value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
+/*************************************************************************************************************/
+// "... pom : String = right_part"
 
-    node_fail(node);
-
-    node->expression_type = VARIABLE_DEF_EXPR;
-    node->ExpressionUnion.var_def_expr.var_def_name_expr = var_def_name_expr;
-    node->ExpressionUnion.var_def_expr.variable_type = varible_type;
-    node->ExpressionUnion.var_def_expr.variable_value = variable_value;
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_variable_decExpr(char* var_dec_name_expr, AbstractSyntaxTree* varible_type, AbstractSyntaxTree* variable_value) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
-
-    node_fail(node);
+AbstractSyntaxTree* make_variable_Expr(String var_name, enum ValueType type, AbstractSyntaxTree* right_part) {
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
 
     node->expression_type = VARIABLE_DEC_EXPR;
-    node->ExpressionUnion.var_dec_expr.var_dec_name_expr = var_dec_name_expr;
-    node->ExpressionUnion.var_dec_expr.variable_type = varible_type;
-    node->ExpressionUnion.var_dec_expr.variable_value = variable_value;
-    i++;
+    node->ExpressionUnion.var_expr.name = var_name;
+    node->ExpressionUnion.var_expr.VarUnion.value.type = type;
+    node->ExpressionUnion.var_expr.VarUnion.right_part = right_part;
+
     return node;
 }
 
-AbstractSyntaxTree* make_ArgumentExpr(AbstractSyntaxTree* arg_name) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
+/*************************************************************************************************************/
+// "...(value)", where value is f.e. 5 ALSO use for creating
 
-    node_fail(node);
+AbstractSyntaxTree* make_valueExpr(String arg_name, enum ValueType type, Lexer* lex) {
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
 
-    node->expression_type = FUNCTION_ARG_EXPR;
-    node->ExpressionUnion.argument_expr.arg_value = arg_name;
-    i++;
+    node->expression_type = VARIABLE_VALUE;
+    node->ExpressionUnion.var_expr.name = arg_name;
+    node->ExpressionUnion.var_expr.VarUnion.value.type = type;
+
+    switch (type) {
+        case INT_VALUE:
+            node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.int_value = lex->i_num;
+            break;
+        case DOUBLE_VALUE:
+            node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.double_value = lex->d_num;
+            break;
+        default: // STRING VALUE
+            node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.string_value = lex->str;
+            break;
+    }
+
     return node;
 }
 
-AbstractSyntaxTree* make_ParameterExpr(AbstractSyntaxTree* param_name, AbstractSyntaxTree* param_type, ASTList* next) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
+/*************************************************************************************************************/
+// Parser creates tree for each param and stores it into vector
+// "with y : String"
 
-    node_fail(node);
+AbstractSyntaxTree* make_parameterExpr(String param_name, String param_ident, enum ValueType param_type) {
+    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
+    if (!node) return NULL;
 
     node->expression_type = FUNCTION_PARAM_EXPR;
     node->ExpressionUnion.parameter_expr.param_name = param_name;
+    node->ExpressionUnion.parameter_expr.param_ident = param_ident;
     node->ExpressionUnion.parameter_expr.param_type = param_type;
-    i++;
-    return node;
-}
-
-AbstractSyntaxTree* make_BodyExpr(AbstractSyntaxTree* body, ASTList* next) {
-    AbstractSyntaxTree* node = (AbstractSyntaxTree*)malloc(sizeof(AbstractSyntaxTree));
-    node_fail(node);
-
-    node->expression_type = BODY_EXPR;
-    node->ExpressionUnion.body_expr.body = body;
-    node->ExpressionUnion.body_expr.next = next;
 
     return node;
 }
 
+/*************************************************************************************************************/
 
+/*
+    Body will consists each lines, so the parser created tree for each line and stores it into vector
+        => no need to have function for creating body tree
+*/
 
-
-
-
-
-int main(void) {
-
-    //if (a<2) {
-    //b = b + 1;
-    //a = a + 1;
-    //}
-    //else {
-    //return 0
-    //}  
-
-
-   /* AbstractSyntaxTree* if_condition = make_binaryExpr("<", make_variableExpr("a"), make_integerExpr(2));
-
-    AbstractSyntaxTree* if_body = make_BodyExpr(
-        make_assignExpr("=", make_variableExpr("b"), make_binaryExpr("+", make_variableExpr("b"), make_integerExpr(1))),
-            NULL
-    );
-
-    AbstractSyntaxTree* else_body = make_BodyExpr(
-        make_returnExpr(make_integerExpr(0)),
-        NULL
-    );
-
-
-    AbstractSyntaxTree* root = make_conditionExpr(if_condition, if_body, else_body);*/
-
-/* AbstractSyntaxTree* param1 = make_ParameterExpr(make_variableExpr("ahoj"), make_integerType(make_integerExpr(1)), NULL);
-
-AbstractSyntaxTree* param2 = make_ParameterExpr(make_variableExpr("ahoj"), make_integerType(make_integerExpr(1)), param1);
-
-ASTList* param = (ASTList*) param2;
-
-AbstractSyntaxTree* root = make_function_defExpr("funkce", param2, make_binaryExpr("<", make_variableExpr("a"), make_integerExpr(2))); */
-
-
-    printf("Number of NODES: %d\n", i);
-    printf("\nPOSTORDER TRAVERSAL:\n");
-   // preorder_traversal(root);
-   // free_ast(root);
-}
+/*************************************************************************************************************/
