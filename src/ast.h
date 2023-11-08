@@ -1,128 +1,245 @@
 #ifndef AST_H_INCLUDED
 #define AST_H_INCLUDED
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "utils.h"
 #include "vec.h"
 #include "lexer.h"
 
-enum NodeExprType{
-    BINARY_OP_EXPR,
-    FUNCTION_CALL_EXPR,
-    FUNCTION_DEF_EXPR,
-    RETURN_EXPR,
-    CONDITIONS_EXPR,
-    WHILE_EXPR,
-    VARIABLE_DEC_EXPR,
-    FUNCTION_PARAM_EXPR,
-    VARIABLE_VALUE,
-};
+// TODO: symbol table type
+typedef int SymItem;
 
 // Forward declarations
-typedef struct AbstractSyntaxTree AbstractSyntaxTree;
-typedef struct VariableValue VariableValue;
+
+// Expression, something that has value
+typedef struct AstExpr AstExpr;
+// Statement something that doesn't have value
+typedef struct AstStmt AstStmt;
 
 typedef struct {
-    String operator_expr;
-    AbstractSyntaxTree* left;
-    AbstractSyntaxTree* right;
-} OperatorExpr;
+    // type: AstStmt *
+    Vec stmts;
+} AstBlock;
 
 typedef struct {
-    String func_name;
-    Vec* func_arguments;
-} FunctionCallExpr;
+    Token operator;
+    AstExpr *left;
+    AstExpr *right;
+} AstBinaryOp;
 
-enum ValueType {
-    INT_VALUE,
-    DOUBLE_VALUE,
-    STRING_VALUE,
-    UNKNOWN // Value will be determined from symtable
+typedef struct {
+    Token operator;
+    AstExpr *param;
+} AstUnaryOp;
+
+typedef struct {
+    SymItem *ident;
+    SymItem *name;
+} AstFuncCallParam;
+
+typedef struct {
+    SymItem *ident;
+    // type: AstFuncCallParam *
+    Vec arguments;
+} AstFunctionCall;
+
+typedef enum {
+    LITERAL_INT,
+    LITERAL_DOUBLE,
+    LITERAL_STRING,
+    LITERAL_NIL,
+} AstType;
+
+typedef struct {
+    SymItem *ident;
+    SymItem *name;
+} AstFuncDeclParam;
+
+typedef struct {
+    SymItem *ident;
+    // type: AstFuncDeclParam
+    Vec parameters;
+    AstBlock *body;
+} AstFunctionDecl;
+
+typedef struct {
+    AstExpr *expr;
+} AstReturn;
+
+typedef enum {
+    AST_COND_EXPR,
+    AST_COND_LET,
+} AstConditionType;
+
+typedef struct {
+    SymItem *ident;
+    AstExpr *value;
+} AstVariableDecl;
+
+typedef struct {
+    AstConditionType type;
+    union {
+        AstExpr *expr;
+        AstVariableDecl *let;
+    };
+} AstCondition;
+
+typedef struct {
+    AstCondition *condition;
+    AstBlock *if_body;
+    AstBlock *else_body;
+} AstIf;
+
+typedef struct {
+    AstCondition *condition;
+    AstBlock *body;
+} AstWhile;
+
+typedef struct {
+    AstType type;
+    union {
+        int int_v;
+        double double_v;
+        String string_v;
+    };
+} AstLiteral;
+
+typedef struct {
+    SymItem *ident;
+} AstVariable;
+
+typedef enum {
+    AST_BINARY_OP,
+    AST_UNARY_OP,
+    AST_FUNCTION_CALL,
+    AST_LITERAL,
+    AST_VARIABLE,
+} AstExprType;
+
+struct AstExpr {
+    AstExprType type;
+    union {
+        AstBinaryOp *binary_op;
+        AstUnaryOp *unary_op;
+        AstFunctionCall *function_call;
+        AstLiteral *literal;
+        AstVariable *variable;
+    };
 };
 
-typedef struct {
-    String func_name;
-    Vec* func_parameters;
-    Vec* func_body;
-    enum ValueType ret_val;
-} FunctionDefExpr;
+typedef enum {
+    AST_EXPR,
+    AST_BLOCK,
+    AST_FUNCTION_DECL,
+    AST_VARIABLE_DECL,
+    AST_RETURN,
+    AST_IF,
+    AST_WHILE,
+} AstStmtType;
 
-typedef struct {
-    AbstractSyntaxTree* return_expr;
-} ReturnExpr;
-
-typedef struct {
-    AbstractSyntaxTree* if_condition;
-    Vec* if_body;
-    Vec* else_body;
-} ConditionsExpr;
-
-typedef struct {
-    AbstractSyntaxTree* while_condition;
-    Vec* while_body;
-} WhileExpr;
-
-typedef struct VariableValue {
-    enum ValueType type;
+struct AstStmt {
+    AstStmtType type;
     union {
-        int int_value;
-        double double_value;
-        String string_value;
-    } ValueUnion;
-} VariableValue;
+        AstExpr *expr;
+        AstBlock *block;
+        AstFunctionDecl *function_decl;
+        AstVariableDecl *variable_decl;
+        AstReturn *return_v;
+        AstIf *if_v;
+        AstWhile *while_v;
+    };
+};
 
-typedef struct {
-    String name;
-    union {
-        VariableValue value;
-        AbstractSyntaxTree* right_part;
-    } VarUnion;
-} VariableExpr;
+AstBlock *ast_block(Vec stmts);
 
-typedef struct {
-    String param_name;
-    String param_ident;
-    enum ValueType param_type;
-} ParameterExpr;
+AstBinaryOp *ast_binary_op(Token operator, AstExpr *left, AstExpr *right);
 
-typedef struct AbstractSyntaxTree {
-    enum NodeExprType expression_type;
-    union {
-        OperatorExpr        operator_expr;
-        FunctionCallExpr    func_call_expr;
-        FunctionDefExpr     func_def_expr;
-        ReturnExpr          return_expr;
-        ConditionsExpr      conditions_expr;
-        WhileExpr           while_expr;
-        VariableExpr        var_expr;
-        ParameterExpr       parameter_expr;
-        VariableValue       variable_value;
-    } ExpressionUnion;
-} AbstractSyntaxTree;
+AstUnaryOp *ast_unary_op(Token operator, AstExpr *param);
 
-void free_ast(AbstractSyntaxTree* node);
+AstFuncCallParam *ast_func_call_param(SymItem *ident, SymItem *name);
 
-void free_ast_vec(Vec* vec);
+AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters);
 
-void preorder_traversal(AbstractSyntaxTree* node);
+AstFuncDeclParam *ast_func_decl_param(SymItem *ident, SymItem *name);
 
-AbstractSyntaxTree* make_binaryExpr(String operator_expr, AbstractSyntaxTree* left, AbstractSyntaxTree* right);
+AstFunctionDecl *ast_function_decl(SymItem *ident, AstBlock *body);
 
-AbstractSyntaxTree* make_returnExpr(AbstractSyntaxTree* return_value);
+AstReturn *ast_return(AstExpr *expr);
 
-AbstractSyntaxTree* make_whileExpr(AbstractSyntaxTree* while_condition, Vec* while_body);
+AstCondition *ast_expr_condition(AstExpr *expr);
 
-AbstractSyntaxTree* make_conditionExpr(AbstractSyntaxTree* if_condition, Vec* if_body, Vec* else_body);
+AstCondition *ast_let_condition(AstVariableDecl *let);
 
-AbstractSyntaxTree* make_function_callExpr(String func_name, Vec* func_arguments);
+AstIf *ast_if(AstCondition *condition, AstBlock *if_body, AstBlock *else_body);
 
-AbstractSyntaxTree* make_function_defExpr(String func_name, Vec* func_parameters, Vec* func_body, enum ValueType ret_val);
+AstWhile *ast_while(AstCondition *condition, AstBlock *body);
 
-AbstractSyntaxTree* make_variable_Expr(String var_name, enum ValueType type, AbstractSyntaxTree* right_part);
+AstLiteral *ast_int_literal(int value);
 
-AbstractSyntaxTree* make_valueExpr(String arg_name, enum ValueType type, Lexer* lex);
+AstLiteral *ast_double_literal(double value);
 
-AbstractSyntaxTree* make_parameterExpr(String param_name, String param_ident, enum ValueType param_type);
+AstLiteral *ast_string_literal(String value);
+
+AstLiteral *ast_nil_literal();
+
+AstVariable *ast_variable(SymItem *ident);
+
+AstVariableDecl *ast_variable_decl(SymItem *ident, AstExpr *value);
+
+AstExpr *ast_binary_op_expr(AstBinaryOp *value);
+
+AstExpr *ast_unary_op_expr(AstUnaryOp *value);
+
+AstExpr *ast_function_call_expr(AstFunctionCall *value);
+
+AstExpr *ast_literal_expr(AstLiteral *value);
+
+AstExpr *ast_variable_expr(AstVariable *value);
+
+AstStmt *ast_expr_stmt(AstExpr *value);
+
+AstStmt *ast_block_stmt(AstBlock *value);
+
+AstStmt *ast_function_decl_stmt(AstFunctionDecl *value);
+
+AstStmt *ast_variable_decl_stmt(AstVariableDecl *value);
+
+AstStmt *ast_return_stmt(AstReturn *value);
+
+AstStmt *ast_if_stmt(AstIf *value);
+
+AstStmt *ast_while_stmt(AstWhile *value);
+
+void ast_free_block(AstBlock **value);
+
+void ast_free_binary_op(AstBinaryOp **value);
+
+void ast_free_unary_op(AstUnaryOp **value);
+
+void ast_free_func_call_param(AstFuncCallParam **value);
+
+void ast_free_function_call(AstFunctionCall **value);
+
+void ast_free_func_decl_param(AstFuncDeclParam **value);
+
+void ast_free_function_decl(AstFunctionDecl **value);
+
+void ast_free_function_decl(AstFunctionDecl **value);
+
+void ast_free_return(AstReturn **value);
+
+void ast_free_condition(AstCondition **value);
+
+void ast_free_if(AstIf **value);
+
+void ast_free_while(AstWhile **value);
+
+void ast_free_literal(AstLiteral **value);
+
+void ast_free_variable(AstVariable **value);
+
+void ast_free_variable_decl(AstVariableDecl **value);
+
+void ast_free_expr(AstExpr **value);
+
+void ast_free_stmt(AstStmt **value);
 
 #endif // AST_H_INCLUDED

@@ -34,4 +34,10 @@
 /// Other error
 #define ERR_OTHER 99
 
+void set_err_code(int err_code);
+
+int get_first_err_code();
+
+int get_last_err_code();
+
 #endif // ERRORS_H_INCLDUED
