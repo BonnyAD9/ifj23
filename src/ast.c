@@ -1,268 +1,401 @@
 #include "ast.h"
 
-void free_ast_vec(Vec* vec) {
-    if (!vec)
-        return;
-    VEC_FOR_EACH(vec, AbstractSyntaxTree*, item)
-        free_ast(*(item.v));
-    vec_free(vec);
+#include "errors.h"
+#include "utils.h"
+
+#include <stdlib.h>
+
+static void *ast_err(const char *msg) {
+    set_err_code(ERR_OTHER);
+    EPRINTF("%s", msg);
 }
 
-void free_ast(AbstractSyntaxTree* node) {
-    if (!node)
-        return;
-    // String type variables will be delivered to tree by Lexer and also freed, not here
-    switch (node->expression_type) {
-        case BINARY_OP_EXPR:
-            free_ast(node->ExpressionUnion.operator_expr.left);
-            free_ast(node->ExpressionUnion.operator_expr.right);
-            break;
-        case FUNCTION_CALL_EXPR:
-            free_ast_vec(node->ExpressionUnion.func_call_expr.func_arguments);
-            break;
-        case FUNCTION_DEF_EXPR:
-            free_ast_vec(node->ExpressionUnion.func_def_expr.func_parameters);
-            free_ast_vec(node->ExpressionUnion.func_def_expr.func_body);
-            break;
-        case RETURN_EXPR:
-            free_ast(node->ExpressionUnion.return_expr.return_expr);
-            break;
-        case CONDITIONS_EXPR:
-            free_ast(node->ExpressionUnion.conditions_expr.if_condition);
-            free_ast_vec(node->ExpressionUnion.conditions_expr.if_body);
-            free_ast_vec(node->ExpressionUnion.conditions_expr.else_body);
-            break;
-        case WHILE_EXPR:
-            free_ast(node->ExpressionUnion.while_expr.while_condition);
-            free_ast_vec(node->ExpressionUnion.while_expr.while_body);
-            break;
-        case VARIABLE_DEC_EXPR:
-            free_ast(node->ExpressionUnion.var_expr.VarUnion.right_part);
-            break;
-        default:
-            break;
+#define STRUCT_ALLOC(type, ...) \
+    type *res = malloc(sizeof(*res)); \
+    if (!res) { \
+        return ast_err("Failed to allocate memory"); \
+    } \
+    *res = (type) { \
+        __VA_ARGS__ \
+    }; \
+    return res
+
+static void *ast_mem_check(void *mem) {
+    if (mem) {
+        return mem;
     }
-    free(node);
+    return ast_err("Failed to allocate memory");
 }
 
-void preorder_traversal(AbstractSyntaxTree* node) {
-    if (!node)
-        return;
+AstBlock *ast_block(Vec stmts) {
+    STRUCT_ALLOC(AstBlock,
+        .stmts = stmts,
+    );
+}
 
-    switch (node->expression_type) {
-        case BINARY_OP_EXPR:
-            printf("Binary Operation: %s\n", node->ExpressionUnion.operator_expr.operator_expr.str);
-            preorder_traversal(node->ExpressionUnion.operator_expr.left);
-            preorder_traversal(node->ExpressionUnion.operator_expr.right);
-            break;
-        case FUNCTION_CALL_EXPR:
-            printf("Function call - function name: %s\n", node->ExpressionUnion.func_call_expr.func_name.str);
-            printf("Function arguments: \n");
-            VEC_FOR_EACH(node->ExpressionUnion.func_call_expr.func_arguments, AbstractSyntaxTree*, item)
-                preorder_traversal(*(item.v));
-            break;
-        case FUNCTION_DEF_EXPR:
-            printf("Function definition - function name: %s\n", node->ExpressionUnion.func_def_expr.func_name.str);
-            printf("Function params: \n");
-            VEC_FOR_EACH(node->ExpressionUnion.func_def_expr.func_parameters, AbstractSyntaxTree*, item)
-                preorder_traversal(*(item.v));
-            printf("Function body: \n");
-            VEC_FOR_EACH(node->ExpressionUnion.func_def_expr.func_body, AbstractSyntaxTree*, item)
-                preorder_traversal(*(item.v));
-            break;
-        case RETURN_EXPR:
-            printf("Return expression\n");
-            preorder_traversal(node->ExpressionUnion.return_expr.return_expr);
-            break;
-        case CONDITIONS_EXPR:
-            printf("Condition expression\n");
-            printf("If condition: \n");
-            preorder_traversal(node->ExpressionUnion.conditions_expr.if_condition);
-            printf("If body: \n");
-            VEC_FOR_EACH(node->ExpressionUnion.conditions_expr.if_body, AbstractSyntaxTree*, item)
-                preorder_traversal(*(item.v));
-            printf("Else body: \n");
-            VEC_FOR_EACH(node->ExpressionUnion.conditions_expr.else_body, AbstractSyntaxTree*, item)
-                preorder_traversal(*(item.v));
-            break;
-        case WHILE_EXPR:
-            printf("While expression\n");
-            printf("While condition\n");
-            preorder_traversal(node->ExpressionUnion.while_expr.while_condition);
-            printf("While body\n");
-            VEC_FOR_EACH(node->ExpressionUnion.while_expr.while_body, AbstractSyntaxTree*, item)
-                preorder_traversal(*(item.v));
-            break;
-        case VARIABLE_DEC_EXPR:
-            printf("Variable expression - name: %s\n", node->ExpressionUnion.var_expr.name.str);
-            preorder_traversal(node->ExpressionUnion.var_expr.VarUnion.right_part);
-            break;
-        case FUNCTION_PARAM_EXPR:
-            printf("Param expression - name: %s\n", node->ExpressionUnion.parameter_expr.param_name.str);
-            printf("Param expression - ident: %s\n", node->ExpressionUnion.parameter_expr.param_ident.str);
-            break;
-        case VARIABLE_VALUE:
-            if (node->ExpressionUnion.variable_value.type == INT_VALUE)
-                printf("Integer Expression: %d\n", node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.int_value);
-            else if (node->ExpressionUnion.variable_value.type == DOUBLE_VALUE)
-                printf("Double Expression: %f\n", node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.double_value);
-            else
-                printf("String Expression: %s\n", node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.string_value.str);
-            break;
-        default:
-            break;
+AstBinaryOp *ast_binary_op(Token operator, AstExpr *left, AstExpr *right) {
+    STRUCT_ALLOC(AstBinaryOp,
+        .operator = operator,
+        .left = left,
+        .right = right,
+    );
+}
+
+AstUnaryOp *ast_unary_op(Token operator, AstExpr *param) {
+    STRUCT_ALLOC(AstUnaryOp,
+        .operator = operator,
+        .param = param,
+    );
+}
+
+AstFuncCallParam *ast_func_call_param(SymItem *ident, SymItem *name) {
+    STRUCT_ALLOC(AstFuncCallParam,
+        .ident = ident,
+        .name = name,
+    );
+}
+
+AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters) {
+    STRUCT_ALLOC(AstFunctionCall,
+        .ident = ident,
+        .arguments = parameters,
+    );
+}
+
+AstFuncDeclParam *ast_func_decl_param(SymItem *ident, SymItem *name) {
+    STRUCT_ALLOC(AstFuncDeclParam,
+        .ident = ident,
+        .name = name,
+    );
+}
+
+AstFunctionDecl *ast_function_decl(SymItem *ident, AstBlock *body) {
+    STRUCT_ALLOC(AstFunctionDecl,
+        .ident = ident,
+        .body = body,
+    );
+}
+
+AstReturn *ast_return(AstExpr *expr) {
+    STRUCT_ALLOC(AstReturn,
+        .expr = expr,
+    );
+}
+
+AstCondition *ast_expr_condition(AstExpr *expr) {
+    STRUCT_ALLOC(AstCondition,
+        .type = AST_COND_EXPR,
+        .expr = expr,
+    );
+}
+
+AstCondition *ast_let_condition(AstVariableDecl *let) {
+    STRUCT_ALLOC(AstCondition,
+        .type = AST_COND_LET,
+        .let = let,
+    );
+}
+
+AstIf *ast_if(AstCondition *condition, AstBlock *if_body, AstBlock *else_body) {
+    STRUCT_ALLOC(AstIf,
+        .condition = condition,
+        .if_body = if_body,
+        .else_body = else_body,
+    );
+}
+
+AstWhile *ast_while(AstCondition *condition, AstBlock *body) {
+    STRUCT_ALLOC(AstWhile,
+        .condition = condition,
+        .body = body,
+    );
+}
+
+AstLiteral *ast_int_literal(int value) {
+    STRUCT_ALLOC(AstLiteral,
+        .type = LITERAL_INT,
+        .int_v = value,
+    );
+}
+
+AstLiteral *ast_double_literal(double value) {
+    STRUCT_ALLOC(AstLiteral,
+        .type = LITERAL_DOUBLE,
+        .double_v = value,
+    );
+}
+
+AstLiteral *ast_string_literal(String value) {
+    STRUCT_ALLOC(AstLiteral,
+        .type = LITERAL_STRING,
+        .string_v = value,
+    );
+}
+
+AstLiteral *ast_nil_literal() {
+    STRUCT_ALLOC(AstLiteral,
+        .type = LITERAL_NIL,
+    );
+}
+
+AstVariable *ast_variable(SymItem *ident) {
+    STRUCT_ALLOC(AstVariable,
+        .ident = ident,
+    );
+}
+
+AstVariableDecl *ast_variable_decl(SymItem *ident, AstExpr *value) {
+    STRUCT_ALLOC(AstVariableDecl,
+        .ident = ident,
+        .value = value,
+    );
+}
+
+AstExpr *ast_binary_op_expr(AstBinaryOp *value) {
+    STRUCT_ALLOC(AstExpr,
+        .type = AST_BINARY_OP,
+        .binary_op = value,
+    );
+}
+
+AstExpr *ast_unary_op_expr(AstUnaryOp *value) {
+    STRUCT_ALLOC(AstExpr,
+        .type = AST_UNARY_OP,
+        .unary_op = value,
+    );
+}
+
+AstExpr *ast_function_call_expr(AstFunctionCall *value) {
+    STRUCT_ALLOC(AstExpr,
+        .type = AST_FUNCTION_CALL,
+        .function_call = value,
+    );
+}
+
+AstExpr *ast_literal_expr(AstLiteral *value) {
+    STRUCT_ALLOC(AstExpr,
+        .type = AST_LITERAL,
+        .literal = value,
+    );
+}
+
+AstExpr *ast_variable_expr(AstVariable *value) {
+    STRUCT_ALLOC(AstExpr,
+        .type = AST_VARIABLE,
+        .variable = value,
+    );
+}
+
+AstStmt *ast_expr_stmt(AstExpr *value) {
+    STRUCT_ALLOC(AstStmt,
+        .type = AST_EXPR,
+        .expr = value,
+    );
+}
+
+AstStmt *ast_block_stmt(AstBlock *value) {
+    STRUCT_ALLOC(AstStmt,
+        .type = AST_BLOCK,
+        .block = value,
+    );
+}
+
+AstStmt *ast_function_decl_stmt(AstFunctionDecl *value) {
+    STRUCT_ALLOC(AstStmt,
+        .type = AST_FUNCTION_DECL,
+        .function_decl = value,
+    );
+}
+
+AstStmt *ast_variable_decl_stmt(AstVariableDecl *value) {
+    STRUCT_ALLOC(AstStmt,
+        .type = AST_VARIABLE_DECL,
+        .variable_decl = value,
+    );
+}
+
+AstStmt *ast_return_stmt(AstReturn *value) {
+    STRUCT_ALLOC(AstStmt,
+        .type = AST_RETURN,
+        .return_v = value,
+    );
+}
+
+AstStmt *ast_if_stmt(AstIf *value) {
+    STRUCT_ALLOC(AstStmt,
+        .type = AST_IF,
+        .if_v = value,
+    );
+}
+
+AstStmt *ast_while_stmt(AstWhile *value) {
+    STRUCT_ALLOC(AstStmt,
+        .type = AST_WHILE,
+        .while_v = value,
+    );
+}
+
+#define FREE_INIT(type, value, v) \
+    type *v = *value; \
+    *value = NULL; \
+    if (!v) return \
+
+void ast_free_block(AstBlock **value) {
+    FREE_INIT(AstBlock, value, v);
+
+    vec_free_with(&v->stmts, (FreeFun)ast_free_stmt);
+    free(v);
+}
+
+void ast_free_binary_op(AstBinaryOp **value) {
+    FREE_INIT(AstBinaryOp, value, v);
+
+    ast_free_expr(&v->left);
+    ast_free_expr(&v->right);
+    free(v);
+}
+
+void ast_free_unary_op(AstUnaryOp **value) {
+    FREE_INIT(AstUnaryOp, value, v);
+
+    ast_free_expr(&v->param);
+    free(v);
+}
+
+void ast_free_func_call_param(AstFuncCallParam **value) {
+    FREE_INIT(AstFuncCallParam, value, v);
+
+    free(v);
+}
+
+void ast_free_function_call(AstFunctionCall **value) {
+    FREE_INIT(AstFunctionCall, value, v);
+
+    vec_free_with(&v->arguments, (FreeFun)ast_free_func_call_param);
+    free(v);
+}
+
+void ast_free_func_decl_param(AstFuncDeclParam **value) {
+    FREE_INIT(AstFuncDeclParam, value, v);
+
+    free(v);
+}
+
+void ast_free_function_decl(AstFunctionDecl **value) {
+    FREE_INIT(AstFunctionDecl, value, v);
+
+    vec_free_with(&v->parameters, (FreeFun)ast_free_func_decl_param);
+    ast_free_block(&v->body);
+    free(v);
+}
+
+void ast_free_return(AstReturn **value) {
+    FREE_INIT(AstReturn, value, v);
+
+    ast_free_expr(&v->expr);
+    free(v);
+}
+
+void ast_free_condition(AstCondition **value) {
+    FREE_INIT(AstCondition, value, v);
+
+    switch (v->type) {
+    case AST_COND_EXPR:
+        ast_free_expr(&v->expr);
+        break;
+    case AST_COND_LET:
+        ast_free_variable_decl(&v->let);
+        break;
     }
+    free(v);
 }
 
-/*************************************************************************************************************/
-// "left operator_expr[<, >, ...] right"
+void ast_free_if(AstIf **value) {
+    FREE_INIT(AstIf, value, v);
 
-AbstractSyntaxTree* make_binaryExpr(String operator_expr, AbstractSyntaxTree* left, AbstractSyntaxTree* right) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
-
-    node->expression_type = BINARY_OP_EXPR;
-    node->ExpressionUnion.operator_expr.operator_expr = operator_expr;
-    node->ExpressionUnion.operator_expr.left = left;
-    node->ExpressionUnion.operator_expr.right = right;
-
-    return node;
+    ast_free_condition(&v->condition);
+    ast_free_block(&v->if_body);
+    ast_free_block(&v->else_body);
+    free(v);
 }
 
-/*************************************************************************************************************/
-// "return return_value"
+void ast_free_while(AstWhile **value) {
+    FREE_INIT(AstWhile, value, v);
 
-AbstractSyntaxTree* make_returnExpr(AbstractSyntaxTree* return_value) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
-
-    node->expression_type = RETURN_EXPR;
-    node->ExpressionUnion.return_expr.return_expr = return_value;
-
-    return node;
+    ast_free_condition(&v->condition);
+    ast_free_block(&v->body);
+    free(v);
 }
 
-/*************************************************************************************************************/
-// "while (condition) { while_body }"
+void ast_free_literal(AstLiteral **value) {
+    FREE_INIT(AstLiteral, value, v);
 
-AbstractSyntaxTree* make_whileExpr(AbstractSyntaxTree* while_condition, Vec* while_body) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
-
-    node->expression_type = WHILE_EXPR;
-    node->ExpressionUnion.while_expr.while_condition = while_condition;
-    node->ExpressionUnion.while_expr.while_body = while_body;
-
-    return node;
+    free(v);
 }
 
-/*************************************************************************************************************/
-// "if (condition) { if_body } else { else _body }"
+void ast_free_variable(AstVariable **value) {
+    FREE_INIT(AstVariable, value, v);
 
-AbstractSyntaxTree* make_conditionExpr(AbstractSyntaxTree* if_condition, Vec* if_body, Vec* else_body) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
-
-    node->expression_type = CONDITIONS_EXPR;
-    node->ExpressionUnion.conditions_expr.if_condition = if_condition;
-    node->ExpressionUnion.conditions_expr.if_body = if_body;
-    node->ExpressionUnion.conditions_expr.else_body = else_body;
-
-    return node;
+    free(v);
 }
 
-/*************************************************************************************************************/
-// "... func_name(params)"
+void ast_free_variable_decl(AstVariableDecl **value) {
+    FREE_INIT(AstVariableDecl, value, v);
 
-AbstractSyntaxTree* make_function_callExpr(String func_name, Vec* func_arguments) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
-
-    node->expression_type = FUNCTION_CALL_EXPR;
-    node->ExpressionUnion.func_call_expr.func_name = func_name;
-    node->ExpressionUnion.func_call_expr.func_arguments = func_arguments;
-
-    return node;
+    ast_free_expr(&v->value);
+    free(v);
 }
 
-/*************************************************************************************************************/
-// "... pom(params) { func_body }"
+void ast_free_expr(AstExpr **value) {
+    FREE_INIT(AstExpr, value, v);
 
-AbstractSyntaxTree* make_function_defExpr(String func_name, Vec* func_parameters, Vec* func_body, enum ValueType ret_val) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
-
-    node->expression_type = FUNCTION_DEF_EXPR;
-    node->ExpressionUnion.func_def_expr.func_name = func_name;
-    node->ExpressionUnion.func_def_expr.func_parameters = func_parameters;
-    node->ExpressionUnion.func_def_expr.func_body = func_body;
-    node->ExpressionUnion.func_def_expr.ret_val = ret_val;
-
-    return node;
-}
-
-/*************************************************************************************************************/
-// "... pom : String = right_part"
-
-AbstractSyntaxTree* make_variable_Expr(String var_name, enum ValueType type, AbstractSyntaxTree* right_part) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
-
-    node->expression_type = VARIABLE_DEC_EXPR;
-    node->ExpressionUnion.var_expr.name = var_name;
-    node->ExpressionUnion.var_expr.VarUnion.value.type = type;
-    node->ExpressionUnion.var_expr.VarUnion.right_part = right_part;
-
-    return node;
-}
-
-/*************************************************************************************************************/
-// "...(value)", where value is f.e. 5 ALSO use for creating
-
-AbstractSyntaxTree* make_valueExpr(String arg_name, enum ValueType type, Lexer* lex) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
-
-    node->expression_type = VARIABLE_VALUE;
-    node->ExpressionUnion.var_expr.name = arg_name;
-    node->ExpressionUnion.var_expr.VarUnion.value.type = type;
-
-    switch (type) {
-        case INT_VALUE:
-            node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.int_value = lex->i_num;
-            break;
-        case DOUBLE_VALUE:
-            node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.double_value = lex->d_num;
-            break;
-        default: // STRING VALUE
-            node->ExpressionUnion.var_expr.VarUnion.value.ValueUnion.string_value = lex->str;
-            break;
+    switch (v->type) {
+    case AST_BINARY_OP:
+        ast_free_binary_op(&v->binary_op);
+        break;
+    case AST_UNARY_OP:
+        ast_free_unary_op(&v->unary_op);
+        break;
+    case AST_FUNCTION_CALL:
+        ast_free_function_call(&v->function_call);
+        break;
+    case AST_LITERAL:
+        ast_free_literal(&v->literal);
+        break;
+    case AST_VARIABLE:
+        ast_free_variable(&v->variable);
+        break;
     }
 
-    return node;
+    free(v);
 }
 
-/*************************************************************************************************************/
-// Parser creates tree for each param and stores it into vector
-// "with y : String"
+void ast_free_stmt(AstStmt **value) {
+    FREE_INIT(AstStmt, value, v);
 
-AbstractSyntaxTree* make_parameterExpr(String param_name, String param_ident, enum ValueType param_type) {
-    AbstractSyntaxTree* node = malloc(sizeof(AbstractSyntaxTree));
-    if (!node) return NULL;
+    switch (v->type) {
+    case AST_EXPR:
+        ast_free_expr(&v->expr);
+        break;
+    case AST_BLOCK:
+        ast_free_block(&v->block);
+        break;
+    case AST_FUNCTION_DECL:
+        ast_free_function_decl(&v->function_decl);
+        break;
+    case AST_VARIABLE_DECL:
+        ast_free_variable_decl(&v->variable_decl);
+        break;
+    case AST_RETURN:
+        ast_free_return(&v->return_v);
+        break;
+    case AST_IF:
+        ast_free_if(&v->if_v);
+        break;
+    case AST_WHILE:
+        ast_free_while(&v->while_v);
+        break;
+    }
 
-    node->expression_type = FUNCTION_PARAM_EXPR;
-    node->ExpressionUnion.parameter_expr.param_name = param_name;
-    node->ExpressionUnion.parameter_expr.param_ident = param_ident;
-    node->ExpressionUnion.parameter_expr.param_type = param_type;
-
-    return node;
+    free(v);
 }
-
-/*************************************************************************************************************/
-
-/*
-    Body will consists each lines, so the parser created tree for each line and stores it into vector
-        => no need to have function for creating body tree
-*/
-
-/*************************************************************************************************************/
