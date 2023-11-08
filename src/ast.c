@@ -8,6 +8,7 @@
 static void *ast_err(const char *msg) {
     set_err_code(ERR_OTHER);
     EPRINTF("%s", msg);
+    return NULL;
 }
 
 #define STRUCT_ALLOC(type, ...) \
@@ -19,13 +20,6 @@ static void *ast_err(const char *msg) {
         __VA_ARGS__ \
     }; \
     return res
-
-static void *ast_mem_check(void *mem) {
-    if (mem) {
-        return mem;
-    }
-    return ast_err("Failed to allocate memory");
-}
 
 AstBlock *ast_block(Vec stmts) {
     STRUCT_ALLOC(AstBlock,
