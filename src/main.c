@@ -130,8 +130,6 @@ int main(void) {
     }
 
     vec_free(&v);
-}
-
 
     printf("----------------------------------------\n");
     // AST Basic Tests
