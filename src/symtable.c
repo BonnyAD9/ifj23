@@ -272,3 +272,119 @@ void tree_visualise(Tree *tree) {
     fprintf(stdout, "[root] - ");
     _visualise_tree(tree->root_node);
 }
+
+
+
+Symtable symtable_new() {
+    return (Symtable) {
+        .scopes = VEC_NEW(Tree),
+        .scope_stack = VEC_NEW(Tree)
+    };
+}
+
+void symtable_free(Symtable *symtable) {
+    VEC_FOR_EACH(&symtable->scopes, Tree*, scope) {
+        tree_free(*scope.v);
+        free(*scope.v);
+        scope.v = NULL;
+    }
+    vec_free(&symtable->scopes);
+    vec_free(&symtable->scope_stack);
+}
+
+void symtable_scope_add(Symtable *symtable) {
+    Tree *new = malloc(sizeof(Tree));
+    new->root_node = NULL;
+
+    VEC_PUSH(&symtable->scopes, Tree*, new);
+    VEC_PUSH(&symtable->scope_stack, Tree*, new);
+}
+
+void symtable_scope_pop(Symtable *symtable) {
+    VEC_POP(&symtable->scope_stack, Tree*);
+}
+
+NodeData *symtable_var_add(
+    Symtable *symtable,
+    String name,
+    bool mutable,
+    FilePos pos
+) {
+    Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
+
+    NodeData data = {
+        .name = name,
+        .type = VAR,
+        .data = {
+            .var = {
+                .data_type = NONE,
+                .nullable = false,
+                .mutable = mutable,
+            }
+        },
+        .file_place = pos
+    };
+    tree_insert(scope, name.str, data);
+    NodeData *var = tree_find(scope, name.str);
+    return var;
+}
+
+void symtable_var_set_type(NodeData *var, DataType type, bool nullable) {
+    if (var->type != VAR)
+        return;
+
+    var->data.var.data_type = type;
+    var->data.var.nullable = nullable;
+}
+
+NodeData *symtable_func_add(Symtable *symtable, String name, FilePos pos) {
+    Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
+
+    NodeData data = {
+        .name = name,
+        .type = FUNC,
+        .data = {
+            .func = {
+                .return_type = RET_VOID
+            }
+        },
+        .file_place = pos
+    };
+    tree_insert(scope, name.str, data);
+    NodeData *func = tree_find(scope, name.str);
+    return func;
+}
+
+void symtable_func_set_return(NodeData *func, ReturnType ret) {
+    if (func->type != FUNC)
+        return;
+
+    func->data.func.return_type = ret;
+}
+
+void symtable_func_set_params(NodeData *func, Vec params) {
+    if (func->type != FUNC)
+        return;
+
+    func->data.func.params = params;
+}
+
+ReturnType symtable_func_get_return(Symtable *symtable, String name) {
+    Tree *scope = VEC_AT(&symtable->scopes, Tree*, 0);
+    NodeData *data = tree_find(scope, name.str);
+
+    if (data->type != FUNC)
+        return RET_VOID;
+
+    return data->data.func.return_type;
+}
+
+Vec *symtable_func_get_params(Symtable *symtable, String name) {
+    Tree *scope = VEC_AT(&symtable->scopes, Tree*, 0);
+    NodeData *data = tree_find(scope, name.str);
+
+    if (data->type != FUNC)
+        return NULL;
+
+    return &data->data.func.params;
+}

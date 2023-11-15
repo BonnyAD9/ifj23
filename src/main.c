@@ -129,4 +129,17 @@ int main(void) {
     }
 
     vec_free(&v);
+
+    Symtable symtable = symtable_new();
+    symtable_scope_add(&symtable);
+    FilePos pos = {
+        .column = 0,
+        .line = 0
+    };
+    data = symtable_var_add(&symtable, STR("x"), true, pos);
+    symtable_var_set_type(data, INT, false);
+    Tree *scope = VEC_LAST(&symtable.scope_stack, Tree*);
+
+    // tree_visualise(&VEC_LAST(&symtable.scope_stack, Tree));
+    symtable_free(&symtable);
 }
