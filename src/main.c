@@ -13,7 +13,7 @@ void print_node_data(Tree *tree, SymItem **data, const char *key) {
     *data = tree_find(tree, key);
     if (*data)
         // Also print data stored in found node
-        fprintf(stdout, "Node %s found, data.layer=%d\n", key, (*data)->layer);
+        fprintf(stdout, "Node %s found, data.layer=%d\n", key, (*data)->name);
     else
         fprintf(stdout, "Node %s NOT found\n", key);
 }
@@ -53,93 +53,4 @@ int main(void) {
     }
     lex_free(&lexer);
     printf("----------------------------------------\n");
-
-    // Symtable - tree tests
-    Tree tree = tree_new();
-    //////////////// Insertion ////////////////
-    tree_insert(&tree, "A", (SymItem){.layer = 1});
-    tree_insert(&tree, "B", (SymItem){.layer = 2});
-    tree_insert(&tree, "C", (SymItem){.layer = 3});
-    tree_insert(&tree, "D", (SymItem){.layer = 4});
-    tree_insert(&tree, "E", (SymItem){.layer = 5});
-    tree_insert(&tree, "F", (SymItem){.layer = 6});
-    // Print tree content
-    tree_visualise(&tree);
-    fprintf(stdout, "\n");
-    //////////////// Deletion ////////////////
-    tree_remove(&tree, "C");
-    tree_remove(&tree, "E");
-    tree_remove(&tree, "@");
-    // Print tree content
-    tree_visualise(&tree);
-    //////////////// Lookup ////////////////
-    SymItem *data;
-    print_node_data(&tree, &data, "F");
-    // Try to modify node's data, layer=6 -> layer=0
-    if (data)
-        data->layer = 0;
-    // Print again and expect data.layer value change
-    print_node_data(&tree, &data, "F");
-    // Modify node's layer by insertion
-    tree_insert(&tree, "F", (SymItem){.layer = 1});
-    print_node_data(&tree, &data, "F");
-    // Try to find non-existing node
-    print_node_data(&tree, &data, "@");
-
-    tree_free(&tree);
-    fclose(file);
-
-    printf("----------------------------------------\n");
-    // vector test
-    Vec v = VEC_NEW(int);
-
-    vec_push_span(&v, SPAN_ARR(((int []) { 5, 4, 3, 2, 1 })));
-
-    VEC_PUSH(&v, int, 0);
-
-    VEC_FOR_EACH(&v, int, item) {
-        printf("%zu: %d\n", item.i, *item.v);
-    }
-
-    printf("pop %d, set [3]=10 and set last = 7\n", VEC_POP(&v, int));
-    VEC_AT(&v, int, 3) = 10;
-    VEC_LAST(&v, int) = 7;
-
-    VEC_FOR_EACH(&v, int, item) {
-        printf("%zu: %d\n", item.i, *item.v);
-    }
-
-    printf("push tail of vec to the vec\n");
-
-    Span tail = vec_slice(&v, 1, v.len - 1);
-
-
-    printf("tail of vec:\n");
-    SPAN_FOR_EACH(tail, int, item) {
-        printf("%zu: %d\n", item.i, *item.v);
-    }
-
-    Vec v2 = span_to_vec(tail);
-    vec_push_span(&v, vec_as_span(&v2));
-    vec_free(&v2);
-
-    printf("Vec:\n");
-    VEC_FOR_EACH(&v, int, item) {
-        printf("%zu: %d\n", item.i, *item.v);
-    }
-
-    vec_free(&v);
-
-    Symtable symtable = sym_new();
-    sym_scope_add(&symtable);
-    FilePos pos = {
-        .column = 0,
-        .line = 0
-    };
-    data = sym_var_add(&symtable, str_clone(STR("x")), true, pos);
-    sym_var_set_type(data, INT, false);
-    Tree *scope = VEC_LAST(&symtable.scope_stack, Tree*);
-
-    // tree_visualise(&VEC_LAST(&symtable.scope_stack, Tree));
-    sym_free(&symtable);
 }

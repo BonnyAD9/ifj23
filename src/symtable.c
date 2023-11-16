@@ -9,7 +9,7 @@ static int node_balance(TreeNode *node);
 /// Returns bigger of two passed-in values
 static int max(int a_val, int b_val);
 /// Create new tree node with given key and data
-static TreeNode *create_node(const char *key, SymItem data);
+static TreeNode *create_node(const char *key, Vec data);
 /// Process right rotation with given tree node
 static TreeNode *right_rotate(TreeNode *y);
 /// Process left rotation with given tree node
@@ -21,11 +21,14 @@ static void _tree_free(TreeNode *node);
 /// Recursively search for node with given key
 static SymItem *_tree_find(TreeNode *node, const char *key);
 /// Inserts new node into current tree
-static TreeNode *_tree_insert(TreeNode *node, const char *key, SymItem data);
+static TreeNode *_tree_insert(TreeNode *node, const char *key, Vec data);
 /// Deletes node in current tree
 static TreeNode *_tree_remove(TreeNode *node, const char *key);
 /// Prints tree structure and node values to stdout
 static void _visualise_tree(TreeNode *node);
+
+/// Frees SymItem vector
+void sym_data_free(Vec *data);
 
 static int node_height(TreeNode *node) {
     return ((node) ? node->height : 0);
@@ -58,13 +61,7 @@ static void _tree_free(TreeNode *node) {
     // Release allocated function params
     str_free(&node->data.func_params);
 */
-    str_free(&node->data.name);
-    if (node->data.type == SYM_FUNC) {
-        VEC_FOR_EACH(&node->data.func.params, FuncParam, param) {
-            str_free(&param.v->label);
-        }
-        vec_free(&node->data.func.params);
-    }
+    sym_data_free(&node->data);
     free(node);
     node = NULL;
 }
@@ -88,11 +85,11 @@ static SymItem *_tree_find(TreeNode *node, const char *key) {
     return _tree_find(node->left_node, key);
 }
 
-SymItem *tree_find(Tree *tree, const char *key) {
+Vec *tree_find(Tree *tree, const char *key) {
     return _tree_find(tree->root_node, key);
 }
 
-static TreeNode *create_node(const char *key, SymItem data) {
+static TreeNode *create_node(const char *key, Vec data) {
     TreeNode *new_node = malloc(sizeof(TreeNode));
     if (!new_node)
         return NULL;
@@ -139,7 +136,7 @@ static int _update_height_ret_balance(TreeNode *node) {
     return node_balance(node);
 }
 
-static TreeNode *_tree_insert(TreeNode *node, const char *key, SymItem data) {
+static TreeNode *_tree_insert(TreeNode *node, const char *key, Vec data) {
     if (!node)
         return create_node(key, data);
 
@@ -184,7 +181,7 @@ static TreeNode *_tree_insert(TreeNode *node, const char *key, SymItem data) {
     return node;
 }
 
-void tree_insert(Tree *tree, const char *key, SymItem data) {
+void tree_insert(Tree *tree, const char *key, Vec data) {
     tree->root_node = _tree_insert(tree->root_node, key, data);
     if (!tree->root_node)
         return;
@@ -297,6 +294,19 @@ void sym_free(Symtable *symtable) {
     vec_free(&symtable->scope_stack);
 }
 
+void sym_data_free(Vec *data) {
+    VEC_FOR_EACH(data, SymItem, item) {
+        str_free(&item.v->name);
+        if (item.v->type == SYM_FUNC) {
+            VEC_FOR_EACH(&item.v->func.params, FuncParam, param) {
+                str_free(&param.v->label);
+            }
+            vec_free(&item.v->func.params);
+        }
+
+    }
+}
+
 void sym_scope_add(Symtable *symtable) {
     Tree new = tree_new();
 
@@ -308,16 +318,55 @@ void sym_scope_pop(Symtable *symtable) {
     VEC_POP(&symtable->scope_stack, Tree*);
 }
 
-SymItem *sym_item_new(Symtable *symtable, String name, FilePos pos) {
+SymItem *sym_find(Symtable *symtable, String name) {
     Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
+    Vec *data = tree_find(scope, name.str);
 
-    SymItem data = {
+    if (data)
+        return &VEC_LAST(data, SymItem);
+
+    Vec new = VEC_NEW(SymItem);
+    SymItem item = {
         .name = name,
         .type = SYM_NONE,
-        .file_pos = pos
+        .declared = false,
     };
-    tree_insert(scope, name.str, data);
+    VEC_PUSH(&data, SymItem, item);
+
+    tree_insert(scope, name.str, new);
     return tree_find(scope, name.str);
+}
+
+SymItem *sym_declare(Symtable *symtable, String name) {
+    Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
+    Vec *data = tree_find(scope, name.str);
+
+    if (!data) {
+        Vec new = VEC_NEW(SymItem);
+        SymItem item = {
+            .name = name,
+            .type = SYM_NONE,
+            .declared = false,
+        };
+        VEC_PUSH(&data, SymItem, item);
+
+        tree_insert(scope, name.str, new);
+        return tree_find(scope, name.str);
+    }
+
+    SymItem *item = &VEC_LAST(data, SymItem);
+    if (!item->declared) {
+        item->declared = true;
+        return item;
+    }
+
+    SymItem new_item = {
+        .name = name,
+        .type = SYM_NONE,
+        .declared = false,
+    };
+    VEC_PUSH(&data, SymItem, new_item);
+    return &VEC_LAST(data, SymItem);
 }
 
 void sym_item_var(SymItem *ident, VarData var) {
@@ -328,66 +377,6 @@ void sym_item_var(SymItem *ident, VarData var) {
 void sym_item_func(SymItem *ident, FuncData fun) {
     ident->type = SYM_FUNC;
     ident->func = fun;
-}
-
-SymItem *sym_var_add(
-    Symtable *symtable,
-    String name,
-    bool mutable,
-    FilePos pos
-) {
-    Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
-
-    SymItem data = {
-        .name = name,
-        .type = SYM_VAR,
-        .var = {
-            .data_type = NONE,
-            .nullable = false,
-            .mutable = mutable,
-        },
-        .file_pos = pos
-    };
-    tree_insert(scope, name.str, data);
-    return tree_find(scope, name.str);
-}
-
-void sym_var_set_type(SymItem *var, DataType type, bool nullable) {
-    if (var->type != SYM_VAR)
-        return;
-
-    var->var.data_type = type;
-    var->var.nullable = nullable;
-}
-
-SymItem *sym_func_add(Symtable *symtable, String name, FilePos pos) {
-    Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
-
-    SymItem data = {
-        .name = name,
-        .type = SYM_FUNC,
-        .func = {
-            .return_type = RET_VOID
-        },
-        .file_pos = pos
-    };
-    tree_insert(scope, name.str, data);
-    SymItem *func = tree_find(scope, name.str);
-    return func;
-}
-
-void sym_func_set_ret(SymItem *func, ReturnType ret) {
-    if (func->type != SYM_FUNC)
-        return;
-
-    func->func.return_type = ret;
-}
-
-void sym_func_set_params(SymItem *func, Vec params) {
-    if (func->type != SYM_FUNC)
-        return;
-
-    func->func.params = params;
 }
 
 ReturnType sym_func_get_ret(SymItem *data, String name) {

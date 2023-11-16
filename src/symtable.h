@@ -61,14 +61,15 @@ struct SymItem {
         FuncData func;
         VarData var;
     };
-    unsigned int layer;
+    bool declared;
     // Marks position in file
     FilePos file_pos;
 };
 
 typedef struct node {
     const char *key;
-    SymItem data;
+    // SymItem vector
+    Vec data;
     struct node *left_node;
     struct node *right_node;
     // Height factor for maintaining tree balanced
@@ -88,19 +89,22 @@ typedef struct {
 Tree tree_new();
 
 /// Adds node into tree
-void tree_insert(Tree *tree, const char *key, SymItem data);
+void tree_insert(Tree *tree, const char *key, Vec data);
 
 /// Removes tree node by given key
 void tree_remove(Tree *tree, const char *key);
 
 /// Returns pointer to data of found node, if not found NULL
-SymItem *tree_find(Tree *tree, const char *key);
+Vec *tree_find(Tree *tree, const char *key);
 
 /// Frees the tree - owner's responsibility!
 void tree_free(Tree *tree);
 
 void tree_visualise(Tree *tree);
 
+//===========================================================================//
+//                                 Symtable                                  //
+//===========================================================================//
 
 /// Creates new symtable
 Symtable sym_new();
@@ -114,34 +118,17 @@ void sym_scope_add(Symtable *symtable);
 /// Pops scope from symtable scope stack
 void sym_scope_pop(Symtable *symtable);
 
-/// Creates new symtable item, without specifying its type
-SymItem *sym_item_new(Symtable *symtable, String name, FilePos pos);
+/// Finds item in symtable, create new if not existing
+SymItem *sym_find(Symtable *symtable, String name);
+
+/// Declares new item
+SymItem *sym_declare(Symtable *symtable, String name);
 
 /// Sets ident to variable with given data
 void sym_item_var(SymItem *ident, VarData var);
 
 /// Sets ident to function with given data
 void sym_item_func(SymItem *ident, FuncData fun);
-
-/// Adds variable to the active scope (first in stack)
-SymItem *sym_var_add(
-    Symtable *symtable,
-    String name,
-    bool mutable,
-    FilePos pos
-);
-
-/// Sets variable type
-void sym_var_set_type(SymItem *var, DataType type, bool nullable);
-
-/// Adds function to the current scope (first in stack)
-SymItem *sym_func_add(Symtable *symtable, String name, FilePos pos);
-
-/// Sets return type of given function
-void sym_func_set_ret(SymItem *func, ReturnType ret);
-
-/// Sets parameters of given function
-void sym_func_set_params(SymItem *func, Vec params);
 
 /// Gets return type of function with given name
 ReturnType sym_func_get_ret(SymItem *data, String name);
