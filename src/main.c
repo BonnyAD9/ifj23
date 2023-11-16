@@ -9,15 +9,6 @@
 #include "symtable.h"
 #include "vec.h"
 
-void print_node_data(Tree *tree, SymItem **data, const char *key) {
-    *data = tree_find(tree, key);
-    if (*data)
-        // Also print data stored in found node
-        fprintf(stdout, "Node %s found, data.layer=%d\n", key, (*data)->name);
-    else
-        fprintf(stdout, "Node %s NOT found\n", key);
-}
-
 int main(void) {
     FILE* file = fopen(DEBUG_FILE, "r");
     if (!file)

@@ -19,7 +19,7 @@ static int _update_height_ret_balance(TreeNode *node);
 /// Recursively delete tree
 static void _tree_free(TreeNode *node);
 /// Recursively search for node with given key
-static SymItem *_tree_find(TreeNode *node, const char *key);
+static Vec *_tree_find(TreeNode *node, const char *key);
 /// Inserts new node into current tree
 static TreeNode *_tree_insert(TreeNode *node, const char *key, Vec data);
 /// Deletes node in current tree
@@ -70,7 +70,7 @@ void tree_free(Tree *tree) {
     _tree_free(tree->root_node);
 }
 
-static SymItem *_tree_find(TreeNode *node, const char *key) {
+static Vec *_tree_find(TreeNode *node, const char *key) {
     // Search failed
     if (!node)
         return NULL;
@@ -331,10 +331,10 @@ SymItem *sym_find(Symtable *symtable, String name) {
         .type = SYM_NONE,
         .declared = false,
     };
-    VEC_PUSH(&data, SymItem, item);
+    VEC_PUSH(data, SymItem, item);
 
     tree_insert(scope, name.str, new);
-    return tree_find(scope, name.str);
+    return &VEC_LAST(data, SymItem);
 }
 
 SymItem *sym_declare(Symtable *symtable, String name) {
@@ -348,10 +348,10 @@ SymItem *sym_declare(Symtable *symtable, String name) {
             .type = SYM_NONE,
             .declared = false,
         };
-        VEC_PUSH(&data, SymItem, item);
+        VEC_PUSH(&new, SymItem, item);
 
         tree_insert(scope, name.str, new);
-        return tree_find(scope, name.str);
+        return &VEC_LAST(&new, SymItem);
     }
 
     SymItem *item = &VEC_LAST(data, SymItem);
@@ -365,7 +365,7 @@ SymItem *sym_declare(Symtable *symtable, String name) {
         .type = SYM_NONE,
         .declared = false,
     };
-    VEC_PUSH(&data, SymItem, new_item);
+    VEC_PUSH(data, SymItem, new_item);
     return &VEC_LAST(data, SymItem);
 }
 
