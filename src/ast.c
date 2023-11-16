@@ -42,10 +42,19 @@ AstUnaryOp *ast_unary_op(Token operator, AstExpr *param) {
     );
 }
 
-AstFuncCallParam *ast_func_call_param(SymItem *ident, SymItem *name) {
+AstFuncCallParam *ast_func_call_var_param(SymItem *ident, SymItem *name) {
     STRUCT_ALLOC(AstFuncCallParam,
-        .ident = ident,
+        .type = ASTFCP_VARIABLE,
         .name = name,
+        .variable = ident,
+    );
+}
+
+AstFuncCallParam *ast_func_call_lit_param(AstLiteral *literal, SymItem *name) {
+    STRUCT_ALLOC(AstFuncCallParam,
+        .type = ASTFCP_LITERAL,
+        .name = name,
+        .literal = literal,
     );
 }
 

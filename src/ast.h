@@ -30,9 +30,18 @@ typedef struct {
     AstExpr *param;
 } AstUnaryOp;
 
+typedef enum {
+    ASTFCP_VARIABLE,
+    ASTFCP_LITERAL,
+} AstFuncCallParamType;
+
 typedef struct {
-    SymItem *ident;
     SymItem *name;
+    AstFuncCallParamType type;
+    union {
+        SymItem *variable;
+        AstLiteral *literal;
+    };
 } AstFuncCallParam;
 
 typedef struct {
@@ -154,7 +163,9 @@ AstBinaryOp *ast_binary_op(Token operator, AstExpr *left, AstExpr *right);
 
 AstUnaryOp *ast_unary_op(Token operator, AstExpr *param);
 
-AstFuncCallParam *ast_func_call_param(SymItem *ident, SymItem *name);
+AstFuncCallParam *ast_func_call_var_param(SymItem *ident, SymItem *name);
+
+AstFuncCallParam *ast_func_call_lit_param(AstLiteral *literal, SymItem *name);
 
 AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters);
 
