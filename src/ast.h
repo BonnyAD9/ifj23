@@ -33,24 +33,46 @@ typedef struct {
 typedef struct {
     SymItem *ident;
     SymItem *name;
+    AstTermType arg_type;
 } AstFuncCallParam;
 
 typedef struct {
     SymItem *ident;
+    AstFuncType func_type;
     // type: AstFuncCallParam *
     Vec arguments;
+    // func type from table
 } AstFunctionCall;
 
 typedef enum {
     LITERAL_INT,
+    LITERAL_INT_NOT_NIL,
     LITERAL_DOUBLE,
+    LITERAL_DOUBLE_NOT_NIL,
     LITERAL_STRING,
+    LITERAL_STRING_NOT_NIL,
     LITERAL_NIL,
-} AstType;
+    LITERAL_NIL_NOT_NIL,
+    NOT_DEFINED,
+    UNKNOWN
+} AstDataType;
+
+typedef enum {
+    LITERAL,
+    VARIABLE,
+    UNKNOWN
+} AstTermType;
+
+typedef enum {
+    VOID_FUNC,
+    NON_VOID_FUNC,
+    UNKNOWN
+} AstFuncType;
 
 typedef struct {
     SymItem *ident;
     SymItem *name;
+    AstTermType param_type;
 } AstFuncDeclParam;
 
 typedef struct {
@@ -58,6 +80,7 @@ typedef struct {
     // type: AstFuncDeclParam
     Vec parameters;
     AstBlock *body;
+    // func type from table
 } AstFunctionDecl;
 
 typedef struct {
@@ -72,6 +95,7 @@ typedef enum {
 typedef struct {
     SymItem *ident;
     AstExpr *value;
+    AstDataType data_type;
 } AstVariableDecl;
 
 typedef struct {
@@ -94,7 +118,7 @@ typedef struct {
 } AstWhile;
 
 typedef struct {
-    AstType type;
+    AstDataType data_type;
     union {
         int int_v;
         double double_v;
@@ -104,6 +128,7 @@ typedef struct {
 
 typedef struct {
     SymItem *ident;
+    // data type from table
 } AstVariable;
 
 typedef enum {
