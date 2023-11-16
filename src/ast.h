@@ -60,13 +60,16 @@ typedef struct {
 
 typedef struct {
     SymItem *ident;
+    AstFuncType func_type;
     // type: AstFuncCallParam *
     Vec arguments;
+    // func type from table
 } AstFunctionCall;
 
 typedef struct {
     SymItem *ident;
     SymItem *name;
+    AstTermType param_type;
 } AstFuncDeclParam;
 
 typedef struct {
@@ -74,6 +77,7 @@ typedef struct {
     // type: AstFuncDeclParam
     Vec parameters;
     AstBlock *body;
+    // func type from table
 } AstFunctionDecl;
 
 typedef struct {
@@ -88,6 +92,7 @@ typedef enum {
 typedef struct {
     SymItem *ident;
     AstExpr *value;
+    AstDataType data_type;
 } AstVariableDecl;
 
 typedef struct {
@@ -111,6 +116,7 @@ typedef struct {
 
 typedef struct {
     SymItem *ident;
+    // data type from table
 } AstVariable;
 
 typedef enum {
