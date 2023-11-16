@@ -58,6 +58,9 @@ static void _tree_free(TreeNode *node) {
     // Release allocated function params
     str_free(&node->data.func_params);
 */
+    str_free(&node->data.name);
+    if (node->data.type == FUNC)
+        vec_free(&node->data.func.params);
     free(node);
     node = NULL;
 }
@@ -315,12 +318,10 @@ NodeData *symtable_var_add(
     NodeData data = {
         .name = name,
         .type = VAR,
-        .data = {
-            .var = {
-                .data_type = NONE,
-                .nullable = false,
-                .mutable = mutable,
-            }
+        .var = {
+            .data_type = NONE,
+            .nullable = false,
+            .mutable = mutable,
         },
         .file_place = pos
     };
@@ -333,8 +334,8 @@ void symtable_var_set_type(NodeData *var, DataType type, bool nullable) {
     if (var->type != VAR)
         return;
 
-    var->data.var.data_type = type;
-    var->data.var.nullable = nullable;
+    var->var.data_type = type;
+    var->var.nullable = nullable;
 }
 
 NodeData *symtable_func_add(Symtable *symtable, String name, FilePos pos) {
@@ -343,10 +344,8 @@ NodeData *symtable_func_add(Symtable *symtable, String name, FilePos pos) {
     NodeData data = {
         .name = name,
         .type = FUNC,
-        .data = {
-            .func = {
-                .return_type = RET_VOID
-            }
+        .func = {
+            .return_type = RET_VOID
         },
         .file_place = pos
     };
@@ -359,32 +358,26 @@ void symtable_func_set_return(NodeData *func, ReturnType ret) {
     if (func->type != FUNC)
         return;
 
-    func->data.func.return_type = ret;
+    func->func.return_type = ret;
 }
 
 void symtable_func_set_params(NodeData *func, Vec params) {
     if (func->type != FUNC)
         return;
 
-    func->data.func.params = params;
+    func->func.params = params;
 }
 
-ReturnType symtable_func_get_return(Symtable *symtable, String name) {
-    Tree *scope = VEC_AT(&symtable->scopes, Tree*, 0);
-    NodeData *data = tree_find(scope, name.str);
-
+ReturnType symtable_func_get_return(NodeData *data, String name) {
     if (data->type != FUNC)
         return RET_VOID;
 
-    return data->data.func.return_type;
+    return data->func.return_type;
 }
 
-Vec *symtable_func_get_params(Symtable *symtable, String name) {
-    Tree *scope = VEC_AT(&symtable->scopes, Tree*, 0);
-    NodeData *data = tree_find(scope, name.str);
-
+Vec *symtable_func_get_params(NodeData *data, String name) {
     if (data->type != FUNC)
         return NULL;
 
-    return &data->data.func.params;
+    return &data->func.params;
 }

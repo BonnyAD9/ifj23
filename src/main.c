@@ -136,7 +136,7 @@ int main(void) {
         .column = 0,
         .line = 0
     };
-    data = symtable_var_add(&symtable, STR("x"), true, pos);
+    data = symtable_var_add(&symtable, str_clone(STR("x")), true, pos);
     symtable_var_set_type(data, INT, false);
     Tree *scope = VEC_LAST(&symtable.scope_stack, Tree*);
 

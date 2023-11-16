@@ -49,16 +49,14 @@ typedef struct {
     bool mutable;
 } VarData;
 
-typedef union {
-    FuncData func;
-    VarData var;
-} NodeDataType;
-
 // Values saved in each tree node
 typedef struct {
     String name;
     Type type;
-    NodeDataType data;
+    union {
+        FuncData func;
+        VarData var;
+    };
     unsigned int layer;
     // Marks position in file
     FilePos file_place;
@@ -133,9 +131,9 @@ void symtable_func_set_return(NodeData *func, ReturnType ret);
 void symtable_func_set_params(NodeData *func, Vec params);
 
 /// Gets return type of function with given name
-ReturnType symtable_func_get_return(Symtable *symtable, String name);
+ReturnType symtable_func_get_return(NodeData *data, String name);
 
 /// Gets params of function with given name
-Vec *symtable_func_get_params(Symtable *symtable, String name);
+Vec *symtable_func_get_params(NodeData *data, String name);
 
 #endif // SYMTABLE_H_INCLUDED
