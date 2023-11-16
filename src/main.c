@@ -9,7 +9,7 @@
 #include "symtable.h"
 #include "vec.h"
 
-void print_node_data(Tree *tree, NodeData **data, const char *key) {
+void print_node_data(Tree *tree, SymItem **data, const char *key) {
     *data = tree_find(tree, key);
     if (*data)
         // Also print data stored in found node
@@ -57,12 +57,12 @@ int main(void) {
     // Symtable - tree tests
     Tree tree = tree_new();
     //////////////// Insertion ////////////////
-    tree_insert(&tree, "A", (NodeData){.layer = 1});
-    tree_insert(&tree, "B", (NodeData){.layer = 2});
-    tree_insert(&tree, "C", (NodeData){.layer = 3});
-    tree_insert(&tree, "D", (NodeData){.layer = 4});
-    tree_insert(&tree, "E", (NodeData){.layer = 5});
-    tree_insert(&tree, "F", (NodeData){.layer = 6});
+    tree_insert(&tree, "A", (SymItem){.layer = 1});
+    tree_insert(&tree, "B", (SymItem){.layer = 2});
+    tree_insert(&tree, "C", (SymItem){.layer = 3});
+    tree_insert(&tree, "D", (SymItem){.layer = 4});
+    tree_insert(&tree, "E", (SymItem){.layer = 5});
+    tree_insert(&tree, "F", (SymItem){.layer = 6});
     // Print tree content
     tree_visualise(&tree);
     fprintf(stdout, "\n");
@@ -73,7 +73,7 @@ int main(void) {
     // Print tree content
     tree_visualise(&tree);
     //////////////// Lookup ////////////////
-    NodeData *data;
+    SymItem *data;
     print_node_data(&tree, &data, "F");
     // Try to modify node's data, layer=6 -> layer=0
     if (data)
@@ -81,7 +81,7 @@ int main(void) {
     // Print again and expect data.layer value change
     print_node_data(&tree, &data, "F");
     // Modify node's layer by insertion
-    tree_insert(&tree, "F", (NodeData){.layer = 1});
+    tree_insert(&tree, "F", (SymItem){.layer = 1});
     print_node_data(&tree, &data, "F");
     // Try to find non-existing node
     print_node_data(&tree, &data, "@");
@@ -130,16 +130,16 @@ int main(void) {
 
     vec_free(&v);
 
-    Symtable symtable = symtable_new();
-    symtable_scope_add(&symtable);
+    Symtable symtable = sym_new();
+    sym_scope_add(&symtable);
     FilePos pos = {
         .column = 0,
         .line = 0
     };
-    data = symtable_var_add(&symtable, str_clone(STR("x")), true, pos);
-    symtable_var_set_type(data, INT, false);
+    data = sym_var_add(&symtable, str_clone(STR("x")), true, pos);
+    sym_var_set_type(data, INT, false);
     Tree *scope = VEC_LAST(&symtable.scope_stack, Tree*);
 
     // tree_visualise(&VEC_LAST(&symtable.scope_stack, Tree));
-    symtable_free(&symtable);
+    sym_free(&symtable);
 }
