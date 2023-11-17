@@ -6,6 +6,7 @@
 #include "lexer.h"
 #include "string.h"
 #include "vec.h"
+#include "enums.h"
 
 typedef enum {
     // Function
@@ -27,13 +28,6 @@ typedef enum {
     LOCAL,
     GLOBAL
 } Scope;
-
-typedef enum {
-    INT,
-    DOUBLE,
-    STRING,
-    NONE
-} DataType;
 
 typedef struct SymItem SymItem;
 

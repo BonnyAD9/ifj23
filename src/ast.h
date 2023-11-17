@@ -1,10 +1,9 @@
 #ifndef AST_H_INCLUDED
 #define AST_H_INCLUDED
 
-#include "vec.h"
-#include "lexer.h"
-#include "symtable.h"
-
+#include "vec.h"      // Vec
+#include "symtable.h" // SymItem
+#include "enums.h"    // DataType
 // Forward declarations
 
 // Expression, something that has value
@@ -28,15 +27,8 @@ typedef struct {
     AstExpr *param;
 } AstUnaryOp;
 
-typedef enum {
-    LITERAL_INT,
-    LITERAL_DOUBLE,
-    LITERAL_STRING,
-    LITERAL_NIL,
-} AstType;
-
 typedef struct {
-    AstType type;
+    DataType type;
     union {
         int int_v;
         double double_v;
@@ -45,13 +37,17 @@ typedef struct {
 } AstLiteral;
 
 typedef enum {
-    ASTFCP_VARIABLE,
-    ASTFCP_LITERAL,
-} AstFuncCallParamType;
+    AST_BINARY_OP,
+    AST_UNARY_OP,
+    AST_FUNCTION_CALL,
+    AST_LITERAL,
+    AST_VARIABLE,
+} AstExprType;
 
 typedef struct {
-    SymItem *name;
-    AstFuncCallParamType type;
+    String name;
+    // can be only literal or variable
+    AstExprType type;
     union {
         SymItem *variable;
         AstLiteral *literal;
@@ -60,7 +56,6 @@ typedef struct {
 
 typedef struct {
     SymItem *ident;
-    AstFuncType func_type;
     // type: AstFuncCallParam *
     Vec arguments;
     // func type from table
@@ -68,8 +63,7 @@ typedef struct {
 
 typedef struct {
     SymItem *ident;
-    SymItem *name;
-    AstTermType param_type;
+    String name;
 } AstFuncDeclParam;
 
 typedef struct {
@@ -92,7 +86,6 @@ typedef enum {
 typedef struct {
     SymItem *ident;
     AstExpr *value;
-    AstDataType data_type;
 } AstVariableDecl;
 
 typedef struct {
@@ -118,14 +111,6 @@ typedef struct {
     SymItem *ident;
     // data type from table
 } AstVariable;
-
-typedef enum {
-    AST_BINARY_OP,
-    AST_UNARY_OP,
-    AST_FUNCTION_CALL,
-    AST_LITERAL,
-    AST_VARIABLE,
-} AstExprType;
 
 struct AstExpr {
     AstExprType type;
@@ -167,13 +152,13 @@ AstBinaryOp *ast_binary_op(Token operator, AstExpr *left, AstExpr *right);
 
 AstUnaryOp *ast_unary_op(Token operator, AstExpr *param);
 
-AstFuncCallParam *ast_func_call_var_param(SymItem *ident, SymItem *name);
+AstFuncCallParam *ast_func_call_var_param(SymItem *ident, String name);
 
-AstFuncCallParam *ast_func_call_lit_param(AstLiteral *literal, SymItem *name);
+AstFuncCallParam *ast_func_call_lit_param(AstLiteral *literal, String name);
 
 AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters);
 
-AstFuncDeclParam *ast_func_decl_param(SymItem *ident, SymItem *name);
+AstFuncDeclParam *ast_func_decl_param(SymItem *ident, String name);
 
 AstFunctionDecl *ast_function_decl(SymItem *ident, AstBlock *body);
 

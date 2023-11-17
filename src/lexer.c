@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #include "utils.h" // DEBUG_FILE
+#include "enums.h" // DataType::*
 
 // Avoid double usage of these chars for number parsing
 bool plus_minus_used = false,
@@ -134,7 +135,7 @@ static Token read_ident(Lexer *lex) {
         return T_DECL;
     }
     else if (str_eq(lex->str, STR("nil"))){
-        lex->subtype = TL_NIL;
+        lex->subtype = DT_NIL;
         return T_LITERAL;
     }
     else if (str_eq(lex->str, STR("return")))
@@ -219,7 +220,7 @@ static Token read_num(Lexer *lex) {
             // Error if no value was parsed or errno occured
             if (endval == lex->str.str || errno != 0)
                 return lex_error(lex, "Error while converting number \n");
-            lex->subtype = TL_DOUBLE;
+            lex->subtype = DT_DOUBLE;
             return T_LITERAL;
     }
     else {
@@ -228,7 +229,7 @@ static Token read_num(Lexer *lex) {
         lex->i_num = strtol(lex->str.str, &endval, 10);
         if (endval == lex->str.str || errno != 0)
             return lex_error(lex, "Error while converting number \n");
-        lex->subtype = TL_INT;
+        lex->subtype = DT_INT;
         return T_LITERAL;
     }
 }
@@ -311,7 +312,7 @@ static Token read_triple_str(Lexer *lex) {
     // Store string
     lex->str = sb_get(&lex->buffer);
 
-    lex->subtype = TL_STRING;
+    lex->subtype = DT_STRING;
     return T_LITERAL;
 }
 
@@ -324,7 +325,7 @@ static Token read_str(Lexer *lex) {
 
         // Empty string
         lex->str = STR("");
-        lex->subtype = TL_STRING;
+        lex->subtype = DT_STRING;
         return T_LITERAL;
     }
 
@@ -408,7 +409,7 @@ static Token read_str(Lexer *lex) {
     lex->str = sb_get(&lex->buffer);
 
     lex->subtype = T_LITERAL;
-    return TL_STRING;
+    return DT_STRING;
 }
 
 Token ret_operator(Lexer *lex, char symbol, Token ret_val) {

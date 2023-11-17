@@ -58,13 +58,6 @@ typedef enum {
 } Token;
 
 typedef enum {
-    TL_INT,
-    TL_DOUBLE,
-    TL_STRING,
-    TL_NIL,
-} LiteralType;
-
-typedef enum {
     TD_LET,
     TD_VAR,
 } DeclType;

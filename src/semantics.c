@@ -1,24 +1,47 @@
 #include "semantics.h"
 
+#include "errors.h"
+#include "utils.h"
+
 // TODO keep up-date
 static bool    *sema_err(const char *msg, const int err_type);
-static Context *new_context(bool in_func, bool in_if, bool in_main, bool in_while, AstFuncType func_type);
+static Context *new_context(bool in_func, bool in_if, bool in_main, bool in_while, DataType func_type);
 static bool     process_statement(AstStmt *stmt);
 static bool     check_expr(AstExpr *expr);
-static bool     process_expr(AstExpr *expr, AstDataType *final_type);
-static bool     check_binary_op(AstBinaryOp *binary_op, AstDataType *final_type);
-static bool     check_unary_op(AstUnaryOp *unary_op, AstDataType *final_type);
-static bool     check_func_call(AstFunctionCall *func_call, AstDataType *final_type);
+static bool     process_expr(AstExpr *expr, DataType *final_type);
+static bool     check_binary_op(AstBinaryOp *binary_op, DataType *final_type);
+static bool     check_unary_op(AstUnaryOp *unary_op, DataType *final_type);
+static bool     check_func_call(AstFunctionCall *func_call, DataType *final_type);
 static bool     check_func_params(SymItem *ident, Vec params);
-static bool     check_literal(AstLiteral *literal, AstDataType *final_type);
-static bool     check_variable(SymItem *ident, AstDataType *final_type);
-static bool     check_compatibility(Token operator, AstDataType left_type, AstDataType right_type, AstDataType *final_type);
+static bool     check_literal(AstLiteral *literal, DataType *final_type);
+static bool     check_variable(SymItem *ident, DataType *final_type);
+static bool     check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type);
 static bool     check_block(AstBlock *block);
 static bool     check_func_decl(AstFunctionDecl *function_decl, Context *context);
 static bool     check_var_decl(AstVariableDecl *variable_decl);
 static bool     check_return(AstReturn *return_v, Context *context);
 static bool     check_if_stmt(AstIf *if_v);
 static bool     check_while_stmt(AstWhile *while_v);
+
+
+/////////////////////////////////////////////////////////////////////////
+
+static bool get_type_from_table(SymItem *ident, DataType *final_type) {
+    // TODO FOR MARTIN, kdyz void funcke, aby to bylo ve finaltype rozpoznatelne
+    return 0;
+}
+
+static Vec *get_args_vector_for_function(SymItem *funcname) {
+    // TODO FOR MARTIN
+    return NULL;
+}
+
+/*static String get_name_from_symtable(SymItem *iden) {
+    // TODO FOR MARTIN
+    return NUL_STR;
+}*/
+
+/////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////
 // Context type vec
@@ -31,7 +54,7 @@ static bool *sema_err(const char *msg, const int err_type) {
     return false;
 }
 
-static Context *new_context(bool in_func, bool in_if, bool in_main, bool in_while, AstFuncType func_type) {
+static Context *new_context(bool in_func, bool in_if, bool in_main, bool in_while, DataType func_type) {
     Context *cont = malloc(sizeof(Context));
     // TODO is check necessary and how to treat it?
     cont->in_func     = in_func;
@@ -47,7 +70,7 @@ static Context *new_context(bool in_func, bool in_if, bool in_main, bool in_whil
 bool check_statement(AstStmt *stmt) {
     context_vec = VEC_NEW(Context);
     // Set initial context and push it to vector
-    Context *new_cont = new_context(false, false, true, false, UNKNOWN);
+    Context *new_cont = new_context(false, false, true, false, DT_NONE);
     VEC_PUSH(&context_vec, Context*, new_cont);
 
     bool retval = process_statement(stmt);
@@ -66,39 +89,39 @@ static bool process_statement(AstStmt *stmt) {
         case AST_BLOCK:
             return check_block(stmt->block);
         case AST_FUNCTION_DECL:
-            cur_context = VEC_LAST(context_vec, Context*);
+            cur_context = VEC_LAST(&context_vec, Context*);
             if (cur_context->in_func || cur_context->in_if || cur_context->in_while) // Invalid combination
                 return sema_err("Cant declare/define inside function", ERR_SEMANTIC);
             // New - in function - context
-            Context *new_cont = new_context(true, false, false, false, UNKNOWN);
+            Context *new_cont = new_context(true, false, false, false, DT_NONE);
             VEC_PUSH(&context_vec, Context*, new_cont);
             bool retval = check_func_decl(stmt->function_decl, new_cont);
 
             // Check for missing return statement
-            if (new_cont->func_type != VOID_FUNC && !new_cont->return_used)
+            if (new_cont->func_type != DT_VOID && !new_cont->return_used)
                 return sema_err("Missing return statement in function", ERR_INVALID_RETURN);
 
             // Free before poping
             free(new_cont);
             // Pop exiting context when check done
-            VEC_POP(&context_vec, Context);
+            vec_pop(&context_vec);
 
             return retval;
         case AST_VARIABLE_DECL:
             return check_var_decl(stmt->variable_decl);
         case AST_RETURN:
-            cur_context = VEC_LAST(context_vec, Context*);
+            cur_context = VEC_LAST(&context_vec, Context*);
             if (cur_context->in_main && !cur_context->in_func) // Cant do return from main body
                 return sema_err("Return in main body", ERR_SEMANTIC);
             // In function
             return check_return(stmt->return_v, cur_context);
         case AST_IF:
-            cur_context = VEC_LAST(context_vec, Context*);
+            cur_context = VEC_LAST(&context_vec, Context*);
             cur_context->in_if = true;
 
             return check_if_stmt(stmt->if_v);
         case AST_WHILE:
-            cur_context = VEC_LAST(context_vec, Context*);
+            cur_context = VEC_LAST(&context_vec, Context*);
             cur_context->in_while = true;
 
             return check_while_stmt(stmt->while_v);
@@ -111,11 +134,11 @@ static bool process_statement(AstStmt *stmt) {
 // avoid f.e. having func call on left side of expression or if statement and so on
 
 static bool check_expr(AstExpr *expr) {
-    AstDataType type;
+    DataType type;
     return process_expr(expr, &type);
 }
 
-static bool process_expr(AstExpr *expr, AstDataType *final_type) {
+static bool process_expr(AstExpr *expr, DataType *final_type) {
     switch (expr->type) {
         case AST_BINARY_OP:
             return check_binary_op(expr->binary_op, final_type);
@@ -132,41 +155,33 @@ static bool process_expr(AstExpr *expr, AstDataType *final_type) {
     }
 }
 
-static bool check_binary_op(AstBinaryOp *binary_op, AstDataType *final_type) {
+static bool check_binary_op(AstBinaryOp *binary_op, DataType *final_type) {
     // Avoid f.e. funccall(a,b) = 5 type of expressions
     AstExprType left_expr_type = binary_op->left->type;
     if ((left_expr_type == AST_FUNCTION_CALL || left_expr_type == AST_LITERAL) && binary_op->operator == '=')
         return sema_err("Invalid l-value of expression", ERR_SEMANTIC);
 
     bool left_side = process_expr(binary_op->left, final_type);
-    AstDataType left_side_type = final_type;
+    DataType left_side_type = *final_type;
 
     bool right_side = process_expr(binary_op->right, final_type);
-    AstDataType right_side_type = final_type;
+    DataType right_side_type = *final_type;
 
     return (left_side && right_side && check_compatibility(binary_op->operator, left_side_type, right_side_type, final_type));
 }
 
-static bool check_unary_op(AstUnaryOp *unary_op, AstDataType *final_type) {
+static bool check_unary_op(AstUnaryOp *unary_op, DataType *final_type) {
     bool eval_expr = process_expr(unary_op->param, final_type);
-    AstDataType eval_type = final_type;
     // Only allowed unary operator is '!'
     if (unary_op->operator != '!')
         return sema_err("Invalid unary operator", ERR_SEMANTIC);
     // Switch to NOT_NIL values if not already set
-    if (*final_type == LITERAL_INT)
-        *final_type = LITERAL_INT_NOT_NIL;
-    else if (*final_type == LITERAL_DOUBLE)
-        *final_type = LITERAL_DOUBLE_NOT_NIL;
-    else if (*final_type == LITERAL_STRING)
-        *final_type = LITERAL_STRING_NOT_NIL;
-    else if (*final_type == LITERAL_NIL)
-        *final_type = LITERAL_NIL_NOT_NIL;
+    *final_type &= DT_TYPE_M;
     // Otherwise already set to NON-NIL value
     return eval_expr;
 }
 
-static bool check_func_call(AstFunctionCall *func_call, AstDataType *final_type) {
+static bool check_func_call(AstFunctionCall *func_call, DataType *final_type) {
     // If no return, f.e. NO_RET type will be stored in
     bool func_exists = get_type_from_table(func_call->ident, final_type);
     if (!func_exists)
@@ -190,37 +205,33 @@ static bool check_func_params(SymItem *ident, Vec params) {
         let decremented_n = decrement(of: n, by: 1)
     */
     VEC_FOR_EACH(&(params), AstFuncCallParam, arg) {
-        if (arg.v->arg_type == VARIABLE) {
+        if (arg.v->type == AST_VARIABLE) {
             // Check if variable is defined
-            if (!check_variable(arg.v->name, NULL))
+            if (!check_variable(arg.v->variable, NULL))
                 // Error already set by check_variable()
                 return false;
         }
-        // Unexpected value
-        // TODO this UNKNOWN
-        else if (arg.v->arg_type == UNKNOWN)
-            return sema_err("Unknown function call argument", ERR_INVALID_FUN);
 
         // Check for correct ident name
-        if (arg.v->ident != VEC_AT(arg_vec, AstFuncDeclParam, arg.i).ident)
+        if (!str_eq(arg.v->name, VEC_AT(arg_vec, AstFuncDeclParam, arg.i).name))
             return sema_err("Expected func argument differs in ident name", ERR_INVALID_FUN);
 
         // Check if correct type
-        if (arg.v->arg_type != VEC_AT(arg_vec, AstFuncDeclParam, arg.i).param_type)
+        if (arg.v->variable->type != VEC_AT(arg_vec, AstFuncDeclParam, arg.i).ident->type)
             return sema_err("Expected func argument differs in data type", ERR_INVALID_FUN);
     }
 
     return true;
 }
 
-static bool check_literal(AstLiteral *literal, AstDataType *final_type) {
-    *final_type = literal->data_type;
+static bool check_literal(AstLiteral *literal, DataType *final_type) {
+    *final_type = literal->type;
     return true;
 }
 
-static bool check_variable(SymItem *ident, AstDataType *final_type) {
+static bool check_variable(SymItem *ident, DataType *final_type) {
     if (get_type_from_table(ident, final_type)) {
-        if (final_type == LITERAL_INT || final_type == LITERAL_DOUBLE || final_type == LITERAL_STRING)
+        if (!(*final_type & DT_NIL))
             // Throw error about potencial nil
             WPRINTF("Variable can contain nil value");
         return true;
@@ -236,33 +247,33 @@ static bool check_variable(SymItem *ident, AstDataType *final_type) {
         / ... Int / Int ; Double / Double
         ==, !=, >,<, <=, => ... must be same type or error 7 (+ for == and != if nil, we need to convert it to non-nil value)
 */
-static bool check_compatibility(Token operator, AstDataType left_type, AstDataType right_type, AstDataType *final_type) {
+static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type) {
     const char *err_msg = NULL;
-    switch (operator) {
+    switch ((int)operator) {
         case '*':
         case '-':
-            if (left_type == LITERAL_STRING || left_type == LITERAL_NIL || right_type == LITERAL_STRING || right_type == LITERAL_NIL)
+            if (left_type == DT_STRING || left_type == DT_NIL || right_type == DT_STRING || right_type == DT_NIL)
                 err_msg = "Cant multiply/substract from string/nil value";
             // Determine type of whole expression
             else  // If expression contains at least one double type, int values must be converted to double and whole expr will be double type
-                *final_type = ((left_type == LITERAL_DOUBLE || right_type == LITERAL_DOUBLE) ? LITERAL_DOUBLE : LITERAL_INT);
+                *final_type = ((left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT);
             break;
         case '/':
-            if (left_type != right_type || (left_type != LITERAL_INT && left_type != LITERAL_DOUBLE))
+            if (left_type != right_type || (left_type != DT_INT && left_type != DT_DOUBLE))
                 err_msg = "Divided values must have same type";
             // Determine type of whole expression
             else
-                *final_type = ((left_type == LITERAL_DOUBLE) ? LITERAL_DOUBLE : LITERAL_INT);
+                *final_type = ((left_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT);
             break;
         case '+':
-            if (left_type == LITERAL_NIL || right_type == LITERAL_NIL)
+            if (left_type == DT_NIL || right_type == DT_NIL)
                 err_msg = "Cant do addition with nil value";
-            else if ((left_type == LITERAL_STRING || right_type == LITERAL_STRING) && left_type != right_type)
+            else if ((left_type == DT_STRING || right_type == DT_STRING) && left_type != right_type)
                 err_msg = "Cant concat string with non-string value";
             // Determine type of whole expression
             else
-                *final_type = ((left_type == LITERAL_STRING) ? LITERAL_STRING :
-                              ((left_type == LITERAL_DOUBLE || right_type == LITERAL_DOUBLE) ? LITERAL_DOUBLE : LITERAL_INT));
+                *final_type = ((left_type == DT_STRING) ? DT_STRING :
+                              ((left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT));
             break;
         case T_DOUBLE_QUES:
         case T_EQUALS:
@@ -278,7 +289,7 @@ static bool check_compatibility(Token operator, AstDataType left_type, AstDataTy
         case '>':
         case T_LESS_OR_EQUAL:
         case T_GREATER_OR_EQUAL:
-            if ((left_type != right_type) || (left_type == LITERAL_NIL || right_type == LITERAL_NIL))
+            if ((left_type != right_type) || (left_type == DT_NIL || right_type == DT_NIL))
                 err_msg = "Cant compare different types/nil values";
             // Determine type of whole expression
             else
@@ -308,7 +319,7 @@ static bool check_block(AstBlock *block) {
 
 static bool check_func_decl(AstFunctionDecl *function_decl, Context *context) {
     // Check if ident is defined
-    bool func_exists = get_type_from_table(function_decl->ident, context->func_type);
+    bool func_exists = get_type_from_table(function_decl->ident, &context->func_type);
     if (!func_exists)
         return sema_err("Undefined function", ERR_UNDEF_FUNCTION);
 
@@ -322,34 +333,34 @@ static bool check_func_decl(AstFunctionDecl *function_decl, Context *context) {
 
 static bool check_var_decl(AstVariableDecl *variable_decl) {
     // Check ident is valid
-    AstDataType var_type;
+    DataType var_type;
     bool var_exists = check_variable(variable_decl->ident, &var_type);
     if (!var_exists)
         return false;
 
     // Check expression
     if (variable_decl->value) {
-        AstDataType expr_type;
-        bool check_expr = process_expr(variable_decl->value, &expr_type);
+        DataType expr_type;
+        /*bool check_expr = */process_expr(variable_decl->value, &expr_type);
 
         // Check if expr type is inferiable
-        if (expr_type == UNKNOWN)
+        if (expr_type == DT_NONE)
             return sema_err("Expression type cant be determined", ERR_UNKNOWN_TYPE);
 
         // Check if data type is given, or try determine it
-        if (var_type == NOT_DEFINED)
-            variable_decl->data_type = expr_type;
+        if (var_type == DT_NONE)
+            variable_decl->ident->type = expr_type;
         else if (var_type != expr_type)
             return sema_err("Data types are not compatible", ERR_INCOM_TYPE);
     }
     // No init expression, if var allows NIL, set it to NIL, otherwise throw error
     else {
         // Check if NIL is allowed
-        if (var_type == LITERAL_INT || var_type == LITERAL_DOUBLE || var_type == LITERAL_STRING)
-            variable_decl->data_type = LITERAL_NIL;
+        if (var_type == DT_INT || var_type == DT_DOUBLE || var_type == DT_STRING)
+            variable_decl->ident->type = DT_NIL;
         // Not inicialized
         else
-            variable_decl->data_type = UNKNOWN;
+            variable_decl->ident->type = DT_NONE;
     }
     return true;
 }
@@ -358,12 +369,12 @@ static bool check_var_decl(AstVariableDecl *variable_decl) {
 
 static bool check_return(AstReturn *return_v, Context *context) {
     // maybe use global variable to for current context or pass it as another param
-    AstDataType expr_type;
+    DataType expr_type;
     // Void function with return expression is wrong
-    if (context->func_type == VOID_FUNC && return_v->expr)
+    if (context->func_type == DT_VOID && return_v->expr)
         return sema_err("Void funtion returns something", ERR_INVALID_RETURN);
     // Non-void function missing return expression
-    if (context->func_type != VOID_FUNC && !return_v->expr)
+    if (context->func_type != DT_VOID && !return_v->expr)
         return sema_err("Missing function's return type", ERR_INVALID_RETURN);
 
     bool valid_expr = process_expr(return_v->expr, &expr_type);
@@ -403,22 +414,3 @@ static bool check_while_stmt(AstWhile *while_v) {
     bool valid_body = check_block(while_v->body);
     return valid_cond && valid_body;
 }
-
-/////////////////////////////////////////////////////////////////////////
-
-static bool get_type_from_table(SymItem *ident, AstDataType *final_type) {
-    // TODO FOR MARTIN, kdyz void funcke, aby to bylo ve finaltype rozpoznatelne
-    return 0;
-}
-
-static Vec *get_args_vector_for_function(SymItem *funcname) {
-    // TODO FOR MARTIN
-    return NULL;
-}
-
-static String get_name_from_symtable(SymItem *iden) {
-    // TODO FOR MARTIN
-    return NUL_STR;
-}
-
-/////////////////////////////////////////////////////////////////////////
