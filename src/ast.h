@@ -3,9 +3,7 @@
 
 #include "vec.h"
 #include "lexer.h"
-
-// TODO: symbol table type
-typedef int SymItem;
+#include "symtable.h"
 
 // Forward declarations
 
@@ -31,6 +29,22 @@ typedef struct {
 } AstUnaryOp;
 
 typedef enum {
+    LITERAL_INT,
+    LITERAL_DOUBLE,
+    LITERAL_STRING,
+    LITERAL_NIL,
+} AstType;
+
+typedef struct {
+    AstType type;
+    union {
+        int int_v;
+        double double_v;
+        String string_v;
+    };
+} AstLiteral;
+
+typedef enum {
     ASTFCP_VARIABLE,
     ASTFCP_LITERAL,
 } AstFuncCallParamType;
@@ -49,13 +63,6 @@ typedef struct {
     // type: AstFuncCallParam *
     Vec arguments;
 } AstFunctionCall;
-
-typedef enum {
-    LITERAL_INT,
-    LITERAL_DOUBLE,
-    LITERAL_STRING,
-    LITERAL_NIL,
-} AstType;
 
 typedef struct {
     SymItem *ident;
@@ -101,15 +108,6 @@ typedef struct {
     AstCondition *condition;
     AstBlock *body;
 } AstWhile;
-
-typedef struct {
-    AstType type;
-    union {
-        int int_v;
-        double double_v;
-        String string_v;
-    };
-} AstLiteral;
 
 typedef struct {
     SymItem *ident;

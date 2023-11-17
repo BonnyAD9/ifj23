@@ -51,7 +51,7 @@ static TodoTree *parse_return(Parser *par);
 static bool calculate(Vec *ops, Vec *exprs, Vec *fpars);
 static int get_precedence(Token op, bool unary);
 static Token get_r_version(Token op);
-static TodoTree *is_l_operator(Token op);
+static bool is_l_operator(Token op);
 static size_t op_arg_count(Token op);
 static bool is_r_asoc(Token op);
 
@@ -75,7 +75,7 @@ static Token tok_next(Parser *par) {
 static TodoTree *parse_block(Parser *par, Token end) {
     tok_next(par); // skip '{'
 
-    TodoTree *res;
+    TodoTree *res = NULL;
 
     while (par->cur != end) {
         if (par->cur == T_EOF) {
@@ -181,7 +181,7 @@ static TodoTree *parse_if_expression(Parser *par) {
 static TodoTree *parse_expression(Parser *par) {
     TodoTree *term = NULL;
 
-    switch (par->cur) {
+    switch ((int)par->cur) {
     case '(':
         term = parse_bracket(par);
         break;
@@ -314,7 +314,6 @@ static TodoTree *parse_infix(Parser *par, TodoTree *left) {
             break;
         }
 
-        bool read_next = true;
         if (op == '(') {
             TodoTree *params = parse_function_params(par);
             if (!params) {
@@ -324,7 +323,6 @@ static TodoTree *parse_infix(Parser *par, TodoTree *left) {
                 vec_free(&ops);
                 return NULL;
             }
-            read_next = false;
             VEC_PUSH(&fpars, TodoTree *, params);
         }
 
@@ -405,7 +403,7 @@ static TodoTree *parse_func_param(Parser *par) {
 
     if (tok_next(par) != T_IDENT) {
         // TODO: free
-        free(&id);
+        str_free(&id);
         return NULL;
     }
 
@@ -423,7 +421,7 @@ static bool calculate(Vec *ops, Vec *exprs, Vec *fpars) {
         return false;
     }
 
-    TodoTree **r = vec_pop(&exprs);
+    TodoTree **r = vec_pop(exprs);
     if (!r) {
         return false;
     }
@@ -432,7 +430,7 @@ static bool calculate(Vec *ops, Vec *exprs, Vec *fpars) {
         return todo_tree(*op, *r);
     }
 
-    TodoTree **l = vec_pop(&exprs);
+    TodoTree **l = vec_pop(exprs);
     if (!l) {
         return false;
     }
@@ -441,7 +439,7 @@ static bool calculate(Vec *ops, Vec *exprs, Vec *fpars) {
 }
 
 static size_t op_arg_count(Token op) {
-    switch (op) {
+    switch ((int)op) {
     case '(':
     case '!':
     case T_UNARY_MINUS:
@@ -486,8 +484,7 @@ static size_t op_arg_count(Token op) {
 // +------------+-----------------+-------------+---------------+
 
 static int get_precedence(Token op, bool unary) {
-    int prec = 0;
-    switch (op) {
+    switch ((int)op) {
     case '(':
         return 1;
 
@@ -527,7 +524,7 @@ static int get_precedence(Token op, bool unary) {
 }
 
 static Token get_r_version(Token op) {
-    switch (op)
+    switch ((int)op)
     {
     case '+':
         return T_UNARY_PLUS;
@@ -538,7 +535,7 @@ static Token get_r_version(Token op) {
     }
 }
 
-static TodoTree *is_l_operator(Token op) {
+static bool is_l_operator(Token op) {
     return op_arg_count(op) == 2 || op == '(';
 }
 
@@ -586,7 +583,7 @@ static TodoTree *parse_decl(Parser *par) {
         type = parse_type(par);
         if (!type) {
             // TODO: free
-            free(&ident);
+            str_free(&ident);
             return NULL;
         }
         tok_next(par);
@@ -600,7 +597,7 @@ static TodoTree *parse_decl(Parser *par) {
     TodoTree *init = parse_expression(par);
     if (!init) {
         // TODO: free
-        free(&ident);
+        str_free(&ident);
         free(type);
         return NULL;
     }
@@ -615,7 +612,7 @@ static TodoTree *parse_type(Parser *par) {
 
     bool nillable = false;
     tok_next(par);
-    if (par->cur = '?') {
+    if (par->cur == '?') {
         nillable = true;
         tok_next(par);
     }
@@ -634,7 +631,7 @@ static TodoTree *parse_func(Parser *par) {
     tok_next(par);
     if (par->cur != '(') {
         // TODO: free
-        free(&ident);
+        str_free(&ident);
         return parse_error(
             par,
             ERR_SYNTAX,
@@ -648,7 +645,7 @@ static TodoTree *parse_func(Parser *par) {
         TodoTree *param = parse_func_decl_param(par);
         if (!param) {
             // TODO: free
-            free(&ident);
+            str_free(&ident);
             vec_free_with(&params, free);
             return NULL;
         }
@@ -656,7 +653,7 @@ static TodoTree *parse_func(Parser *par) {
         if (par->cur == ',') {
             if (tok_next(par) == ')') {
                 // TODO: free
-                free(&ident);
+                str_free(&ident);
                 vec_free_with(&params, free);
                 return parse_error(
                     par,
@@ -666,7 +663,7 @@ static TodoTree *parse_func(Parser *par) {
             }
         } else if (par->cur != ')') {
             // TODO: free
-            free(&ident);
+            str_free(&ident);
             vec_free_with(&params, free);
             return parse_error(par, ERR_SYNTAX, "Expected ',', or ')'");
         }
@@ -680,7 +677,7 @@ static TodoTree *parse_func(Parser *par) {
         tok_next(par);
         type = parse_type(par);
         if (!type) {
-            free(&ident);
+            str_free(&ident);
             vec_free_with(&params, free);
             return NULL;
         }
@@ -689,7 +686,7 @@ static TodoTree *parse_func(Parser *par) {
     TodoTree *block = parse_block(par, '}');
     if (!block) {
         // TODO: free
-        free(&ident);
+        str_free(&ident);
         vec_free_with(&params, free);
         free(type);
     }
@@ -708,15 +705,15 @@ static TodoTree *parse_func_decl_param(Parser *par) {
 
     if (tok_next(par) != T_IDENT) {
         // TODO: free
-        free(&name);
+        str_free(&name);
         return parse_error(par, ERR_SYNTAX, "Expected parameter identifier");
     }
     String ident = par->lex->str;
 
     if (tok_next(par) != ':') {
         // TODO: free
-        free(&name);
-        free(&ident);
+        str_free(&name);
+        str_free(&ident);
         return parse_error(par, ERR_SYNTAX, "Expected ':'");
     }
 
@@ -725,8 +722,8 @@ static TodoTree *parse_func_decl_param(Parser *par) {
     TodoTree *type = parse_type(par);
     if (!type) {
         // TODO: free
-        free(&name);
-        free(&ident);
+        str_free(&name);
+        str_free(&ident);
         return NULL;
     }
 

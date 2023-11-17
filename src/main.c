@@ -10,15 +10,6 @@
 #include "vec.h"
 #include "ast.h"
 
-void print_node_data(Tree *tree, NodeData **data, const char *key) {
-    *data = tree_find(tree, key);
-    if (*data)
-        // Also print data stored in found node
-        fprintf(stdout, "Node %s found, data.layer=%d\n", key, (*data)->layer);
-    else
-        fprintf(stdout, "Node %s NOT found\n", key);
-}
-
 int main(void) {
     FILE* file = fopen(DEBUG_FILE, "r");
     if (!file)
@@ -55,9 +46,4 @@ int main(void) {
     fclose(file);
     lex_free(&lexer);
     printf("----------------------------------------\n");
-}
-
-
-    printf("----------------------------------------\n");
-    // AST Basic Tests
 }

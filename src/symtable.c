@@ -315,7 +315,7 @@ void sym_scope_add(Symtable *symtable) {
 }
 
 void sym_scope_pop(Symtable *symtable) {
-    VEC_POP(&symtable->scope_stack, Tree*);
+    vec_pop(&symtable->scope_stack);
 }
 
 SymItem *sym_find(Symtable *symtable, String name) {
