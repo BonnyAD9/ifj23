@@ -298,9 +298,7 @@ void sym_data_free(Vec *data) {
     VEC_FOR_EACH(data, SymItem, item) {
         str_free(&item.v->name);
         if (item.v->type == SYM_FUNC) {
-            VEC_FOR_EACH(&item.v->func.params, FuncParam, param) {
-                str_free(&param.v->label);
-            }
+            vec_free_with(&item.v->func.params, (FreeFun)sym_free_func_param);
             vec_free(&item.v->func.params);
         }
 
@@ -325,6 +323,8 @@ SymItem *sym_find(Symtable *symtable, String name) {
     if (data)
         return &VEC_LAST(data, SymItem);
 
+    name = str_clone(name);
+
     Vec new = VEC_NEW(SymItem);
     SymItem item = {
         .name = name,
@@ -337,16 +337,20 @@ SymItem *sym_find(Symtable *symtable, String name) {
     return &VEC_LAST(data, SymItem);
 }
 
-SymItem *sym_declare(Symtable *symtable, String name) {
+SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
     Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
     Vec *data = tree_find(scope, name.str);
 
+    Type new_type = is_function ? SYM_FUNC : SYM_VAR;
+
     if (!data) {
         Vec new = VEC_NEW(SymItem);
+        name = str_clone(name);
         SymItem item = {
             .name = name,
             .type = SYM_NONE,
             .declared = false,
+            .type = new_type,
         };
         VEC_PUSH(&new, SymItem, item);
 
@@ -357,8 +361,15 @@ SymItem *sym_declare(Symtable *symtable, String name) {
     SymItem *item = &VEC_LAST(data, SymItem);
     if (!item->declared) {
         item->declared = true;
+        item->type = new_type;
         return item;
     }
+
+    if (is_function) {
+        // TODO: name conflict with function
+    }
+
+    name = str_clone(name);
 
     SymItem new_item = {
         .name = name,
@@ -413,4 +424,8 @@ FuncData sym_func_new(ReturnType ret, Vec params) {
         .return_type = ret,
         .params = params
     };
+}
+
+void sym_free_func_param(FuncParam *par) {
+    str_free(&par->label);
 }

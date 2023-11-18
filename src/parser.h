@@ -2,18 +2,18 @@
 #define PARSER_H_INCLUDED
 
 #include "lexer.h" // Lexer, Token
-
-typedef int TodoTree; // this will be changed when AstTree is finished
+#include "vec.h"
 
 typedef struct {
     Lexer *lex;
+    Symtable *table;
     Token cur;
     int error;
 } Parser;
 
-Parser parser_new(Lexer *lex);
+Parser parser_new(Lexer *lex, Symtable *table);
 
-bool parser_parse(Parser *par);
+AstBlock *parser_parse(Parser *par);
 
 void parser_free(Parser *p);
 

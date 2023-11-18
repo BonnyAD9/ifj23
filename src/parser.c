@@ -2,25 +2,26 @@
 
 #include "errors.h"
 #include "vec.h"
+#include "ast.h"
+#include "semantics.h"
 
 #include <stdlib.h> // free
 #include <limits.h> // INT_MAX
 
+// TODO: remove, it is here only to show errors when it is used
+#define todo_tree(...) {+++}
+
 static Token tok_next(Parser *par);
 
-Parser parser_new(Lexer *lex) {
+Parser parser_new(Lexer *lex, Symtable *table) {
     return (Parser) {
         .lex = lex,
         .cur = T_EOF, // it is never readed
+        .table = table,
     };
 }
 
-static TodoTree *todo_tree() {
-    static TodoTree todo = 1;
-    return &todo;
-};
-
-static TodoTree *parse_error(Parser *par, int err_type, char *msg) {
+static void *parse_error(Parser *par, int err_type, char *msg) {
     printf(
         ":%zu:%zu: error: %s",
         par->lex->token_start.line,
@@ -31,22 +32,22 @@ static TodoTree *parse_error(Parser *par, int err_type, char *msg) {
     return NULL;
 }
 
-static TodoTree *parse_block(Parser *par, Token end);
-static TodoTree *parse_statement(Parser *par);
-static TodoTree *parse_if(Parser *par);
-static TodoTree *parse_if_expression(Parser *par);
-static TodoTree *parse_expression(Parser *par);
-static TodoTree *parse_bracket(Parser *par);
-static TodoTree *parse_terminal(Parser *par);
-static TodoTree *parse_infix(Parser *par, TodoTree *left);
-static TodoTree *parse_function_params(Parser *par);
-static TodoTree *parse_func_param(Parser *par);
-static TodoTree *parse_while(Parser *par);
-static TodoTree *parse_decl(Parser *par);
-static TodoTree *parse_type(Parser *par);
-static TodoTree *parse_func(Parser *par);
-static TodoTree *parse_func_decl_param(Parser *par);
-static TodoTree *parse_return(Parser *par);
+static AstBlock *parse_block(Parser *par, bool top_level);
+static AstStmt *parse_statement(Parser *par);
+static AstStmt *parse_if(Parser *par);
+static AstCondition *parse_if_condition(Parser *par);
+static AstExpr *parse_expression(Parser *par);
+static AstExpr *parse_bracket(Parser *par);
+static AstExpr *parse_terminal(Parser *par);
+static AstExpr *parse_infix(Parser *par, AstExpr *left);
+static bool parse_function_params(Parser *par, Vec *res);
+static AstFuncCallParam *parse_func_param(Parser *par);
+static AstStmt *parse_while(Parser *par);
+static AstStmt *parse_decl(Parser *par);
+static bool parse_type(Parser *par, DataType *res);
+static AstStmt *parse_func(Parser *par);
+static bool parse_func_decl_param(Parser *par, FuncParam *res);
+static AstStmt *parse_return(Parser *par);
 
 static bool calculate(Vec *ops, Vec *exprs, Vec *fpars);
 static int get_precedence(Token op, bool unary);
@@ -55,13 +56,8 @@ static bool is_l_operator(Token op);
 static size_t op_arg_count(Token op);
 static bool is_r_asoc(Token op);
 
-bool parser_parse(Parser *par) {
-    TodoTree *res = parse_block(par, T_EOF);
-    if (!res) {
-        return false;
-    }
-    // TODO: handle tree
-    return true;
+AstBlock *parser_parse(Parser *par) {
+    return parse_block(par, true);
 }
 
 void parser_free(Parser *p) {
@@ -72,33 +68,39 @@ static Token tok_next(Parser *par) {
     return par->cur = lex_next(par->lex);
 }
 
-static TodoTree *parse_block(Parser *par, Token end) {
+static AstBlock *parse_block(Parser *par, bool top_level) {
+    sym_scope_add(par->table);
+
     tok_next(par); // skip '{'
 
-    TodoTree *res = NULL;
+    Token end = top_level ? T_EOF : '}';
+
+    Vec stmts = VEC_NEW(AstStmt *);
 
     while (par->cur != end) {
         if (par->cur == T_EOF) {
+            sym_scope_pop(par->table);
             return parse_error(
                 par,
                 ERR_SYNTAX,
                 "Unexpected eof, expected end of block"
             );
         }
-        TodoTree *stmt = parse_statement(par);
+        AstStmt *stmt = parse_statement(par);
         if (!stmt) {
-            free(res);
+            sym_scope_pop(par->table);
+            vec_free_with(&stmts, (FreeFun)ast_free_stmt);
             return NULL;
         }
 
-        // TODO: add stmt to res
-        todo_tree(res, stmt);
+        VEC_PUSH(&stmts, AstStmt *, stmt);
     }
 
-    return res;
+    sym_scope_pop(par->table);
+    return sem_block(stmts, top_level);
 }
 
-static TodoTree *parse_statement(Parser *par) {
+static AstStmt *parse_statement(Parser *par) {
     switch (par->cur) {
     case T_IF:
         return parse_if(par);
@@ -111,15 +113,15 @@ static TodoTree *parse_statement(Parser *par) {
     case T_RETURN:
         return parse_return(par);
     default:
-        return parse_expression(par);
+        return sem_expr_stmt(parse_expression(par));
     }
 }
 
-static TodoTree *parse_if(Parser *par) {
+static AstStmt *parse_if(Parser *par) {
     tok_next(par); // skip the if
 
-    TodoTree *if_expr = parse_if_expression(par);
-    if (!if_expr) {
+    AstCondition *cond = parse_if_condition(par);
+    if (!cond) {
         return NULL;
     }
 
@@ -127,14 +129,14 @@ static TodoTree *parse_if(Parser *par) {
         return parse_error(par, ERR_SYNTAX, "Expected {");
     }
 
-    TodoTree *true_block = parse_block(par, '}');
+    AstBlock *true_block = parse_block(par, '}');
     if (!true_block) {
-        free(if_expr); // TODO: free
+        ast_free_condition(&cond);
         return NULL;
     }
 
     if (par->cur != T_ELSE) {
-        return todo_tree(if_expr, true_block, NULL);
+        return sem_if(cond, true_block, NULL);
     }
 
     tok_next(par); // skip the else
@@ -143,20 +145,19 @@ static TodoTree *parse_if(Parser *par) {
         return parse_error(par, ERR_SYNTAX, "Expected {");
     }
 
-    TodoTree *false_block = parse_block(par, '}');
+    AstBlock *false_block = parse_block(par, '}');
     if (!false_block) {
-        // TODO: free
-        free(if_expr);
-        free(true_block);
+        ast_free_condition(&cond);
+        ast_free_block(&false_block);
         return NULL;
     }
 
-    return todo_tree(if_expr, true_block, false_block);
+    return sem_if(cond, true_block, false_block);
 }
 
-static TodoTree *parse_if_expression(Parser *par) {
+static AstCondition *parse_if_condition(Parser *par) {
     if (par->cur != T_DECL) {
-        return parse_expression(par);
+        return sem_expr_condition(parse_expression(par));
     }
 
     if (par->lex->subtype != TD_LET) {
@@ -175,11 +176,13 @@ static TodoTree *parse_if_expression(Parser *par) {
         );
     }
 
-    return todo_tree(par->lex->str);
+    SymItem *ident = sym_find(par->table, par->lex->str);
+
+    return sem_let_condition(ident);
 }
 
-static TodoTree *parse_expression(Parser *par) {
-    TodoTree *term = NULL;
+static AstExpr *parse_expression(Parser *par) {
+    AstExpr *term = NULL;
 
     switch ((int)par->cur) {
     case '(':
@@ -200,16 +203,16 @@ static TodoTree *parse_expression(Parser *par) {
     return parse_infix(par, term);
 }
 
-static TodoTree *parse_bracket(Parser *par) {
+static AstExpr *parse_bracket(Parser *par) {
     tok_next(par); // skip '('
 
-    TodoTree *res = parse_expression(par);
+    AstExpr *res = parse_expression(par);
     if (!res) {
         return NULL;
     }
 
     if (par->cur != ')') {
-        free(res); // TODO: free
+        ast_free_expr(&res);
         return parse_error(par, ERR_SYNTAX, "Expected ')'");
     }
 
@@ -217,14 +220,15 @@ static TodoTree *parse_bracket(Parser *par) {
     return res;
 }
 
-static TodoTree *parse_terminal(Parser *par) {
-    TodoTree *ret;
+static AstExpr *parse_terminal(Parser *par) {
+    AstExpr *ret;
+    SymItem *ident;
     switch (par->cur) {
     case T_IDENT:
-        ret = todo_tree(par->lex->str);
+        ret = sem_lex_variable(par->lex);
         break;
     case T_LITERAL:
-        ret = todo_tree(par->lex);
+        ret = sem_lex_literal(par->lex);
         break;
     default:
         return parse_error(par, ERR_SEMANTIC, "Expected terminal");
@@ -233,7 +237,8 @@ static TodoTree *parse_terminal(Parser *par) {
     return ret;
 }
 
-static TodoTree *parse_infix(Parser *par, TodoTree *left) {
+// TODO: parse infix
+static AstExpr *parse_infix(Parser *par, AstExpr *left) {
     Vec exprs = VEC_NEW(TodoTree *);
     Vec ops = VEC_NEW(Token); // operators, 0 is brackets as exprs
     Vec fpars = VEC_NEW(TodoTree *); // function parameters for function calls
@@ -362,7 +367,7 @@ static TodoTree *parse_infix(Parser *par, TodoTree *left) {
     return ret;
 }
 
-static TodoTree *parse_function_params(Parser *par) {
+static bool parse_function_params(Parser *par, Vec *res) {
     tok_next(par);
     Vec params = VEC_NEW(TodoTree *);
     while (par->cur != ')') {
@@ -389,7 +394,7 @@ static TodoTree *parse_function_params(Parser *par) {
     return todo_tree(params);
 }
 
-static TodoTree *parse_func_param(Parser *par) {
+static AstFuncCallParam *parse_func_param(Parser *par) {
     if (par->cur != T_IDENT) {
         return NULL;
     }
@@ -543,95 +548,89 @@ static bool is_r_asoc(Token op) {
     return op == T_DOUBLE_QUES || op == '=';
 }
 
-static TodoTree *parse_while(Parser *par) {
+static AstStmt *parse_while(Parser *par) {
     tok_next(par); // skip the while
-    TodoTree *cond = parse_expression(par);
+    AstExpr *cond = parse_expression(par);
     if (!cond) {
         return false;
     }
 
     if (tok_next(par) != '{') {
-        // TODO: free
-        free(cond);
+        ast_free_expr(&cond);
         return parse_error(par, ERR_SYNTAX, "Expected '{'");
     }
 
-    TodoTree *loop = parse_block(par, '}');
+    AstBlock *loop = parse_block(par, '}');
     if (!loop) {
-        // TODO: free
-        free(cond);
-        free(loop);
+        ast_free_expr(&cond);
         return NULL;
     }
 
-    return todo_tree(cond, loop);
+    return sem_while(cond, loop);
 }
 
-static TodoTree *parse_decl(Parser *par) {
-    Token dtype = par->lex->subtype;
+static AstStmt *parse_decl(Parser *par) {
+    bool mutable = par->lex->subtype == TD_VAR;
 
     if (tok_next(par) != T_IDENT) {
         return NULL;
     }
-    String ident = par->lex->str;
+
+    SymItem *ident = sym_declare(par->table, par->lex->str, false);
+    if (!ident) {
+        return NULL;
+    }
 
     tok_next(par);
 
-    TodoTree *type = NULL;
+    DataType type = DT_NONE;
     if (par->cur == ':') {
         tok_next(par);
-        type = parse_type(par);
-        if (!type) {
-            // TODO: free
-            str_free(&ident);
+        if (!parse_type(par, &type)) {
             return NULL;
         }
         tok_next(par);
     }
 
     if (par->cur != '=') {
-        return todo_tree(dtype, ident, type);
+        return sem_var_decl(mutable, ident, type, NULL);
     }
 
     tok_next(par);
-    TodoTree *init = parse_expression(par);
+    AstExpr *init = parse_expression(par);
     if (!init) {
-        // TODO: free
-        str_free(&ident);
-        free(type);
         return NULL;
     }
 
-    return todo_tree(dtype, ident, type, init);
+    return sem_var_decl(mutable, ident, type, init);
 }
 
-static TodoTree *parse_type(Parser *par) {
+static bool parse_type(Parser *par, DataType *res) {
     if (par->cur != T_TYPE) {
-        return parse_error(par, ERR_SYNTAX, "Expected type name");
+        parse_error(par, ERR_SYNTAX, "Expected type name");
+        return false;
     }
 
-    bool nillable = false;
+    *res = par->lex->subtype;
+
     tok_next(par);
     if (par->cur == '?') {
-        nillable = true;
-        tok_next(par);
+        *res |= DT_NIL;
     }
 
-    return todo_tree(par->lex->subtype, nillable);
+    return true;
 }
 
-static TodoTree *parse_func(Parser *par) {
+static AstStmt *parse_func(Parser *par) {
     tok_next(par); // skip the func
     if (par->cur != T_IDENT) {
         return parse_error(par, ERR_SYNTAX, "expected function identifier");
     }
 
-    String ident = par->lex->str;
+    SymItem *ident = sym_declare(par->table, par->lex->str, true);
 
     tok_next(par);
     if (par->cur != '(') {
-        // TODO: free
-        str_free(&ident);
         return parse_error(
             par,
             ERR_SYNTAX,
@@ -639,22 +638,21 @@ static TodoTree *parse_func(Parser *par) {
         );
     }
 
-    Vec params = VEC_NEW(TodoTree *);
+    Vec params = VEC_NEW(FuncParam);
+    sym_scope_add(par->table);
 
     while (tok_next(par) != ')') {
-        TodoTree *param = parse_func_decl_param(par);
-        if (!param) {
-            // TODO: free
-            str_free(&ident);
-            vec_free_with(&params, free);
+        FuncParam param;
+        if (!parse_func_decl_param(par, &param)) {
+            sym_scope_pop(par->table);
+            vec_free_with(&params, (FreeFun)sym_free_func_param);
             return NULL;
         }
-        VEC_PUSH(&params, TodoTree *, param);
+        VEC_PUSH(&params, FuncParam, param);
         if (par->cur == ',') {
             if (tok_next(par) == ')') {
-                // TODO: free
-                str_free(&ident);
-                vec_free_with(&params, free);
+                sym_scope_pop(par->table);
+                vec_free_with(&params, (FreeFun)sym_free_func_param);
                 return parse_error(
                     par,
                     ERR_SYNTAX,
@@ -662,79 +660,77 @@ static TodoTree *parse_func(Parser *par) {
                 );
             }
         } else if (par->cur != ')') {
-            // TODO: free
-            str_free(&ident);
-            vec_free_with(&params, free);
+            sym_scope_pop(par->table);
+            vec_free_with(&params, (FreeFun)sym_free_func_param);
             return parse_error(par, ERR_SYNTAX, "Expected ',', or ')'");
         }
     }
 
     tok_next(par);
 
-    TodoTree *type = NULL;
+    DataType type = DT_NONE;
 
     if (par->cur == T_RETURNS) {
         tok_next(par);
-        type = parse_type(par);
-        if (!type) {
-            str_free(&ident);
-            vec_free_with(&params, free);
+        if (!parse_type(par, &type)) {
+            sym_scope_pop(par->table);
+            vec_free_with(&params, (FreeFun)sym_free_func_param);
             return NULL;
         }
     }
 
-    TodoTree *block = parse_block(par, '}');
+    AstBlock *block = parse_block(par, '}');
     if (!block) {
-        // TODO: free
-        str_free(&ident);
-        vec_free_with(&params, free);
-        free(type);
+        sym_scope_pop(par->table);
+        vec_free_with(&params, (FreeFun)sym_free_func_param);
+        return NULL;
     }
 
-    return todo_tree(ident, params, type, block);
+    sym_scope_pop(par->table);
+
+    return sem_func_decl(ident, params, type, block);
 }
 
-static TodoTree *parse_func_decl_param(Parser *par) {
-    String name = NUL_STR;
+static bool parse_func_decl_param(Parser *par, FuncParam *res) {
+    String label = NUL_STR;
 
     if (par->cur != '_' && par->cur != T_IDENT) {
-        return parse_error(par, ERR_SYNTAX, "Expected parameter name");
+        parse_error(par, ERR_SYNTAX, "Expected parameter name");
+        return false;
     } else if (par->cur == T_IDENT) {
-        name = par->lex->str;
+        label = str_clone(par->lex->str);
     }
 
     if (tok_next(par) != T_IDENT) {
-        // TODO: free
-        str_free(&name);
-        return parse_error(par, ERR_SYNTAX, "Expected parameter identifier");
+        str_free(&label);
+        parse_error(par, ERR_SYNTAX, "Expected parameter identifier");
+        return false;
     }
-    String ident = par->lex->str;
+
+    SymItem *ident = sym_declare(par->table, par->lex->str, false);
 
     if (tok_next(par) != ':') {
-        // TODO: free
-        str_free(&name);
-        str_free(&ident);
-        return parse_error(par, ERR_SYNTAX, "Expected ':'");
+        str_free(&label);
+        parse_error(par, ERR_SYNTAX, "Expected ':'");
+        return false;
     }
 
     tok_next(par);
 
-    TodoTree *type = parse_type(par);
-    if (!type) {
-        // TODO: free
-        str_free(&name);
-        str_free(&ident);
+    DataType type;
+    if (!parse_type(par, &type)) {
+        str_free(&label);
         return NULL;
     }
 
-    return todo_tree(name, ident, type);
+    return sem_func_param(label, ident, type, &res);
 }
 
-static TodoTree *parse_return(Parser *par) {
+static AstStmt *parse_return(Parser *par) {
     tok_next(par);
-    TodoTree *expr = parse_expression(par);
+    AstExpr *expr = parse_expression(par);
     if (!expr) {
         return NULL;
     }
-    return todo_tree(par);
+    return sem_return(expr);
 }

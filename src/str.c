@@ -27,7 +27,9 @@ String str_clone(const String s) {
         exit(ERR_OTHER);
     }
 
-    memcpy(str, s.str, s.len + 1);
+    memcpy(str, s.str, s.len);
+
+    str[s.len] = 0;
 
     return (String) { .str = str, .len = s.len };
 }

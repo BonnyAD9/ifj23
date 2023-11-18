@@ -38,6 +38,7 @@ typedef struct {
 
 typedef struct {
     ReturnType return_type;
+    // type: FuncParam
     Vec params;
 } FuncData;
 
@@ -116,7 +117,7 @@ void sym_scope_pop(Symtable *symtable);
 SymItem *sym_find(Symtable *symtable, String name);
 
 /// Declares new item
-SymItem *sym_declare(Symtable *symtable, String name);
+SymItem *sym_declare(Symtable *symtable, String name, bool is_function);
 
 /// Sets ident to variable with given data
 void sym_item_var(SymItem *ident, VarData var);
@@ -138,5 +139,8 @@ VarData sym_var_new(DataType type, bool nullable, bool mutable);
 
 /// Creates new function data
 FuncData sym_func_new(ReturnType ret, Vec params);
+
+/// Frees func param
+void sym_free_func_param(FuncParam *par);
 
 #endif // SYMTABLE_H_INCLUDED
