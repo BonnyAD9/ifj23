@@ -34,6 +34,12 @@
     ++name.i \
 )
 
+/// Inserts at the given index
+#define VEC_INSERT(vec, type, index, item) do { \
+    type __i = (item); \
+    vec_insert((vec), (index), &__i); \
+} while (0)
+
 /// Creates new span
 #define SPAN_NEW(data, len) span_new(data, sizeof(*data), len)
 
@@ -115,6 +121,9 @@ bool vec_push_span(Vec *vec, Span span);
 
 /// Copies the vector, returns empty vector when fails
 Vec vec_clone(Vec *vec);
+
+/// Inserts item at the given position
+bool vec_insert(Vec *vec, size_t index, void *item);
 
 /// creates new span
 Span span_new(void *data, size_t item_size, size_t len);

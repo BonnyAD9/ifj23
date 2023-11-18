@@ -4,6 +4,7 @@
 #include "vec.h"
 #include "ast.h"
 #include "semantics.h"
+#include "infix_parser.h"
 
 #include <stdlib.h> // free
 #include <limits.h> // INT_MAX
@@ -39,7 +40,6 @@ static AstCondition *parse_if_condition(Parser *par);
 static AstExpr *parse_expression(Parser *par);
 static AstExpr *parse_bracket(Parser *par);
 static AstExpr *parse_terminal(Parser *par);
-static AstExpr *parse_infix(Parser *par, AstExpr *left);
 static bool parse_function_params(Parser *par, Vec *res);
 static AstFuncCallParam *parse_func_param(Parser *par);
 static AstStmt *parse_while(Parser *par);
@@ -48,13 +48,6 @@ static bool parse_type(Parser *par, DataType *res);
 static AstStmt *parse_func(Parser *par);
 static bool parse_func_decl_param(Parser *par, FuncParam *res);
 static AstStmt *parse_return(Parser *par);
-
-static bool calculate(Vec *ops, Vec *exprs, Vec *fpars);
-static int get_precedence(Token op, bool unary);
-static Token get_r_version(Token op);
-static bool is_l_operator(Token op);
-static size_t op_arg_count(Token op);
-static bool is_r_asoc(Token op);
 
 AstBlock *parser_parse(Parser *par) {
     return parse_block(par, true);
@@ -182,6 +175,7 @@ static AstCondition *parse_if_condition(Parser *par) {
 }
 
 static AstExpr *parse_expression(Parser *par) {
+    // TODO: infix only
     AstExpr *term = NULL;
 
     switch ((int)par->cur) {
@@ -235,317 +229,6 @@ static AstExpr *parse_terminal(Parser *par) {
     }
     tok_next(par);
     return ret;
-}
-
-// TODO: parse infix
-static AstExpr *parse_infix(Parser *par, AstExpr *left) {
-    Vec exprs = VEC_NEW(TodoTree *);
-    Vec ops = VEC_NEW(Token); // operators, 0 is brackets as exprs
-    Vec fpars = VEC_NEW(TodoTree *); // function parameters for function calls
-
-    bool no_l = true; // when true, the next value cannot take from left
-    bool do_l = false; // when true, the next operator must take from left
-
-    if (left) {
-        VEC_PUSH(&exprs, TodoTree *, left);
-        no_l = false;
-        do_l = true;
-    }
-
-    while (true) {
-        // 0 when not operator
-        Token op = par->cur;
-        int prec = get_precedence(op, no_l);
-
-        if (prec == 0) {
-            // not operator
-            if (do_l) {
-                // expected operator => end of expression
-                break;
-            }
-
-            if (par->cur != T_LITERAL && par->cur != T_IDENT) {
-                break;
-            }
-
-            TodoTree *term = parse_terminal(par);
-            if (!term) {
-                return NULL;
-            }
-
-            do_l = true;
-            no_l = false;
-            VEC_PUSH(&exprs, TodoTree *, term);
-            continue;
-        }
-
-        if (no_l) {
-            // don't expect operator
-            if (op == '(') {
-                VEC_PUSH(&ops, Token, T_EXPR_PAREN);
-                do_l = false;
-                no_l = true;
-                continue;
-            }
-
-            if (op == ')') {
-                Token *last = vec_last(&ops);
-                while (last && *last != T_EXPR_PAREN) {
-                    if (!calculate(&ops, &exprs, &fpars)) {
-                        return NULL;
-                    }
-                }
-                if (last) { // pop the T_EXPR_PAREN
-                    vec_pop(&ops);
-                }
-            }
-
-            Token op = get_r_version(op);
-            if (op == T_ERR) {
-                return parse_error(
-                    par,
-                    ERR_SYNTAX,
-                    "Operator has no left argument"
-                );
-            }
-
-            VEC_PUSH(&ops, Token, op);
-            no_l = false;
-            do_l = true;
-            continue;
-        }
-
-        if (do_l && !is_l_operator(op)) {
-            break;
-        }
-
-        if (op == '(') {
-            TodoTree *params = parse_function_params(par);
-            if (!params) {
-                // TODO: free
-                vec_free_with(&fpars, free);
-                vec_free_with(&exprs, free);
-                vec_free(&ops);
-                return NULL;
-            }
-            VEC_PUSH(&fpars, TodoTree *, params);
-        }
-
-        while (true) {
-            Token *other_op = vec_last(&ops);
-            int other_prec = INT_MAX;
-            if (other_op) {
-                other_prec = get_precedence(*other_op, false);
-            }
-
-            if (prec < other_prec || (prec == other_prec && is_r_asoc(op))) {
-                VEC_PUSH(&ops, Token, op);
-                break;
-            }
-
-            if (!calculate(&ops, &exprs, &fpars)) {
-                // TODO: free
-                vec_free_with(&fpars, free);
-                vec_free_with(&exprs, free);
-                vec_free(&ops);
-                return NULL;
-            }
-        }
-    }
-
-    if (exprs.len != 1 || ops.len != 0 || fpars.len != 0) {
-        vec_free_with(&fpars, free);
-        vec_free_with(&exprs, free);
-        vec_free(&ops);
-        return parse_error(par, ERR_SYNTAX, "Unexpected end of expression");
-    }
-
-    TodoTree *ret = VEC_LAST(&exprs, TodoTree *);
-    vec_free(&fpars);
-    vec_free(&exprs);
-    vec_free(&ops);
-    return ret;
-}
-
-static bool parse_function_params(Parser *par, Vec *res) {
-    tok_next(par);
-    Vec params = VEC_NEW(TodoTree *);
-    while (par->cur != ')') {
-        TodoTree *param = parse_func_param(par);
-        if (!param) {
-            // TODO: free
-            vec_free_with(&params, free);
-            return NULL;
-        }
-        VEC_PUSH(&params, TodoTree *, param);
-        if (par->cur == ',') {
-            if (tok_next(par) == ')') {
-                // TODO: free
-                vec_free_with(&params, free);
-                return parse_error(par, ERR_SYNTAX, "Expected next argument");
-            }
-        } else if (par->cur != ')') {
-            // TODO: free
-            vec_free_with(&params, free);
-            return parse_error(par, ERR_SYNTAX, "Expected ',' or ')'");
-        }
-    }
-    tok_next(par);
-    return todo_tree(params);
-}
-
-static AstFuncCallParam *parse_func_param(Parser *par) {
-    if (par->cur != T_IDENT) {
-        return NULL;
-    }
-
-    // TODO: id
-    String id = par->lex->str;
-
-    if (tok_next(par) != ':') {
-        return todo_tree(id);
-    }
-
-    if (tok_next(par) != T_IDENT) {
-        // TODO: free
-        str_free(&id);
-        return NULL;
-    }
-
-    return todo_tree(id, par->lex->str);
-}
-
-static bool calculate(Vec *ops, Vec *exprs, Vec *fpars) {
-    Token *op = vec_pop(ops);
-    if (!op || *op == T_EXPR_PAREN) {
-        return false;
-    }
-
-    size_t cnt = op_arg_count(*op);
-    if (cnt == 0) {
-        return false;
-    }
-
-    TodoTree **r = vec_pop(exprs);
-    if (!r) {
-        return false;
-    }
-
-    if (cnt == 1) {
-        return todo_tree(*op, *r);
-    }
-
-    TodoTree **l = vec_pop(exprs);
-    if (!l) {
-        return false;
-    }
-
-    return todo_tree(*op, *l, *r);
-}
-
-static size_t op_arg_count(Token op) {
-    switch ((int)op) {
-    case '(':
-    case '!':
-    case T_UNARY_MINUS:
-    case T_UNARY_PLUS:
-        return 1;
-
-    case '*':
-    case '/':
-    case '+':
-    case '-':
-    case '<':
-    case '>':
-    case '=':
-    case T_EQUALS:
-    case T_DIFFERS:
-    case T_LESS_OR_EQUAL:
-    case T_GREATER_OR_EQUAL:
-    case T_DOUBLE_QUES:
-        return 2;
-
-    default:
-        return 0;
-    }
-}
-
-// +------------+-----------------+-------------+---------------+
-// | PRECEDENCE | OPERATOR        | DESCRIPTION | ASOCIATIVITY  |
-// +------------+-----------------+-------------+---------------+
-// | 1          | ()              | call        | left to right |
-// +------------+-----------------+-------------+               |
-// | 2          | ! - +           | prefix      |               |
-// +------------+-----------------+-------------+               |
-// | 3          | * /             | mul/div     |               |
-// +------------+-----------------+-------------+               |
-// | 4          | + -             | add/sub     |               |
-// +------------+-----------------+-------------+               |
-// | 5          | == != < > <= >= | comparison  |               |
-// +------------+-----------------+-------------+---------------+
-// | 6          | ??              | nil check   | right to left |
-// +------------+-----------------+-------------+               |
-// | 7          | =               | assignment  |               |
-// +------------+-----------------+-------------+---------------+
-
-static int get_precedence(Token op, bool unary) {
-    switch ((int)op) {
-    case '(':
-        return 1;
-
-    case '!':
-    case T_UNARY_MINUS:
-    case T_UNARY_PLUS:
-        return 2;
-
-    case '*':
-    case '/':
-        return 3;
-
-    case '+':
-    case '-':
-        if (unary) {
-            return 2;
-        }
-        return 4;
-
-    case '<':
-    case '>':
-    case T_EQUALS:
-    case T_DIFFERS:
-    case T_LESS_OR_EQUAL:
-    case T_GREATER_OR_EQUAL:
-        return 5;
-
-    case T_DOUBLE_QUES:
-        return 6;
-
-    case '=':
-        return 7;
-
-    default:
-        return INT_MAX;
-    }
-}
-
-static Token get_r_version(Token op) {
-    switch ((int)op)
-    {
-    case '+':
-        return T_UNARY_PLUS;
-    case '-':
-        return T_UNARY_MINUS;
-    default:
-        return op;
-    }
-}
-
-static bool is_l_operator(Token op) {
-    return op_arg_count(op) == 2 || op == '(';
-}
-
-static bool is_r_asoc(Token op) {
-    return op == T_DOUBLE_QUES || op == '=';
 }
 
 static AstStmt *parse_while(Parser *par) {

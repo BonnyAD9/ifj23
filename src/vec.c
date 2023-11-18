@@ -107,6 +107,20 @@ Vec vec_clone(Vec *vec) {
     return span_to_vec(vec_as_span(vec));
 }
 
+bool vec_insert(Vec *vec, size_t index, void *item) {
+    if (index == vec->len) {
+        return vec_push(vec, item);
+    }
+
+    if (!vec_reserve(vec, vec->len + 1)) {
+        return false;
+    }
+
+    memmove(vec_at(vec, index + 1), vec_at(vec, index), vec->len - index);
+    memcpy(vec_at(vec, index), item, vec->item_size);
+    return true;
+}
+
 Span span_new(void *data, size_t item_size, size_t len) {
     return (Span) {
         .items = data,

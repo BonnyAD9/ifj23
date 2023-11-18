@@ -29,5 +29,6 @@ AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr
 AstStmt *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body);
 bool sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res);
 AstStmt *sem_return(AstExpr *expr);
+AstExpr *sem_unary(AstExpr *expr, FullToken op);
 
 #endif // SEMANTICS_H_INCLUDED
