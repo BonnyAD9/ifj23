@@ -45,16 +45,16 @@ typedef struct {
 } AstFunctionCall;
 
 typedef enum {
-    LITERAL_INT,
-    LITERAL_INT_NOT_NIL,
+    UNKNOWN,                // Default state for functions before their type is infered
+    LITERAL_INT,            // "Int?"" -> can contain NIL
+    LITERAL_INT_NOT_NIL,    // "Int" or "Int!" -> can NOT contain NIL
     LITERAL_DOUBLE,
     LITERAL_DOUBLE_NOT_NIL,
     LITERAL_STRING,
     LITERAL_STRING_NOT_NIL,
     LITERAL_NIL,
     LITERAL_NIL_NOT_NIL,
-    NOT_DEFINED,
-    UNKNOWN
+    NOT_DEFINED            // variable declaration without data type given BUT with left expression
 } AstDataType;
 
 typedef enum {

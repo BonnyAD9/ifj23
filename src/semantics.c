@@ -33,7 +33,6 @@ static bool *sema_err(const char *msg, const int err_type) {
 
 static Context *new_context(bool in_func, bool in_if, bool in_main, bool in_while, AstFuncType func_type) {
     Context *cont = malloc(sizeof(Context));
-    // TODO is check necessary and how to treat it?
     cont->in_func     = in_func;
     cont->in_if       = in_if;
     cont->in_main     = in_main;
@@ -149,19 +148,18 @@ static bool check_binary_op(AstBinaryOp *binary_op, AstDataType *final_type) {
 
 static bool check_unary_op(AstUnaryOp *unary_op, AstDataType *final_type) {
     bool eval_expr = process_expr(unary_op->param, final_type);
-    AstDataType eval_type = final_type;
+    // Check for non-translateable options
+    if (*final_type == UNKNOWN || *final_type == NOT_DEFINED)
+        return sema_err("Invalid expression type, cant convert to non-nil type", ERR_SEMANTIC);
+
     // Only allowed unary operator is '!'
     if (unary_op->operator != '!')
         return sema_err("Invalid unary operator", ERR_SEMANTIC);
+
     // Switch to NOT_NIL values if not already set
-    if (*final_type == LITERAL_INT)
-        *final_type = LITERAL_INT_NOT_NIL;
-    else if (*final_type == LITERAL_DOUBLE)
-        *final_type = LITERAL_DOUBLE_NOT_NIL;
-    else if (*final_type == LITERAL_STRING)
-        *final_type = LITERAL_STRING_NOT_NIL;
-    else if (*final_type == LITERAL_NIL)
-        *final_type = LITERAL_NIL_NOT_NIL;
+    // NOT_NIL values are on even (sude) places in enum
+    if (*final_type % 2)
+        *final_type++;
     // Otherwise already set to NON-NIL value
     return eval_expr;
 }
@@ -174,40 +172,46 @@ static bool check_func_call(AstFunctionCall *func_call, AstDataType *final_type)
     return check_func_params(func_call->ident, func_call->arguments);
 }
 
-static bool check_func_params(SymItem *ident, Vec params) {
+static bool check_func_params(SymItem *ident, Vec args) {
     // TODO make sure symtable will store it as expected vector
-    Vec *arg_vec = get_args_vector_for_function(ident);
-    if (!arg_vec)
-        return sema_err("Error while retrieving function args", ERR_SEMANTIC);
+    Vec *params = get_params_vector_for_function(ident);
+    if (!params)
+        return sema_err("Error while retrieving function params", ERR_SEMANTIC);
     // Check for same vector length
-    if (arg_vec->len != params.len)
+    if (params->len != args.len)
         return sema_err("Provided count of args differs from func's count of params", ERR_SEMANTIC);
 
     /*
-        func decrement(of n: Int, by m: Int) -> Int {
+        func decrement(of n: Int, by m: Int) -> Int { [params]
             return n - m
         }
-        let decremented_n = decrement(of: n, by: 1)
+        let decremented_n = decrement(of: n, by: 1)   [arguments]
     */
-    VEC_FOR_EACH(&(params), AstFuncCallParam, arg) {
+    VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
+        AstFuncDeclParam param = VEC_AT(params, AstFuncDeclParam, arg.i);
+        AstDataType param_data_type, arg_data_type;
+
+        // Load also param data type
+        check_variable(param.name, &param_data_type);
+
         if (arg.v->arg_type == VARIABLE) {
             // Check if variable is defined
-            if (!check_variable(arg.v->name, NULL))
+            if (!check_variable(arg.v->name, &arg_data_type))
                 // Error already set by check_variable()
                 return false;
         }
-        // Unexpected value
-        // TODO this UNKNOWN
-        else if (arg.v->arg_type == UNKNOWN)
-            return sema_err("Unknown function call argument", ERR_INVALID_FUN);
-
         // Check for correct ident name
-        if (arg.v->ident != VEC_AT(arg_vec, AstFuncDeclParam, arg.i).ident)
+        if (arg.v->ident != param.ident)
             return sema_err("Expected func argument differs in ident name", ERR_INVALID_FUN);
 
         // Check if correct type
-        if (arg.v->arg_type != VEC_AT(arg_vec, AstFuncDeclParam, arg.i).param_type)
-            return sema_err("Expected func argument differs in data type", ERR_INVALID_FUN);
+        // f.e. passing NIL to Int? is valid
+        if (param_data_type != arg_data_type) {
+            if ((param_data_type % 2) && arg_data_type != LITERAL_NIL) // LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING, LITERAL_NIL
+                return sema_err("Uncompatible argument and parameter type", ERR_INVALID_FUN);
+            if (!(param_data_type % 2) && arg_data_type != LITERAL_NIL_NOT_NIL) // LITERAL_INT_NOT_NIL, LITERAL_DOUBLE_NOT_NIL, LITERAL_STRING_NOT_NIL, LITERAL_NIL_NOT_NIL
+                return sema_err("Uncompatible argument and parameter type", ERR_INVALID_FUN);
+        }
     }
 
     return true;
@@ -221,11 +225,11 @@ static bool check_literal(AstLiteral *literal, AstDataType *final_type) {
 static bool check_variable(SymItem *ident, AstDataType *final_type) {
     if (get_type_from_table(ident, final_type)) {
         if (final_type == LITERAL_INT || final_type == LITERAL_DOUBLE || final_type == LITERAL_STRING)
-            // Throw error about potencial nil
+            // Throw warning about potencial nil
             WPRINTF("Variable can contain nil value");
         return true;
     }
-    return sema_err("Undefined variable", ERR_UNDEF_VAR);
+    return sema_err("Undefined variable", ERR_UNDEF_FUNCTION);
 }
 
 /*
@@ -241,47 +245,106 @@ static bool check_compatibility(Token operator, AstDataType left_type, AstDataTy
     switch (operator) {
         case '*':
         case '-':
-            if (left_type == LITERAL_STRING || left_type == LITERAL_NIL || right_type == LITERAL_STRING || right_type == LITERAL_NIL)
+            // Check for potencially nil values (LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING, LITERAL_NIL) and also avoid any STRING type or NOT_NIL -> in enum on positions 5 and further
+            if ((left_type % 2 || right_type % 2) || (left_type > 4 || right_type > 4))
                 err_msg = "Cant multiply/substract from string/nil value";
             // Determine type of whole expression
-            else  // If expression contains at least one double type, int values must be converted to double and whole expr will be double type
-                *final_type = ((left_type == LITERAL_DOUBLE || right_type == LITERAL_DOUBLE) ? LITERAL_DOUBLE : LITERAL_INT);
+            // (If expression contains at least one double type, int values must be converted to double and whole expr will be double type)
+            else {
+                if (left_type == right_type)
+                    *final_type = left_type;
+                else {
+                    if (left_type == LITERAL_DOUBLE_NOT_NIL || right_type == LITERAL_DOUBLE_NOT_NIL)
+                        *final_type = LITERAL_DOUBLE_NOT_NIL;
+                    else
+                        *final_type = LITERAL_INT_NOT_NIL;
+                }
+            }
             break;
         case '/':
-            if (left_type != right_type || (left_type != LITERAL_INT && left_type != LITERAL_DOUBLE))
+            // We can't devide by nil-containing values or any string values
+            if (left_type != right_type || (left_type != LITERAL_INT_NOT_NIL && left_type != LITERAL_DOUBLE_NOT_NIL))
                 err_msg = "Divided values must have same type";
             // Determine type of whole expression
-            else
-                *final_type = ((left_type == LITERAL_DOUBLE) ? LITERAL_DOUBLE : LITERAL_INT);
+            else {
+                if (left_type == right_type)
+                    *final_type = left_type;
+                else {
+                    if (left_type == LITERAL_DOUBLE_NOT_NIL || right_type == LITERAL_DOUBLE_NOT_NIL)
+                        *final_type = LITERAL_DOUBLE_NOT_NIL;
+                    else
+                        *final_type = LITERAL_INT_NOT_NIL;
+                }
+            }
             break;
         case '+':
-            if (left_type == LITERAL_NIL || right_type == LITERAL_NIL)
-                err_msg = "Cant do addition with nil value";
-            else if ((left_type == LITERAL_STRING || right_type == LITERAL_STRING) && left_type != right_type)
-                err_msg = "Cant concat string with non-string value";
+            // Check for potencially nil values (LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING, LITERAL_NIL)
+            if ((left_type % 2 || right_type % 2) || (left_type != right_type && (left_type == LITERAL_STRING_NOT_NIL || right_type == LITERAL_STRING_NOT_NIL)))
+                err_msg = "Cant concat/add with potencially NIL values";
             // Determine type of whole expression
-            else
-                *final_type = ((left_type == LITERAL_STRING) ? LITERAL_STRING :
-                              ((left_type == LITERAL_DOUBLE || right_type == LITERAL_DOUBLE) ? LITERAL_DOUBLE : LITERAL_INT));
+            else {
+                if (left_type == right_type)
+                    *final_type = left_type;
+                else {
+                    if (left_type == LITERAL_DOUBLE_NOT_NIL || right_type == LITERAL_DOUBLE_NOT_NIL)
+                        *final_type = LITERAL_DOUBLE_NOT_NIL;
+                    else
+                        *final_type = LITERAL_INT_NOT_NIL;
+                }
+            }
             break;
-        case T_DOUBLE_QUES:
         case T_EQUALS:
         case T_DIFFERS:
-        case '=':
-            if (left_type != right_type)
-                err_msg = "Cant compare/assign different types";
-            // Determine type of whole expression
+        case T_LESS_OR_EQUAL:
+        case T_GREATER_OR_EQUAL:
+            if (left_type != right_type) {
+                if (left_type % 2 || right_type % 2) { // LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING
+                    if (left_type  != LITERAL_NIL && left_type != LITERAL_NIL_NOT_NIL &&
+                        right_type != LITERAL_NIL && right_type != LITERAL_NIL_NOT_NIL)
+                            err_msg = "Non-compatible types for comparison";
+                }
+                else
+                    err_msg = "Non-compatible types for comparison";
+            }
+            // Else OK
+            if (!err_msg)
+                *final_type = left_type;
+            break;
+        case T_DOUBLE_QUES:
+            if (!(left_type % 2) || (right_type != left_type + 1))
+                err_msg = "Uncomaptible types for ?? operator";
+            else if (left_type != LITERAL_NIL)
+                *final_type = left_type;
             else
+                *final_type = right_type;
+            break;
+        case '=':
+            if (left_type != right_type) {
+                if (left_type == LITERAL_NIL || left_type == LITERAL_NIL_NOT_NIL)
+                    err_msg = "NIL as l-value is prohibited for assignment";
+                else if (left_type % 2) { // LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING
+                    // left_type + 1 : LITERAL_INT -> LITERAL_INT_NOT_NIL, LITERAL_DOUBLE -> LITERAL_DOUBLE_NOT_NIL ...
+                    if (right_type != left_type + 1 && right_type != LITERAL_NIL && right_type != LITERAL_NIL_NOT_NIL)
+                        err_msg = "Non-compatible types for assignment";
+                }
+                else if (!(left_type % 2)) { // LITERAL_STRING_NOT_NIL, LITERAL_DOUBLE_NOT_NIL, LITERAL_INT_NOT_NIL
+                    if (right_type != LITERAL_NIL_NOT_NIL)
+                        err_msg = "Cant assign NIL to non-NIL variable";
+                }
+                else
+                    err_msg = "Cant compare/assign different types";
+            }
+            // Determine type of whole expression
+            if (!err_msg)
                 *final_type = left_type;
             break;
         case '<':
         case '>':
-        case T_LESS_OR_EQUAL:
-        case T_GREATER_OR_EQUAL:
-            if ((left_type != right_type) || (left_type == LITERAL_NIL || right_type == LITERAL_NIL))
-                err_msg = "Cant compare different types/nil values";
+            // Only no-NIL types are allowed for this case
+            if ((left_type % 2) || (right_type % 2) || left_type != right_type) // LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING
+                err_msg = "Comparison with potencially-nil values is prohibited";
             // Determine type of whole expression
-            else
+            if (!err_msg)
                 *final_type = left_type;
             break;
         default:
@@ -313,9 +376,7 @@ static bool check_func_decl(AstFunctionDecl *function_decl, Context *context) {
         return sema_err("Undefined function", ERR_UNDEF_FUNCTION);
 
     // Check params
-    bool params_validity = check_func_params(function_decl->ident, function_decl->parameters);
-    bool body_validity = check_block(function_decl->body);
-    return params_validity && body_validity;
+    return check_block(function_decl->body);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -333,24 +394,16 @@ static bool check_var_decl(AstVariableDecl *variable_decl) {
         bool check_expr = process_expr(variable_decl->value, &expr_type);
 
         // Check if expr type is inferiable
-        if (expr_type == UNKNOWN)
+        if (expr_type == LITERAL_NIL || !check_expr)
             return sema_err("Expression type cant be determined", ERR_UNKNOWN_TYPE);
 
         // Check if data type is given, or try determine it
         if (var_type == NOT_DEFINED)
             variable_decl->data_type = expr_type;
-        else if (var_type != expr_type)
-            return sema_err("Data types are not compatible", ERR_INCOM_TYPE);
+        else // var_type value is useless, just avoid using NULL to avoid NULL checks in the function
+            return check_compatibility('=', var_type, expr_type, &var_type);
     }
-    // No init expression, if var allows NIL, set it to NIL, otherwise throw error
-    else {
-        // Check if NIL is allowed
-        if (var_type == LITERAL_INT || var_type == LITERAL_DOUBLE || var_type == LITERAL_STRING)
-            variable_decl->data_type = LITERAL_NIL;
-        // Not inicialized
-        else
-            variable_decl->data_type = UNKNOWN;
-    }
+    // No init expression, PARSER makes sure type is given
     return true;
 }
 
@@ -368,7 +421,7 @@ static bool check_return(AstReturn *return_v, Context *context) {
 
     bool valid_expr = process_expr(return_v->expr, &expr_type);
     // Different return types
-    if (expr_type != context->func_type)
+    if (expr_type != context->func_type || !valid_expr)
         return sema_err("Function returns different type than expected", ERR_INVALID_FUN);
 
     context->return_used = true;
@@ -411,7 +464,7 @@ static bool get_type_from_table(SymItem *ident, AstDataType *final_type) {
     return 0;
 }
 
-static Vec *get_args_vector_for_function(SymItem *funcname) {
+static Vec *get_params_vector_for_function(SymItem *funcname) {
     // TODO FOR MARTIN
     return NULL;
 }
