@@ -201,6 +201,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
                 return false;
         }
         // Check for correct ident name
+        // TODO when symtable done, return var's name to compare + compare scopes
         if (arg.v->ident != param.ident)
             return sema_err("Expected func argument differs in ident name", ERR_INVALID_FUN);
 
@@ -213,12 +214,15 @@ static bool check_func_params(SymItem *ident, Vec args) {
                 return sema_err("Uncompatible argument and parameter type", ERR_INVALID_FUN);
         }
     }
-
     return true;
 }
 
 static bool check_literal(AstLiteral *literal, AstDataType *final_type) {
-    *final_type = literal->data_type;
+    // Implicitni konverze literalu na DOUBLE typ
+    if (literal->data_type == LITERAL_INT_NOT_NIL)
+        *final_type = LITERAL_DOUBLE_NOT_NIL;
+    else
+        *final_type = literal->data_type;
     return true;
 }
 
@@ -245,112 +249,62 @@ static bool check_compatibility(Token operator, AstDataType left_type, AstDataTy
     switch (operator) {
         case '*':
         case '-':
-            // Check for potencially nil values (LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING, LITERAL_NIL) and also avoid any STRING type or NOT_NIL -> in enum on positions 5 and further
-            if ((left_type % 2 || right_type % 2) || (left_type > 4 || right_type > 4))
-                err_msg = "Cant multiply/substract from string/nil value";
-            // Determine type of whole expression
-            // (If expression contains at least one double type, int values must be converted to double and whole expr will be double type)
-            else {
-                if (left_type == right_type)
-                    *final_type = left_type;
-                else {
-                    if (left_type == LITERAL_DOUBLE_NOT_NIL || right_type == LITERAL_DOUBLE_NOT_NIL)
-                        *final_type = LITERAL_DOUBLE_NOT_NIL;
-                    else
-                        *final_type = LITERAL_INT_NOT_NIL;
-                }
-            }
-            break;
         case '/':
-            // We can't devide by nil-containing values or any string values
-            if (left_type != right_type || (left_type != LITERAL_INT_NOT_NIL && left_type != LITERAL_DOUBLE_NOT_NIL))
-                err_msg = "Divided values must have same type";
-            // Determine type of whole expression
-            else {
-                if (left_type == right_type)
-                    *final_type = left_type;
-                else {
-                    if (left_type == LITERAL_DOUBLE_NOT_NIL || right_type == LITERAL_DOUBLE_NOT_NIL)
-                        *final_type = LITERAL_DOUBLE_NOT_NIL;
-                    else
-                        *final_type = LITERAL_INT_NOT_NIL;
-                }
+            if (!compat_array[0][left_type - 1][right_type - 1]) {
+                err_msg = "Uncompatible types for performing ";
+                strcat(err_msg, ((operator == '*') ? "'*' operation" : (operator == '-') ? "'-' operation" : "'/' operation"));
             }
+            else
+                *final_type = final_type_arr[left_type - 1][right_type - 1];
             break;
         case '+':
-            // Check for potencially nil values (LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING, LITERAL_NIL)
-            if ((left_type % 2 || right_type % 2) || (left_type != right_type && (left_type == LITERAL_STRING_NOT_NIL || right_type == LITERAL_STRING_NOT_NIL)))
-                err_msg = "Cant concat/add with potencially NIL values";
-            // Determine type of whole expression
-            else {
-                if (left_type == right_type)
-                    *final_type = left_type;
-                else {
-                    if (left_type == LITERAL_DOUBLE_NOT_NIL || right_type == LITERAL_DOUBLE_NOT_NIL)
-                        *final_type = LITERAL_DOUBLE_NOT_NIL;
-                    else
-                        *final_type = LITERAL_INT_NOT_NIL;
-                }
-            }
-            break;
-        case T_EQUALS:
-        case T_DIFFERS:
-        case T_LESS_OR_EQUAL:
-        case T_GREATER_OR_EQUAL:
-            if (left_type != right_type) {
-                if (left_type % 2 || right_type % 2) { // LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING
-                    if (left_type  != LITERAL_NIL && left_type != LITERAL_NIL_NOT_NIL &&
-                        right_type != LITERAL_NIL && right_type != LITERAL_NIL_NOT_NIL)
-                            err_msg = "Non-compatible types for comparison";
-                }
-                else
-                    err_msg = "Non-compatible types for comparison";
-            }
-            // Else OK
-            if (!err_msg)
-                *final_type = left_type;
-            break;
-        case T_DOUBLE_QUES:
-            if (!(left_type % 2) || (right_type != left_type + 1))
-                err_msg = "Uncomaptible types for ?? operator";
-            else if (left_type != LITERAL_NIL)
-                *final_type = left_type;
+            if (!compat_array[1][left_type - 1][right_type - 1])
+                err_msg = "Uncompatible types for performing '+' operation";
             else
-                *final_type = right_type;
+                *final_type = final_type_arr[left_type - 1][right_type - 1];
             break;
-        case '=':
-            if (left_type != right_type) {
-                if (left_type == LITERAL_NIL || left_type == LITERAL_NIL_NOT_NIL)
-                    err_msg = "NIL as l-value is prohibited for assignment";
-                else if (left_type % 2) { // LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING
-                    // left_type + 1 : LITERAL_INT -> LITERAL_INT_NOT_NIL, LITERAL_DOUBLE -> LITERAL_DOUBLE_NOT_NIL ...
-                    if (right_type != left_type + 1 && right_type != LITERAL_NIL && right_type != LITERAL_NIL_NOT_NIL)
-                        err_msg = "Non-compatible types for assignment";
-                }
-                else if (!(left_type % 2)) { // LITERAL_STRING_NOT_NIL, LITERAL_DOUBLE_NOT_NIL, LITERAL_INT_NOT_NIL
-                    if (right_type != LITERAL_NIL_NOT_NIL)
-                        err_msg = "Cant assign NIL to non-NIL variable";
-                }
-                else
-                    err_msg = "Cant compare/assign different types";
+
+        case T_EQUALS:           // '=='
+        case T_DIFFERS:          // '!='
+        case T_LESS_OR_EQUAL:    // '<='
+        case T_GREATER_OR_EQUAL: // '>='
+            if (!compat_array[2][left_type - 1][right_type - 1]) {
+                err_msg = "Uncompatible types for performing ";
+                strcat(err_msg, ((operator == T_EQUALS) ? "'==' operation" : (operator == T_DIFFERS) ? "'!=' operation" : (operator == T_LESS_OR_EQUAL) ? "'<=' operation" : "'>=' operation"));
             }
-            // Determine type of whole expression
-            if (!err_msg)
-                *final_type = left_type;
+            else
+                *final_type = final_type_arr[left_type - 1][right_type - 1];
             break;
+
+        case T_DOUBLE_QUES:  // ??
+            if (!compat_array[3][left_type - 1][right_type - 1])
+                err_msg = "Uncompatible types for performing '??' operation";
+            else
+                *final_type = final_type_arr[left_type - 1][right_type - 1];
+            break;
+
+        case '=':
+            if (!compat_array[4][left_type - 1][right_type - 1])
+                err_msg = "Uncompatible types for performing '=' operation";
+            else
+                *final_type = final_type_arr[left_type - 1][right_type - 1];
+            break;
+
         case '<':
         case '>':
-            // Only no-NIL types are allowed for this case
-            if ((left_type % 2) || (right_type % 2) || left_type != right_type) // LITERAL_INT, LITERAL_DOUBLE, LITERAL_STRING
-                err_msg = "Comparison with potencially-nil values is prohibited";
-            // Determine type of whole expression
-            if (!err_msg)
-                *final_type = left_type;
+            if (!compat_array[5][left_type - 1][right_type - 1]) {
+                err_msg = "Uncompatible types for performing ";
+                strcat(err_msg, ((operator == '<') ? "'<' operation" : "'>' operation"));
+            }
+            else
+                *final_type = final_type_arr[left_type - 1][right_type - 1];
             break;
+
         default:
             err_msg = "Uknown operator type";
             break;
     }
+
     // If set, output error along with error message
     if (err_msg)
         return sema_err(err_msg, ERR_INCOM_TYPE);
@@ -467,11 +421,6 @@ static bool get_type_from_table(SymItem *ident, AstDataType *final_type) {
 static Vec *get_params_vector_for_function(SymItem *funcname) {
     // TODO FOR MARTIN
     return NULL;
-}
-
-static String get_name_from_symtable(SymItem *iden) {
-    // TODO FOR MARTIN
-    return NUL_STR;
 }
 
 /////////////////////////////////////////////////////////////////////////
