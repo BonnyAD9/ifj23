@@ -116,7 +116,7 @@ int final_type_arr[8][8] = {
     {   0   ,   0   ,   0   ,   0   ,   5   ,   5   ,   4   ,   5   }, // STRING
     {   0   ,   0   ,   0   ,   0   ,   5   ,   6   ,   5   ,   6   }, // STRING_NOT_NIL
     {   1   ,   1   ,   3   ,   3   ,   4   ,   5   ,   7   ,   0   }, // NIL
-    {   1   ,   2   ,   3   ,   4   ,   5   ,   6   ,   0   ,   8   }// NIL_NOT_NIL
+    {   1   ,   2   ,   3   ,   4   ,   5   ,   6   ,   0   ,   8   }  // NIL_NOT_NIL
 };
 
 #endif // SEMANTICS_H_INCLUDED
