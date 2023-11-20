@@ -94,9 +94,11 @@ bool vec_push(Vec *vec, void *item);
 void *vec_at(Vec *vec, size_t index);
 
 /// removes the last item from the vector and returns pointer to it.
-/// Returns NULL if vector is empty.
 /// THE POINTER IS VALID ONLY UNTIL PUSH OR FREE.
 void *vec_pop(Vec *vec);
+
+/// Pops range of elements.
+Span vec_pop_range(Vec *vec, size_t count);
 
 /// gets pointer to the last item in the vector, NULL if vector is empty
 void *vec_last(Vec *vec);

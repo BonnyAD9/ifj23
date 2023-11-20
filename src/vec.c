@@ -40,6 +40,12 @@ void *vec_pop(Vec *vec) {
     return vec_at(vec, vec->len);
 }
 
+Span vec_pop_range(Vec *vec, size_t count) {
+    Span res = vec_slice(vec, vec->len - count, count);
+    vec->len -= count;
+    return res;
+}
+
 void *vec_last(Vec *vec) {
     return vec_at(vec, vec->len - 1);
 }

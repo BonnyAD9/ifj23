@@ -9,6 +9,7 @@
 // struct that holds all info about token
 typedef struct {
     Token type;
+    int subtype;
     union {
         int int_v;
         double double_v;
