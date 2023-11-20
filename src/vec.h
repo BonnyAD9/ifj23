@@ -34,6 +34,12 @@
     ++name.i \
 )
 
+/// Inserts at the given index
+#define VEC_INSERT(vec, type, index, item) do { \
+    type __i = (item); \
+    vec_insert((vec), (index), &__i); \
+} while (0)
+
 /// Creates new span
 #define SPAN_NEW(data, len) span_new(data, sizeof(*data), len)
 
@@ -88,9 +94,11 @@ bool vec_push(Vec *vec, void *item);
 void *vec_at(Vec *vec, size_t index);
 
 /// removes the last item from the vector and returns pointer to it.
-/// Returns NULL if vector is empty.
 /// THE POINTER IS VALID ONLY UNTIL PUSH OR FREE.
 void *vec_pop(Vec *vec);
+
+/// Pops range of elements.
+Span vec_pop_range(Vec *vec, size_t count);
 
 /// gets pointer to the last item in the vector, NULL if vector is empty
 void *vec_last(Vec *vec);
@@ -115,6 +123,9 @@ bool vec_push_span(Vec *vec, Span span);
 
 /// Copies the vector, returns empty vector when fails
 Vec vec_clone(Vec *vec);
+
+/// Inserts item at the given position
+bool vec_insert(Vec *vec, size_t index, void *item);
 
 /// creates new span
 Span span_new(void *data, size_t item_size, size_t len);

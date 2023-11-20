@@ -1,12 +1,9 @@
 #ifndef AST_H_INCLUDED
 #define AST_H_INCLUDED
 
-#include "vec.h"
-#include "lexer.h"
-
-// TODO: symbol table type
-typedef int SymItem;
-
+#include "vec.h"      // Vec
+#include "symtable.h" // SymItem
+#include "enums.h"    // DataType
 // Forward declarations
 
 // Expression, something that has value
@@ -31,48 +28,42 @@ typedef struct {
 } AstUnaryOp;
 
 typedef struct {
-    SymItem *ident;
-    SymItem *name;
-    AstTermType arg_type;
+    DataType type;
+    union {
+        int int_v;
+        double double_v;
+        String string_v;
+    };
+} AstLiteral;
+
+typedef enum {
+    AST_BINARY_OP,
+    AST_UNARY_OP,
+    AST_FUNCTION_CALL,
+    AST_LITERAL,
+    AST_VARIABLE,
+} AstExprType;
+
+typedef struct {
+    String name;
+    // can be only literal or variable
+    AstExprType type;
+    union {
+        SymItem *variable;
+        AstLiteral *literal;
+    };
 } AstFuncCallParam;
 
 typedef struct {
     SymItem *ident;
-    AstFuncType func_type;
     // type: AstFuncCallParam *
     Vec arguments;
     // func type from table
 } AstFunctionCall;
 
-typedef enum {
-    UNKNOWN,                // Default state for functions before their type is infered
-    LITERAL_INT,            // "Int?"" -> can contain NIL
-    LITERAL_INT_NOT_NIL,    // "Int" or "Int!" -> can NOT contain NIL
-    LITERAL_DOUBLE,
-    LITERAL_DOUBLE_NOT_NIL,
-    LITERAL_STRING,
-    LITERAL_STRING_NOT_NIL,
-    LITERAL_NIL,
-    LITERAL_NIL_NOT_NIL,
-    NOT_DEFINED            // variable declaration without data type given BUT with left expression
-} AstDataType;
-
-typedef enum {
-    LITERAL,
-    VARIABLE,
-    UNKNOWN
-} AstTermType;
-
-typedef enum {
-    VOID_FUNC,
-    NON_VOID_FUNC,
-    UNKNOWN
-} AstFuncType;
-
 typedef struct {
     SymItem *ident;
-    SymItem *name;
-    AstTermType param_type;
+    String name;
 } AstFuncDeclParam;
 
 typedef struct {
@@ -95,7 +86,6 @@ typedef enum {
 typedef struct {
     SymItem *ident;
     AstExpr *value;
-    AstDataType data_type;
 } AstVariableDecl;
 
 typedef struct {
@@ -118,26 +108,9 @@ typedef struct {
 } AstWhile;
 
 typedef struct {
-    AstDataType data_type;
-    union {
-        int int_v;
-        double double_v;
-        String string_v;
-    };
-} AstLiteral;
-
-typedef struct {
     SymItem *ident;
     // data type from table
 } AstVariable;
-
-typedef enum {
-    AST_BINARY_OP,
-    AST_UNARY_OP,
-    AST_FUNCTION_CALL,
-    AST_LITERAL,
-    AST_VARIABLE,
-} AstExprType;
 
 struct AstExpr {
     AstExprType type;
@@ -179,11 +152,13 @@ AstBinaryOp *ast_binary_op(Token operator, AstExpr *left, AstExpr *right);
 
 AstUnaryOp *ast_unary_op(Token operator, AstExpr *param);
 
-AstFuncCallParam *ast_func_call_param(SymItem *ident, SymItem *name);
+AstFuncCallParam *ast_func_call_var_param(SymItem *ident, String name);
+
+AstFuncCallParam *ast_func_call_lit_param(AstLiteral *literal, String name);
 
 AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters);
 
-AstFuncDeclParam *ast_func_decl_param(SymItem *ident, SymItem *name);
+AstFuncDeclParam *ast_func_decl_param(SymItem *ident, String name);
 
 AstFunctionDecl *ast_function_decl(SymItem *ident, AstBlock *body);
 

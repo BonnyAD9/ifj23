@@ -1,7 +1,7 @@
-#include "ast.h"
+#include "ast.h" // Vec, DataType::*
 
-#include "errors.h"
-#include "utils.h"
+#include "errors.h" // set_err_code, ERR_OTHER
+#include "utils.h"  // EPRINTF
 
 #include <stdlib.h>
 
@@ -42,10 +42,19 @@ AstUnaryOp *ast_unary_op(Token operator, AstExpr *param) {
     );
 }
 
-AstFuncCallParam *ast_func_call_param(SymItem *ident, SymItem *name) {
+AstFuncCallParam *ast_func_call_var_param(SymItem *ident, String name) {
     STRUCT_ALLOC(AstFuncCallParam,
-        .ident = ident,
+        .type = AST_VARIABLE,
         .name = name,
+        .variable = ident,
+    );
+}
+
+AstFuncCallParam *ast_func_call_lit_param(AstLiteral *literal, String name) {
+    STRUCT_ALLOC(AstFuncCallParam,
+        .type = AST_LITERAL,
+        .name = name,
+        .literal = literal,
     );
 }
 
@@ -56,7 +65,7 @@ AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters) {
     );
 }
 
-AstFuncDeclParam *ast_func_decl_param(SymItem *ident, SymItem *name) {
+AstFuncDeclParam *ast_func_decl_param(SymItem *ident, String name) {
     STRUCT_ALLOC(AstFuncDeclParam,
         .ident = ident,
         .name = name,
@@ -107,28 +116,28 @@ AstWhile *ast_while(AstCondition *condition, AstBlock *body) {
 
 AstLiteral *ast_int_literal(int value) {
     STRUCT_ALLOC(AstLiteral,
-        .type = LITERAL_INT,
+        .type = DT_INT,
         .int_v = value,
     );
 }
 
 AstLiteral *ast_double_literal(double value) {
     STRUCT_ALLOC(AstLiteral,
-        .type = LITERAL_DOUBLE,
+        .type = DT_DOUBLE,
         .double_v = value,
     );
 }
 
 AstLiteral *ast_string_literal(String value) {
     STRUCT_ALLOC(AstLiteral,
-        .type = LITERAL_STRING,
+        .type = DT_STRING,
         .string_v = value,
     );
 }
 
 AstLiteral *ast_nil_literal() {
     STRUCT_ALLOC(AstLiteral,
-        .type = LITERAL_NIL,
+        .type = DT_NIL,
     );
 }
 
