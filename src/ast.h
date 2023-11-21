@@ -147,7 +147,7 @@ AstUnaryOp *ast_unary_op(Token operator, AstExpr *param);
 
 AstFuncCallParam *ast_func_call_var_param(SymItem *ident, String name);
 
-AstFuncCallParam *ast_func_call_lit_param(AstLiteral *literal, String name);
+AstFuncCallParam *ast_func_call_lit_param(AstLiteral literal, String name);
 
 AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters);
 

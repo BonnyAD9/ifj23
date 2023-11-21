@@ -3,6 +3,8 @@
 
 #include "lexer.h" // Lexer, Token
 #include "vec.h"
+#include "symtable.h"
+#include "ast.h"
 
 typedef struct {
     Lexer *lex;

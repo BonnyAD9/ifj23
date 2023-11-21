@@ -213,12 +213,12 @@ static bool check_func_params(SymItem *ident, Vec params) {
         }
 
         // Check for correct ident name
-        if (!str_eq(arg.v->name, VEC_AT(arg_vec, AstFuncDeclParam, arg.i).name))
-            return sema_err("Expected func argument differs in ident name", ERR_INVALID_FUN);
-
-        // Check if correct type
-        if (arg.v->variable->type != VEC_AT(arg_vec, AstFuncDeclParam, arg.i).ident->type)
-            return sema_err("Expected func argument differs in data type", ERR_INVALID_FUN);
+        //if (!str_eq(arg.v->name, VEC_AT(arg_vec, AstFuncDeclParam, arg.i).name))
+        //    return sema_err("Expected func argument differs in ident name", ERR_INVALID_FUN);
+//
+        //// Check if correct type
+        //if (arg.v->variable->type != VEC_AT(arg_vec, AstFuncDeclParam, arg.i).ident->type)
+        //    return sema_err("Expected func argument differs in data type", ERR_INVALID_FUN);
     }
 
     return true;
@@ -324,9 +324,9 @@ static bool check_func_decl(AstFunctionDecl *function_decl, Context *context) {
         return sema_err("Undefined function", ERR_UNDEF_FUNCTION);
 
     // Check params
-    bool params_validity = check_func_params(function_decl->ident, function_decl->parameters);
+    //bool params_validity = check_func_params(function_decl->ident, function_decl->parameters);
     bool body_validity = check_block(function_decl->body);
-    return params_validity && body_validity;
+    return body_validity;
 }
 
 /////////////////////////////////////////////////////////////////////////

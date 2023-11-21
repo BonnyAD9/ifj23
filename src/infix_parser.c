@@ -131,6 +131,8 @@ AstExpr *parse_infix(Parser *par) {
                 return NULL;
             }
             break;
+        default:
+            break;
         }
     }
 
@@ -370,21 +372,26 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
             return false;
         }
         item.term.ident = itm;
-        return true;
+        break;
     }
     case T_LITERAL:
         switch (par->lex->subtype) {
         case DT_INT:
             item.term.int_v = par->lex->i_num;
-            return true;
+            break;
         case DT_DOUBLE:
             item.term.double_v = par->lex->d_num;
-            return true;
+            break;
         case DT_STRING:
             item.term.str = str_clone(par->lex->str);
-            return true;
+            break;
         }
+        break;
+    default:
+        return false;
     }
+
+    VEC_PUSH(&stack->stack, struct StackItem, item);
 
     return true;
 }
@@ -660,7 +667,7 @@ static void si_free(struct StackItem *si) {
         }
         break;
     case SI_NTERM:
-        ast_free_expr(si->nterm);
+        ast_free_expr(&si->nterm);
         break;
     case SI_CALL_PARAMS:
         vec_free_with(&si->call_params, (FreeFun)ast_free_func_call_param);
