@@ -39,9 +39,9 @@ static AstStmt *parse_if(Parser *par);
 static AstCondition *parse_if_condition(Parser *par);
 static AstExpr *parse_expression(Parser *par);
 static AstExpr *parse_bracket(Parser *par);
-static AstExpr *parse_terminal(Parser *par);
-static bool parse_function_params(Parser *par, Vec *res);
-static AstFuncCallParam *parse_func_param(Parser *par);
+static bool parse_literal(Parser *par, AstLiteral *res);
+bool parse_func_params(Parser *par, Vec *res);
+static bool parse_func_param(Parser *par, AstFuncCallParam *res);
 static AstStmt *parse_while(Parser *par);
 static AstStmt *parse_decl(Parser *par);
 static bool parse_type(Parser *par, DataType *res);
@@ -175,26 +175,7 @@ static AstCondition *parse_if_condition(Parser *par) {
 }
 
 static AstExpr *parse_expression(Parser *par) {
-    // TODO: infix only
-    AstExpr *term = NULL;
-
-    switch ((int)par->cur) {
-    case '(':
-        term = parse_bracket(par);
-        break;
-    case '-':
-    case '+':
-    case '!':
-        break;
-    default:
-        term = parse_terminal(par);
-        if (!term) {
-            return parse_error(par, ERR_SYNTAX, "Expected expression");
-        }
-        break;
-    }
-
-    return parse_infix(par, term);
+    return parse_infix(par);
 }
 
 static AstExpr *parse_bracket(Parser *par) {
@@ -214,21 +195,63 @@ static AstExpr *parse_bracket(Parser *par) {
     return res;
 }
 
-static AstExpr *parse_terminal(Parser *par) {
-    AstExpr *ret;
-    SymItem *ident;
-    switch (par->cur) {
-    case T_IDENT:
-        ret = sem_lex_variable(par->lex);
-        break;
-    case T_LITERAL:
-        ret = sem_lex_literal(par->lex);
-        break;
-    default:
-        return parse_error(par, ERR_SEMANTIC, "Expected terminal");
+static bool parse_literal(Parser *par, AstLiteral *res) {
+
+}
+
+bool parse_func_params(Parser *par, Vec *res) {
+    tok_next(par);
+    while (par->cur != ')') {
+        AstFuncCallParam param;
+        if (!parse_func_param(par, &param)) {
+            return false;
+        }
+        if (par->cur != ',' && par->cur != ')') {
+            parse_error(par, ERR_SYNTAX, "Expected ',' or ')'");
+            return false;
+        }
+        tok_next(par);
     }
     tok_next(par);
-    return ret;
+    return true;
+}
+
+static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
+    if (par->cur != T_IDENT && par->cur != T_LITERAL) {
+        return false;
+    }
+
+    res->name = NUL_STR;
+
+    if (par->cur == T_LITERAL) {
+        res->type = AST_LITERAL;
+        if (!parse_literal(par, &res->literal)) {
+            return false;
+        };
+        tok_next(par);
+        return true;
+    }
+
+    String name = str_clone(par->lex->str);
+
+    tok_next(par);
+    if (par->cur == T_LITERAL) {
+        res->name = name;
+        res->type = AST_LITERAL;
+        if (!parse_literal(par, &res->literal)) {
+            str_free(&name);
+            return false;
+        };
+        tok_next(par);
+    }
+
+    if (par->cur == T_IDENT) {
+        res->name = name;
+        res->type = AST_VARIABLE;
+        // TODO: parse variable exit
+    }
+
+    // TODO: name is variable
 }
 
 static AstStmt *parse_while(Parser *par) {

@@ -65,13 +65,6 @@ AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters) {
     );
 }
 
-AstFuncDeclParam *ast_func_decl_param(SymItem *ident, String name) {
-    STRUCT_ALLOC(AstFuncDeclParam,
-        .ident = ident,
-        .name = name,
-    );
-}
-
 AstFunctionDecl *ast_function_decl(SymItem *ident, AstBlock *body) {
     STRUCT_ALLOC(AstFunctionDecl,
         .ident = ident,
@@ -265,10 +258,8 @@ void ast_free_unary_op(AstUnaryOp **value) {
     free(v);
 }
 
-void ast_free_func_call_param(AstFuncCallParam **value) {
-    FREE_INIT(AstFuncCallParam, value, v);
-
-    free(v);
+void ast_free_func_call_param(AstFuncCallParam *value) {
+    str_free(&value->name);
 }
 
 void ast_free_function_call(AstFunctionCall **value) {
@@ -278,16 +269,9 @@ void ast_free_function_call(AstFunctionCall **value) {
     free(v);
 }
 
-void ast_free_func_decl_param(AstFuncDeclParam **value) {
-    FREE_INIT(AstFuncDeclParam, value, v);
-
-    free(v);
-}
-
 void ast_free_function_decl(AstFunctionDecl **value) {
     FREE_INIT(AstFunctionDecl, value, v);
 
-    vec_free_with(&v->parameters, (FreeFun)ast_free_func_decl_param);
     ast_free_block(&v->body);
     free(v);
 }

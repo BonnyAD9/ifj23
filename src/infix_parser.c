@@ -57,6 +57,9 @@ static enum FoldResult es_fold_prefix(struct ExpansionStack *stack);
 static enum FoldResult es_fold_postfix(struct ExpansionStack *stack);
 /// Folds, parses function call parameters and folds again
 static bool es_call(struct ExpansionStack *stack, Parser *par);
+
+// implemented in parser.c
+bool parse_func_params(Parser *par, Vec *res);
 /// folds while there is more than single non terminal, returns the last
 /// non terminal
 static AstExpr *es_finish(struct ExpansionStack *stack);
@@ -596,7 +599,38 @@ static enum FoldResult es_fold_postfix(struct ExpansionStack *stack) {
     return MATCH_OK;
 }
 
-static bool es_call(struct ExpansionStack *stack, Parser *par);
+static bool es_call(struct ExpansionStack *stack, Parser *par) {
+    if (!es_fold(stack)) {
+        return false;
+    }
+
+    VEC_INSERT(
+        &stack->stack,
+        struct StackItem,
+        stack->stack.len - 2,
+        ((struct StackItem) {
+            .type = SI_STOP,
+        })
+    );
+
+    Vec params = VEC_NEW(AstFuncCallParam);
+
+    if (!parse_func_params(par, &params)) {
+        return false;
+    }
+
+    VEC_INSERT(
+        &stack->stack,
+        struct StackItem,
+        stack->stack.len - 2,
+        ((struct StackItem) {
+            .type = SI_CALL_PARAMS,
+            .call_params = params,
+        })
+    );
+
+    return es_fold(stack);
+}
 
 static AstExpr *es_finish(struct ExpansionStack *stack);
 
