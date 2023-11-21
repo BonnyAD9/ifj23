@@ -219,7 +219,7 @@ static AstExpr *parse_terminal(Parser *par) {
     SymItem *ident;
     switch (par->cur) {
     case T_IDENT:
-        ret = sem_lex_variable(par->lex);
+        ret = sem_lex_variable(par->lex, par->table);
         break;
     case T_LITERAL:
         ret = sem_lex_literal(par->lex);
@@ -275,8 +275,10 @@ static AstStmt *parse_decl(Parser *par) {
         tok_next(par);
     }
 
+    sym_item_var(ident, sym_var_new(type, (type & DT_NIL), mutable));
+
     if (par->cur != '=') {
-        return sem_var_decl(mutable, ident, type, NULL);
+        return sem_var_decl(ident, NULL);
     }
 
     tok_next(par);
@@ -285,7 +287,7 @@ static AstStmt *parse_decl(Parser *par) {
         return NULL;
     }
 
-    return sem_var_decl(mutable, ident, type, init);
+    return sem_var_decl(ident, init);
 }
 
 static bool parse_type(Parser *par, DataType *res) {

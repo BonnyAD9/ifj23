@@ -72,9 +72,10 @@ AstFuncDeclParam *ast_func_decl_param(SymItem *ident, String name) {
     );
 }
 
-AstFunctionDecl *ast_function_decl(SymItem *ident, AstBlock *body) {
+AstFunctionDecl *ast_function_decl(SymItem *ident, Vec parameters, AstBlock *body) {
     STRUCT_ALLOC(AstFunctionDecl,
         .ident = ident,
+        .parameters = parameters,
         .body = body,
     );
 }
@@ -92,7 +93,7 @@ AstCondition *ast_expr_condition(AstExpr *expr) {
     );
 }
 
-AstCondition *ast_let_condition(AstVariableDecl *let) {
+AstCondition *ast_let_condition(SymItem *let) {
     STRUCT_ALLOC(AstCondition,
         .type = AST_COND_LET,
         .let = let,
@@ -302,14 +303,9 @@ void ast_free_return(AstReturn **value) {
 void ast_free_condition(AstCondition **value) {
     FREE_INIT(AstCondition, value, v);
 
-    switch (v->type) {
-    case AST_COND_EXPR:
+    if (v->type == AST_COND_EXPR)
         ast_free_expr(&v->expr);
-        break;
-    case AST_COND_LET:
-        ast_free_variable_decl(&v->let);
-        break;
-    }
+
     free(v);
 }
 

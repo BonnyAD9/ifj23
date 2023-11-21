@@ -7,44 +7,7 @@
 #include "errors.h"
 #include "vec.h"
 #include "utils.h"
-
-bool check_statement(AstStmt *stmt);
-
-typedef struct {
-    bool in_func;
-    bool in_main;
-    bool in_while;
-    bool in_if;
-    bool return_used;
-    AstFuncType func_type;
-} Context;
-
-AstBlock *sem_block(Vec stmts, bool top_level);
-AstStmt *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block);
-AstCondition *sem_expr_condition(AstExpr *expr);
-AstCondition *sem_let_condition(SymItem *ident);
-AstExpr *sem_lex_variable(Lexer *lex);
-AstExpr *sem_lex_literal(Lexer *lex);
-AstStmt *sem_while(AstExpr *cond, AstBlock *loop);
-AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr);
-AstStmt *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body);
-bool sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res);
-AstStmt *sem_return(AstExpr *expr);
-AstExpr *sem_unary(AstExpr *expr, Token op);
-AstExpr *sem_variable(SymItem *ident);
-AstExpr *sem_literal(FullToken token);
-AstExpr *sem_call(AstExpr *calle, Vec params);
-AstExpr *sem_binary(AstExpr *left, Token op, AstExpr *right);
-
-                    // INT NOT_NIL DOUBLE NOT_NIL STRING NOT_NIL NIL NOT_NIL
-// INT              |
-// INT_NOT_NIL      |
-// DOUBLE           |
-// DOUBLE_NOT_NIL   |
-// STRING           |
-// STRING_NOT_NIL   |
-// NIL              |
-// NOT_NIL          |
+#include "infix_parser.h"
 
 bool compat_array[6][8][8] = {
     // *********************** '*', '-', '/' ***********************

@@ -92,7 +92,7 @@ typedef struct {
     AstConditionType type;
     union {
         AstExpr *expr;
-        AstVariableDecl *let;
+        SymItem *let;
     };
 } AstCondition;
 
@@ -160,13 +160,13 @@ AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters);
 
 AstFuncDeclParam *ast_func_decl_param(SymItem *ident, String name);
 
-AstFunctionDecl *ast_function_decl(SymItem *ident, AstBlock *body);
+AstFunctionDecl *ast_function_decl(SymItem *ident, Vec parameters, AstBlock *body);
 
 AstReturn *ast_return(AstExpr *expr);
 
 AstCondition *ast_expr_condition(AstExpr *expr);
 
-AstCondition *ast_let_condition(AstVariableDecl *let);
+AstCondition *ast_let_condition(SymItem *let);
 
 AstIf *ast_if(AstCondition *condition, AstBlock *if_body, AstBlock *else_body);
 
