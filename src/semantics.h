@@ -24,7 +24,7 @@ AstStmt *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block)
 AstCondition *sem_expr_condition(AstExpr *expr);
 AstCondition *sem_let_condition(SymItem *ident);
 AstExpr *sem_lex_variable(Lexer *lex);
-AstExpr *sem_lex_literal(Lexer *lex);
+bool sem_lex_literal(Lexer *lex, AstLiteral *res);
 AstStmt *sem_while(AstExpr *cond, AstBlock *loop);
 AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr);
 AstStmt *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body);

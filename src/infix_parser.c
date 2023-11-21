@@ -64,6 +64,7 @@ bool parse_func_params(Parser *par, Vec *res);
 /// non terminal
 static AstExpr *es_finish(struct ExpansionStack *stack);
 static void es_free(struct ExpansionStack *stack);
+static void si_free(struct StackItem *si);
 /// the precedence table
 static enum PrecedenceAction prec_table(Token stack, Token input);
 static bool is_infix_token(Token t);
@@ -632,9 +633,40 @@ static bool es_call(struct ExpansionStack *stack, Parser *par) {
     return es_fold(stack);
 }
 
-static AstExpr *es_finish(struct ExpansionStack *stack);
+static AstExpr *es_finish(struct ExpansionStack *stack) {
+    while (stack->stack.len > 2) {
+        if (!es_fold(stack)) {
+            return NULL;
+        }
+    }
+    struct StackItem last = VEC_POP(&stack->stack, struct StackItem);
+    if (last.type != SI_NTERM) {
+        return NULL;
+    }
+    return last.nterm;
+}
 
-static void es_free(struct ExpansionStack *stack);
+static void es_free(struct ExpansionStack *stack) {
+    vec_free_with(&stack->stack, (FreeFun)si_free);
+}
+
+static void si_free(struct StackItem *si) {
+    switch (si->type) {
+    case SI_STOP:
+        break;
+    case SI_TERM:
+        if (si->term.type == T_LITERAL && si->term.subtype == DT_STRING) {
+            str_free(&si->term.str);
+        }
+        break;
+    case SI_NTERM:
+        ast_free_expr(si->nterm);
+        break;
+    case SI_CALL_PARAMS:
+        vec_free_with(&si->call_params, (FreeFun)ast_free_func_call_param);
+        break;
+    }
+}
 
 static bool is_infix_token(Token t) {
     return t == '!' || t == '*' || t == '/' || t == '+' || t == '-'

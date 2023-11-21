@@ -39,7 +39,6 @@ static AstStmt *parse_if(Parser *par);
 static AstCondition *parse_if_condition(Parser *par);
 static AstExpr *parse_expression(Parser *par);
 static AstExpr *parse_bracket(Parser *par);
-static bool parse_literal(Parser *par, AstLiteral *res);
 bool parse_func_params(Parser *par, Vec *res);
 static bool parse_func_param(Parser *par, AstFuncCallParam *res);
 static AstStmt *parse_while(Parser *par);
@@ -53,9 +52,8 @@ AstBlock *parser_parse(Parser *par) {
     return parse_block(par, true);
 }
 
-void parser_free(Parser *p) {
-    // TODO: parser_free
-}
+void parser_free(Parser *p) { } // current implementation of parser has
+                                // nothing to free
 
 static Token tok_next(Parser *par) {
     return par->cur = lex_next(par->lex);
@@ -195,9 +193,6 @@ static AstExpr *parse_bracket(Parser *par) {
     return res;
 }
 
-static bool parse_literal(Parser *par, AstLiteral *res) {
-
-}
 
 bool parse_func_params(Parser *par, Vec *res) {
     tok_next(par);
@@ -225,7 +220,7 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
 
     if (par->cur == T_LITERAL) {
         res->type = AST_LITERAL;
-        if (!parse_literal(par, &res->literal)) {
+        if (!sem_lex_literal(par->lex, &res->literal)) {
             return false;
         };
         tok_next(par);
@@ -238,7 +233,7 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
     if (par->cur == T_LITERAL) {
         res->name = name;
         res->type = AST_LITERAL;
-        if (!parse_literal(par, &res->literal)) {
+        if (!sem_lex_literal(par, &res->literal)) {
             str_free(&name);
             return false;
         };
@@ -248,10 +243,22 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
     if (par->cur == T_IDENT) {
         res->name = name;
         res->type = AST_VARIABLE;
-        // TODO: parse variable exit
+        SymItem *ident = sym_find(par->table, par->lex->str);
+        if (!ident) {
+            str_free(&res->name);
+            return false;
+        }
+        res->variable = ident;
+        return true;
     }
 
-    // TODO: name is variable
+    SymItem *ident = sym_find(par->table, name);
+    std_free(&name);
+    if (!ident) {
+        return false;
+    }
+    res->variable = ident;
+    return true;
 }
 
 static AstStmt *parse_while(Parser *par) {
