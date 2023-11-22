@@ -468,10 +468,10 @@ AstBlock *sem_block(Vec stmts, bool top_level) {
     ast_free_block(&block);
     return NULL;
 }
-// TODO make sure and adapt about vector types, whether pointers or not
+
 static bool sem_process_block(Vec stmts, bool top_level) {
-    VEC_FOR_EACH(&(stmts), AstStmt, stmt) {
-        bool stmt_valid = sem_process_stmt(stmt.v, top_level);
+    VEC_FOR_EACH(&(stmts), AstStmt*, stmt) {
+        bool stmt_valid = sem_process_stmt((*stmt.v), top_level);
         if (!stmt_valid)
             // Error already set in sem_process_stmt()
             return false;
@@ -531,17 +531,17 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
         return false;
 
     // Now iterate through valid body for return statement
-    VEC_FOR_EACH(&(func_decl->body->stmts), AstStmt, stmt) {
-        if (stmt.v->type == AST_RETURN) {
+    VEC_FOR_EACH(&(func_decl->body->stmts), AstStmt*, stmt) {
+        if ((*stmt.v)->type == AST_RETURN) {
             DataType return_type = sym_func_get_ret(func_decl->ident, func_decl->ident->name);
-            if (return_type == DT_VOID && stmt.v->return_v->expr)
+            if (return_type == DT_VOID && (*stmt.v)->return_v->expr)
                 return sema_err("Unexpected return expression for void type function", ERR_INVALID_RETURN);
 
-            if (return_type != DT_VOID && !stmt.v->return_v->expr)
+            if (return_type != DT_VOID && !(*stmt.v)->return_v->expr)
                 return sema_err("Missing return expression for function", ERR_INVALID_RETURN);
 
             DataType expr_type;
-            process_expr(stmt.v->return_v->expr, &expr_type);
+            process_expr((*stmt.v)->return_v->expr, &expr_type);
             // Check for type compatibility (same as for '=')
             if (!compat_array[4][get_arr_index(return_type)][get_arr_index(expr_type)])
                 return sema_err("Uncompatible types for function return", ERR_INVALID_FUN);
