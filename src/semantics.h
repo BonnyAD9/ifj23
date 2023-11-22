@@ -24,9 +24,10 @@ AstStmt *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block)
 AstCondition *sem_expr_condition(AstExpr *expr);
 AstCondition *sem_let_condition(SymItem *ident);
 bool sem_lex_literal(Lexer *lex, AstLiteral *res);
-AstStmt *sem_while(AstExpr *cond, AstBlock *loop);
+AstStmt *sem_while(AstCondition *cond, AstBlock *loop);
 AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr);
 AstStmt *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body);
+AstStmt *sem_expr_stmt(AstExpr *expr);
 bool sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res);
 AstStmt *sem_return(AstExpr *expr);
 AstExpr *sem_unary(AstExpr *expr, Token op);

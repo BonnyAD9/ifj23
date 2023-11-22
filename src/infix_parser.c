@@ -337,7 +337,6 @@ static struct ExpansionStack es_new(void) {
         .stack = VEC_NEW(struct StackItem),
         .last_term = T_EOF,
         .is_stop_term = true,
-        .is_stop_term = true,
     };
 }
 
