@@ -1,5 +1,33 @@
 #include "semantics.h"
 
+/////////////////////////////////////////////////////////////////////////
+static bool sema_err(const char *msg, const int err_type);
+
+static bool sem_process_expr(AstExpr *expr);
+static bool process_expr(AstExpr *expr, DataType *final_type);
+
+static bool sem_process_binary(AstBinaryOp *binary_op, DataType *final_type);
+static bool sem_process_unary(AstUnaryOp *unary_op, DataType *final_type);
+static bool sem_process_call(AstFunctionCall *func_call, DataType *final_type);
+static bool check_func_params(SymItem *ident, Vec args);
+static bool sem_process_literal(AstLiteral *literal, DataType *final_type);
+static bool sem_process_variable(SymItem *ident, DataType *final_type);
+
+static unsigned int get_arr_index(DataType type);
+static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char *err_msg, const char *err_msg_cnt, DataType *final_type);
+static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type);
+
+static bool sem_process_block(Vec stmts, bool top_level);
+static bool sem_process_stmt(AstStmt *stmt, bool top_level);
+bool sem_process_func_decl(AstFunctionDecl *func_decl);
+static bool sem_process_var_decl(AstVariableDecl *variable_decl);
+static bool sem_process_return(AstReturn *return_v);
+static bool sem_process_expr_condition(AstExpr *expr);
+static bool sem_process_let_condition(SymItem *ident);
+static bool sem_process_if(AstIf *if_v);
+static bool sem_process_while(AstWhile *while_v);
+/////////////////////////////////////////////////////////////////////////
+
 static bool sema_err(const char *msg, const int err_type) {
     set_err_code(err_type);
     EPRINTF("%s", msg);
@@ -7,33 +35,12 @@ static bool sema_err(const char *msg, const int err_type) {
 }
 
 /////////////////////////////////////////////////////////////////////////
-bool          sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res); // DONE
-
-AstBlock     *sem_block(Vec stmts, bool top_level); // DONE
-
-AstCondition *sem_expr_condition(AstExpr *expr); // DONE
-AstCondition *sem_let_condition(SymItem *ident); // DONE
-
-AstStmt      *sem_while(AstExpr *cond, AstBlock *loop); // DONE
-AstStmt      *sem_var_decl(SymItem *ident, AstExpr *expr); // DONE
-AstStmt      *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body); // DONE
-AstStmt      *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block); // DONE
-AstStmt      *sem_return(AstExpr *expr); // DONE
-
-AstExpr      *sem_unary(AstExpr *expr, Token op); // DONE
-AstExpr      *sem_variable(SymItem *ident); // DONE
-AstExpr      *sem_literal(FullToken token); // DONE
-AstExpr      *sem_call(AstExpr *calle, Vec params); // DONE
-AstExpr      *sem_lex_variable(Lexer *lex, Symtable *table);
-AstExpr      *sem_lex_literal(Lexer *lex); // DONE
-AstExpr      *sem_binary(AstExpr *left, Token op, AstExpr *right); // DONE
-
-/////////////////////////////////////////////////////////////////////////
 
 AstExpr *sem_expr(AstExpr *expr) {
-    DataType type;
-    if (process_expr(expr, &type))
+    if (sem_process_expr(expr))
         return expr;
+
+    ast_free_expr(&expr);
     return NULL;
 }
 
@@ -59,11 +66,16 @@ static bool process_expr(AstExpr *expr, DataType *final_type) {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////
+
 AstExpr *sem_binary(AstExpr *left, Token op, AstExpr *right) {
     DataType type;
     AstExpr *binary_expr = ast_binary_op_expr(ast_binary_op(op, left, right));
+
     if (sem_process_binary(binary_expr->binary_op, &type))
         return binary_expr;
+
+    ast_free_expr(&binary_expr);
     return NULL;
 }
 
@@ -74,10 +86,10 @@ static bool sem_process_binary(AstBinaryOp *binary_op, DataType *final_type) {
         return sema_err("Invalid l-value of expression", ERR_SEMANTIC);
 
     bool left_side = process_expr(binary_op->left, final_type);
-    DataType left_side_type = final_type;
+    DataType left_side_type = *final_type;
 
     bool right_side = process_expr(binary_op->right, final_type);
-    DataType right_side_type = final_type;
+    DataType right_side_type = *final_type;
 
     if (!left_side || !right_side)
         // Error is already set by lower instancies
@@ -88,11 +100,16 @@ static bool sem_process_binary(AstBinaryOp *binary_op, DataType *final_type) {
     return false;
 }
 
+/////////////////////////////////////////////////////////////////////////
+
 AstExpr *sem_unary(AstExpr *expr, Token op) {
     DataType type;
     AstExpr *unary_expr = ast_unary_op_expr(ast_unary_op(op, expr));
+
     if (sem_process_unary(unary_expr->unary_op, &type))
         return unary_expr;
+
+    ast_free_expr(&unary_expr);
     return NULL;
 }
 
@@ -113,13 +130,31 @@ static bool sem_process_unary(AstUnaryOp *unary_op, DataType *final_type) {
 
     return true;
 }
-// TODO Discord talks about calle->XXX
+
+/////////////////////////////////////////////////////////////////////////
+
+SymItem *calle_ident(AstExpr *expr) {
+    if (expr->type == AST_VARIABLE)
+        return expr->variable->ident;
+    if (expr->type == AST_UNARY_OP)
+        return calle_ident(expr->unary_op->param);
+    // Else error
+    sema_err("Unknown function name", ERR_UNDEF_FUNCTION);
+    return NULL;
+}
+
 AstExpr *sem_call(AstExpr *calle, Vec params) {
     DataType type;
-    AstExpr *func_call_expr = ast_function_call_expr(ast_function_call(calle->function_call->ident, params));
+    SymItem* ident = calle_ident(calle);
+    if (!ident)
+        return NULL;
+
+    AstExpr *func_call_expr = ast_function_call_expr(ast_function_call(ident, params));
 
     if (sem_process_call(func_call_expr->function_call, &type))
         return func_call_expr;
+
+    ast_free_expr(&func_call_expr);
     return NULL;
 }
 
@@ -185,9 +220,12 @@ static bool check_func_params(SymItem *ident, Vec args) {
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////
+
 AstExpr *sem_literal(FullToken token) {
     DataType type;
     AstLiteral *literal;
+
     if (token.subtype == DT_INT)
         literal = ast_int_literal(token.int_v);
     else if (token.subtype == DT_DOUBLE)
@@ -199,17 +237,20 @@ AstExpr *sem_literal(FullToken token) {
 
     if (sem_process_literal(literal, &type))
         return ast_literal_expr(literal);
+
+    ast_free_literal(&literal);
     return NULL;
 }
 
 static bool sem_process_literal(AstLiteral *literal, DataType *final_type) {
-    // TODO is this conversion really necessary?
-    // Implicit conversion to DOUBLE type
+    // Implicit conversion to DOUBLE type for INT literal
     if (literal->type == DT_INT || literal->type == DT_INT_NIL)
         // INT(2) -> DOUBLE(4) , INT_NIL(3) -> DOUBLE_NIL(5)
         *final_type = literal->type + 2;
     return true;
 }
+
+/////////////////////////////////////////////////////////////////////////
 
 AstExpr *sem_variable(SymItem *ident) {
     DataType type;
@@ -217,6 +258,8 @@ AstExpr *sem_variable(SymItem *ident) {
 
     if (sem_process_variable(var_expr->variable->ident, &type))
         return var_expr;
+
+    ast_free_expr(&var_expr);
     return NULL;
 }
 
@@ -230,10 +273,12 @@ static bool sem_process_variable(SymItem *ident, DataType *final_type) {
     if (ident->var.data_type & DT_NIL)
         // Throw warning about potencial nil
         WPRINTF("Variable can contain nil value");
-
-    *final_type = ident->var.data_type;
+    if (final_type)
+        *final_type = ident->var.data_type;
     return true;
 }
+
+/////////////////////////////////////////////////////////////////////////
 
 static unsigned int get_arr_index(DataType type) {
     if (type == DT_INT)        return 1;
@@ -247,10 +292,15 @@ static unsigned int get_arr_index(DataType type) {
     if (type == DT_ANY)        return 7;
     if (type == DT_ANY_NIL ||
         type == DT_VOID)       return 6;
+    // Unexpected state
+    return 8;
 }
 
 static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char *err_msg, const char *err_msg_cnt, DataType *final_type) {
-    if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)])
+    // Check for unexpected type provided
+    if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
+        err_msg = "Unexpected type provided";
+    else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)])
         // Set error message to non-NILL otherwise keep it NULL
         err_msg = err_msg_cnt;
     else
@@ -288,7 +338,7 @@ static bool check_compatibility(Token operator, DataType left_type, DataType rig
             break;
         ////////////////////
         case T_DOUBLE_QUES:  // ??
-            check_in_array(3, left_type, right_type, err_msg, "Uncompatible types for performing '??' operation", final_type);
+            check_in_array(3, left_type, right_type, err_msg, "Uncompatible types for performing '\?\?' operation", final_type);
             break;
         ////////////////////
         case '=':
@@ -319,6 +369,8 @@ AstBlock *sem_block(Vec stmts, bool top_level) {
 
     if (sem_process_block(stmts, top_level))
         return block;
+
+    ast_free_block(&block);
     return NULL;
 }
 
@@ -358,12 +410,14 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
 }
 
 /////////////////////////////////////////////////////////////////////////
-// TODO add free for failed sema check
+
 AstStmt *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body) {
     AstStmt *func_decl = ast_function_decl_stmt(ast_function_decl(ident, params, body));
 
     if (sem_process_func_decl(func_decl->function_decl))
         return func_decl;
+
+    ast_free_stmt(&func_decl);
     return NULL;
 }
 
@@ -376,7 +430,7 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
         return false;
 
     // First check body is valid
-    bool func_body = sem_process_block(func_decl->body->stmts, true);
+    bool func_body = sem_process_block(func_decl->body->stmts, false);
     if (!func_body)
         // Error already set in sem_block()
         return false;
@@ -384,7 +438,6 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
     // Now iterate through valid body for return statement
     VEC_FOR_EACH(&(func_decl->body->stmts), AstStmt, stmt) {
         if (stmt.v->type == AST_RETURN) {
-            // TODO sym_func_get_ret() should return DataType instead of ReturnType
             DataType return_type = sym_func_get_ret(func_decl->ident, func_decl->ident->name);
             if (return_type == DT_VOID && stmt.v->return_v->expr)
                 return sema_err("Unexpected return expression for void type function", ERR_INVALID_RETURN);
@@ -403,21 +456,24 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
 }
 
 /////////////////////////////////////////////////////////////////////////
+AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr) {
+    if (!sem_process_variable(ident, NULL))
+        // Error already set in sem_process_variable()
+        return NULL;
 
-AstStmt *sem_var_decl(SymItem *ident, AstExpr *expr) {
+    ident->var.data_type = type;
+    ident->var.mutable = mutable;
     AstStmt *var_decl = ast_variable_decl_stmt(ast_variable_decl(ident, expr));
 
     if (sem_process_var_decl(var_decl->variable_decl))
         return var_decl;
+
+    ast_free_stmt(&var_decl);
     return NULL;
 }
 
 static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
     DataType var_type;
-    bool var_expr = sem_process_variable(variable_decl->ident, &var_type);
-    if (!var_expr)
-        // Error already set in sem_variable()
-        return false;
 
     // Check expression
     if (variable_decl->value) {
@@ -434,7 +490,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
         else // var_type value is useless, just avoid using NULL to avoid NULL checks in the function
             return check_compatibility('=', variable_decl->ident->var.data_type, expr_type, &var_type);
     }
-    else if (variable_decl->ident->type == DT_NONE)
+    else if (variable_decl->ident->var.data_type == DT_NONE)
         // Case when type and expression are missing
         return sema_err("Variable declaration is missing both type and expression", ERR_UNKNOWN_TYPE);
     // Else nothing to do, type is given but without expression
@@ -448,6 +504,8 @@ AstStmt *sem_return(AstExpr *expr) {
 
     if (sem_process_return(ret_stmt->return_v))
         return ret_stmt;
+
+    ast_free_stmt(&ret_stmt);
     return NULL;
 }
 
@@ -467,10 +525,12 @@ AstCondition *sem_expr_condition(AstExpr *expr) {
 
     if (sem_process_expr_condition(expr_cond->expr))
         return expr_cond;
+
+    ast_free_condition(&expr_cond);
     return NULL;
 }
 
-bool sem_process_expr_condition(AstExpr *expr) {
+static bool sem_process_expr_condition(AstExpr *expr) {
     DataType type;
     // Check if expression is correct
     bool cond_expr = process_expr(expr, &type);
@@ -497,10 +557,12 @@ AstCondition *sem_let_condition(SymItem *ident) {
 
     if (sem_process_let_condition(let_cond->let))
         return let_cond;
+
+    ast_free_condition(&let_cond);
     return NULL;
 }
 
-bool sem_process_let_condition(SymItem *ident) {
+static bool sem_process_let_condition(SymItem *ident) {
     if (!ident->declared)
         return sema_err("Undeclared variable", ERR_UNDEF_VAR);
 
@@ -519,6 +581,8 @@ AstStmt *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block)
 
     if (sem_process_if(if_stmt->if_v))
         return if_stmt;
+
+    ast_free_stmt(&if_stmt);
     return NULL;
 }
 
@@ -536,7 +600,6 @@ static bool sem_process_if(AstIf *if_v) {
     if (!if_v->if_body)
         return sema_err("Missing statement body", ERR_SEMANTIC);
     // Process if (and) else body
-    // TODO how to decide what to use for top_level value
     bool if_body = sem_process_block(if_v->if_body->stmts, false);
     if (!if_body)
         // Error already set in sem_block()
@@ -552,11 +615,21 @@ static bool sem_process_if(AstIf *if_v) {
 
 /////////////////////////////////////////////////////////////////////////
 
-AstStmt *sem_while(AstExpr *cond, AstBlock *loop) {
+AstStmt *sem_expr_stmt(AstExpr *expr) {
+    if (sem_expr(expr))
+        return ast_expr_stmt(expr);
+    return NULL;
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+AstStmt *sem_while(AstCondition *cond, AstBlock *loop) {
     AstStmt *while_stmt = ast_while_stmt(ast_while(cond, loop));
 
     if (sem_process_while(while_stmt->while_v))
         return while_stmt;
+
+    ast_free_stmt(&while_stmt);
     return NULL;
 }
 
@@ -590,26 +663,25 @@ bool sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res)
 }
 
 /////////////////////////////////////////////////////////////////////////
-
-AstExpr *sem_lex_variable(Lexer *lex, Symtable *table) {
-    lex_next(lex);
-    SymItem *ident = sym_find(table, lex->str);
-    ident->type = SYM_VAR;
+/*
+AstExpr *sem_lex_variable(SymItem *ident) {
     return ast_variable_expr(ast_variable(ident));
 }
-
+*/
 /////////////////////////////////////////////////////////////////////////
 
-AstExpr *sem_lex_literal(Lexer *lex) {
-    AstLiteral *literal;
-    if (lex->subtype == DT_INT)
-        literal = ast_int_literal(lex->i_num);
-    else if (lex->subtype == DT_DOUBLE)
-        literal = ast_double_literal(lex->d_num);
-    else if (lex->subtype == DT_STRING)
-        literal = ast_string_literal(lex->str);
-    else // DT_NIL
-        literal = ast_nil_literal();
+bool sem_lex_literal(Lexer *lex, AstLiteral *res) {
+    if (lex->cur != T_LITERAL)
+        return false;
 
-    return ast_literal_expr(literal);
+    if (lex->subtype == DT_INT)
+        res = ast_int_literal(lex->i_num);
+    else if (lex->subtype == DT_DOUBLE)
+        res = ast_double_literal(lex->d_num);
+    else if (lex->subtype == DT_STRING)
+        res = ast_string_literal(lex->str);
+    else // DT_NIL
+        res = ast_nil_literal();
+
+    return true;
 }
