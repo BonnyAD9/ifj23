@@ -1,6 +1,99 @@
 #include "semantics.h"
 
 /////////////////////////////////////////////////////////////////////////
+static bool compat_array[6][8][8] = {
+    // *********************** '*', '-', '/' ***********************
+    // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL
+   {{   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // INT
+    {   0   ,   1   ,   0   ,   1   ,   0   ,   0   ,   0   ,   0   }, // INT_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE
+    {   0   ,   1   ,   0   ,   1   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // STRING
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // STRING_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }},// NIL_NOT_NIL
+
+    // **************************** '+' ****************************
+    // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL
+   {{   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // INT
+    {   0   ,   1   ,   0   ,   1   ,   0   ,   0   ,   0   ,   0   }, // INT_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE
+    {   0   ,   1   ,   0   ,   1   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // STRING
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   1   ,   0   ,   0   }, // STRING_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }},// NIL_NOT_NIL
+
+    // ******************* '==', '!=', '<=', '=>' ******************
+    // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL
+   {{   1   ,   0   ,   0   ,   0   ,   0   ,   0   ,   1   ,   0   }, // INT
+    {   0   ,   1   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // INT_NOT_NIL
+    {   0   ,   0   ,   1   ,   0   ,   0   ,   0   ,   1   ,   0   }, // DOUBLE
+    {   0   ,   1   ,   0   ,   1   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   1   ,   0   ,   1   ,   0   }, // STRING
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   1   ,   0   ,   0   }, // STRING_NOT_NIL
+    {   1   ,   0   ,   1   ,   0   ,   1   ,   0   ,   1   ,   0   }, // NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   1   }},// NIL_NOT_NIL
+
+    // *************************** '??' ****************************
+    // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL   [RIGHT / LEFT]
+   {{   0   ,   1   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // INT
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // INT_NOT_NIL
+    {   0   ,   0   ,   0   ,   1   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   1   ,   0   ,   0   }, // STRING
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // STRING_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   1   }, // NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }},// NIL_NOT_NIL
+
+    // **************************** '=' ****************************
+    // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL   [RIGHT / LEFT]
+   {{   1   ,   1   ,   0   ,   0   ,   0   ,   0   ,   1   ,   1   }, // INT
+    {   0   ,   1   ,   0   ,   0   ,   0   ,   0   ,   0   ,   1   }, // INT_NOT_NIL
+    {   0   ,   0   ,   1   ,   1   ,   0   ,   0   ,   1   ,   1   }, // DOUBLE
+    {   0   ,   0   ,   0   ,   1   ,   0   ,   0   ,   0   ,   1   }, // DOUBLE_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   1   ,   1   ,   1   ,   1   }, // STRING
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   1   ,   0   ,   1   }, // STRING_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }},// NIL_NOT_NIL
+
+    // ************************* '<', '>' **************************
+    // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL
+   {{   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // INT
+    {   0   ,   1   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // INT_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE
+    {   0   ,   0   ,   0   ,   1   ,   0   ,   0   ,   0   ,   0   }, // DOUBLE_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // STRING
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   1   ,   0   ,   0   }, // STRING_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }, // NIL
+    {   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   ,   0   }} // NIL_NOT_NIL
+};
+
+/*
+   UNKNOWN.........0...DT_NONE
+   INT.............3...DT_INT_NIL
+   INT_NOT_NIL.....2...DT_INT
+   DOUBLE..........5...DT_DOUBLE_NIL
+   DOUBLE_NOT_NIL..4...DT_DOUBLE
+   STRING..........9...DT_STRING_NIL
+   STRING_NOT_NIL..8...DT_STRING
+   NIL.............15..DT_ANY_NIL
+   NIL_NOT_NIL.....14..DT_ANY
+*/
+
+static int final_type_arr[8][8] = {
+    // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL
+    {   3   ,   3   ,   5   ,   5   ,   0   ,   0   ,   3   ,   3   }, // INT
+    {   3   ,   2   ,   5   ,   4   ,   0   ,   0   ,   3   ,   2   }, // INT_NOT_NIL
+    {   5   ,   5   ,   5   ,   5   ,   0   ,   0   ,   5   ,   5   }, // DOUBLE
+    {   5   ,   4   ,   5   ,   4   ,   0   ,   0   ,   5   ,   4   }, // DOUBLE_NOT_NIL
+    {   0   ,   0   ,   0   ,   0   ,   9   ,   9   ,   4   ,   9   }, // STRING
+    {   0   ,   0   ,   0   ,   0   ,   9   ,   8   ,   9   ,   8   }, // STRING_NOT_NIL
+    {   3   ,   3   ,   5   ,   5   ,   4   ,   9   ,   15  ,   0   }, // NIL
+    {   3   ,   2   ,   5   ,   4   ,   9   ,   8   ,   0   ,   14  }  // NIL_NOT_NIL
+};
+
+/////////////////////////////////////////////////////////////////////////
 static bool sema_err(const char *msg, const int err_type);
 
 static bool sem_process_expr(AstExpr *expr);
@@ -14,7 +107,7 @@ static bool sem_process_literal(AstLiteral *literal, DataType *final_type);
 static bool sem_process_variable(SymItem *ident, DataType *final_type);
 
 static unsigned int get_arr_index(DataType type);
-static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char *err_msg, const char *err_msg_cnt, DataType *final_type);
+static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char **err_msg, const char *err_msg_cnt, DataType *final_type);
 static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type);
 
 static bool sem_process_block(Vec stmts, bool top_level);
@@ -243,6 +336,8 @@ AstExpr *sem_literal(FullToken token) {
 }
 
 static bool sem_process_literal(AstLiteral *literal, DataType *final_type) {
+    *final_type = literal->type;
+    // TODO Discuss need of this conversion
     // Implicit conversion to DOUBLE type for INT literal
     if (literal->type == DT_INT || literal->type == DT_INT_NIL)
         // INT(2) -> DOUBLE(4) , INT_NIL(3) -> DOUBLE_NIL(5)
@@ -296,13 +391,13 @@ static unsigned int get_arr_index(DataType type) {
     return 8;
 }
 
-static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char *err_msg, const char *err_msg_cnt, DataType *final_type) {
+static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char **err_msg, const char *err_msg_cnt, DataType *final_type) {
     // Check for unexpected type provided
     if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
         err_msg = "Unexpected type provided";
     else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)])
         // Set error message to non-NILL otherwise keep it NULL
-        err_msg = err_msg_cnt;
+        *err_msg = err_msg_cnt;
     else
         *final_type = final_type_arr[get_arr_index(left_type)][get_arr_index(right_type)];
 }
@@ -311,45 +406,45 @@ static bool check_compatibility(Token operator, DataType left_type, DataType rig
     const char *err_msg = NULL;
     switch (operator) {
         case '*':
-            check_in_array(0, left_type, right_type, err_msg, "Uncompatible types for performing '*' operation", final_type);
+            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '*' operation", final_type);
             break;
         case '-':
-            check_in_array(0, left_type, right_type, err_msg, "Uncompatible types for performing '-' operation", final_type);
+            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '-' operation", final_type);
             break;
         case '/':
-            check_in_array(0, left_type, right_type, err_msg, "Uncompatible types for performing '/' operation", final_type);
+            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '/' operation", final_type);
             break;
         ////////////////////
         case '+':
-            check_in_array(1, left_type, right_type, err_msg, "Uncompatible types for performing '+' operation", final_type);
+            check_in_array(1, left_type, right_type, &err_msg, "Uncompatible types for performing '+' operation", final_type);
             break;
         ////////////////////
         case T_EQUALS:           // '=='
-            check_in_array(2, left_type, right_type, err_msg, "Uncompatible types for performing '==' operation", final_type);
+            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '==' operation", final_type);
             break;
         case T_DIFFERS:          // '!='
-            check_in_array(2, left_type, right_type, err_msg, "Uncompatible types for performing '!=' operation", final_type);
+            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '!=' operation", final_type);
             break;
         case T_LESS_OR_EQUAL:    // '<='
-            check_in_array(2, left_type, right_type, err_msg, "Uncompatible types for performing '<=' operation", final_type);
+            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '<=' operation", final_type);
             break;
         case T_GREATER_OR_EQUAL: // '>='
-            check_in_array(2, left_type, right_type, err_msg, "Uncompatible types for performing '>=' operation", final_type);
+            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '>=' operation", final_type);
             break;
         ////////////////////
         case T_DOUBLE_QUES:  // ??
-            check_in_array(3, left_type, right_type, err_msg, "Uncompatible types for performing '\?\?' operation", final_type);
+            check_in_array(3, left_type, right_type, &err_msg, "Uncompatible types for performing '\?\?' operation", final_type);
             break;
         ////////////////////
         case '=':
-            check_in_array(4, left_type, right_type, err_msg, "Uncompatible types for performing '=' operation", final_type);
+            check_in_array(4, left_type, right_type, &err_msg, "Uncompatible types for performing '=' operation", final_type);
             break;
         ////////////////////
         case '<':
-            check_in_array(5, left_type, right_type, err_msg, "Uncompatible types for performing '<' operation", final_type);
+            check_in_array(5, left_type, right_type, &err_msg, "Uncompatible types for performing '<' operation", final_type);
             break;
         case '>':
-            check_in_array(5, left_type, right_type, err_msg, "Uncompatible types for performing '>' operation", final_type);
+            check_in_array(5, left_type, right_type, &err_msg, "Uncompatible types for performing '>' operation", final_type);
             break;
         default:
             err_msg = "Uknown operator type";
@@ -373,7 +468,7 @@ AstBlock *sem_block(Vec stmts, bool top_level) {
     ast_free_block(&block);
     return NULL;
 }
-
+// TODO make sure and adapt about vector types, whether pointers or not
 static bool sem_process_block(Vec stmts, bool top_level) {
     VEC_FOR_EACH(&(stmts), AstStmt, stmt) {
         bool stmt_valid = sem_process_stmt(stmt.v, top_level);
@@ -387,7 +482,7 @@ static bool sem_process_block(Vec stmts, bool top_level) {
 static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
     switch (stmt->type) {
         case AST_EXPR:
-            return sem_process_expr(sem_expr(stmt->expr));
+            return sem_process_expr(stmt->expr);
         case AST_BLOCK:
             return sem_process_block(stmt->block->stmts, top_level);
         case AST_FUNCTION_DECL:

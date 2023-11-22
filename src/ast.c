@@ -138,7 +138,7 @@ AstLiteral *ast_string_literal(String value) {
 
 AstLiteral *ast_nil_literal() {
     STRUCT_ALLOC(AstLiteral,
-        .type = DT_NIL,
+        .type = DT_ANY_NIL,
     );
 }
 
