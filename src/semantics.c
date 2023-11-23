@@ -398,10 +398,14 @@ static void check_in_array(unsigned int arr_sel, DataType left_type, DataType ri
     if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
         *err_msg = "Unexpected type provided";
     else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)]) {
+        // Current check failed, if any of operands is LITERAL, try it again as these LITERALS are implicitly casted to DOUBLE
+        // Motivation: f.e. if (a[Int] == 5[Int]) -> after implicit casting -> if (a[Int] == 5[Double]) => ERROR even when correct at the beggining
         if (left_expr_type == AST_LITERAL || right_expr_type == AST_LITERAL) {
             if (left_expr_type == AST_LITERAL && (left_type == DT_DOUBLE || left_type == DT_DOUBLE_NIL))
-                return check_in_array(arr_sel, (left_type += 2), right_type, err_msg, err_msg_cnt, final_type, left_expr_type, right_expr_type);
+                // Left operand is LITERAL - change type from DOUBLE -> INT and check again
+                return check_in_array(arr_sel, (left_type -= 2), right_type, err_msg, err_msg_cnt, final_type, left_expr_type, right_expr_type);
             if (right_expr_type == AST_LITERAL && (right_type == DT_DOUBLE || right_type == DT_DOUBLE_NIL))
+                // Right operand is LITERAL - change type from DOUBLE -> INT and check again
                 return check_in_array(arr_sel, left_type, (right_type -= 2), err_msg, err_msg_cnt, final_type, left_expr_type, right_expr_type);
         }
         // Set error message to non-NILL otherwise keep it NULL
