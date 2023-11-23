@@ -107,8 +107,10 @@ static bool sem_process_literal(AstLiteral *literal, DataType *final_type);
 static bool sem_process_variable(SymItem *ident, DataType *final_type);
 
 static unsigned int get_arr_index(DataType type);
-static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char **err_msg, const char *err_msg_cnt, DataType *final_type);
-static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type);
+static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char **err_msg,
+                           const char *err_msg_cnt, DataType *final_type, AstExprType left_expr_type, AstExprType right_expr_type);
+static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type,
+                                AstExprType left_expr_type, AstExprType right_expr_type);
 
 static bool sem_process_block(Vec stmts, bool top_level);
 static bool sem_process_stmt(AstStmt *stmt, bool top_level);
@@ -188,7 +190,7 @@ static bool sem_process_binary(AstBinaryOp *binary_op, DataType *final_type) {
         // Error is already set by lower instancies
         return false;
 
-    if (check_compatibility(binary_op->operator, left_side_type, right_side_type, final_type))
+    if (check_compatibility(binary_op->operator, left_side_type, right_side_type, final_type, binary_op->left->type, binary_op->right->type))
         return true;
     return false;
 }
@@ -391,60 +393,67 @@ static unsigned int get_arr_index(DataType type) {
     return 8;
 }
 
-static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char **err_msg, const char *err_msg_cnt, DataType *final_type) {
+static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char **err_msg, const char *err_msg_cnt, DataType *final_type, AstExprType left_expr_type, AstExprType right_expr_type) {
     // Check for unexpected type provided
     if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
-        err_msg = "Unexpected type provided";
-    else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)])
+        *err_msg = "Unexpected type provided";
+    else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)]) {
+        if (left_expr_type == AST_LITERAL || right_expr_type == AST_LITERAL) {
+            if (left_expr_type == AST_LITERAL && (left_type == DT_DOUBLE || left_type == DT_DOUBLE_NIL))
+                return check_in_array(arr_sel, (left_type += 2), right_type, err_msg, err_msg_cnt, final_type, left_expr_type, right_expr_type);
+            if (right_expr_type == AST_LITERAL && (right_type == DT_DOUBLE || right_type == DT_DOUBLE_NIL))
+                return check_in_array(arr_sel, left_type, (right_type -= 2), err_msg, err_msg_cnt, final_type, left_expr_type, right_expr_type);
+        }
         // Set error message to non-NILL otherwise keep it NULL
         *err_msg = err_msg_cnt;
+    }
     else
         *final_type = final_type_arr[get_arr_index(left_type)][get_arr_index(right_type)];
 }
 
-static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type) {
+static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type, AstExprType left_expr_type, AstExprType right_expr_type) {
     const char *err_msg = NULL;
     switch (operator) {
         case '*':
-            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '*' operation", final_type);
+            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '*' operation", final_type, left_expr_type, right_expr_type);
             break;
         case '-':
-            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '-' operation", final_type);
+            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '-' operation", final_type, left_expr_type, right_expr_type);
             break;
         case '/':
-            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '/' operation", final_type);
+            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '/' operation", final_type, left_expr_type, right_expr_type);
             break;
         ////////////////////
         case '+':
-            check_in_array(1, left_type, right_type, &err_msg, "Uncompatible types for performing '+' operation", final_type);
+            check_in_array(1, left_type, right_type, &err_msg, "Uncompatible types for performing '+' operation", final_type, left_expr_type, right_expr_type);
             break;
         ////////////////////
         case T_EQUALS:           // '=='
-            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '==' operation", final_type);
+            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '==' operation", final_type, left_expr_type, right_expr_type);
             break;
         case T_DIFFERS:          // '!='
-            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '!=' operation", final_type);
+            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '!=' operation", final_type, left_expr_type, right_expr_type);
             break;
         case T_LESS_OR_EQUAL:    // '<='
-            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '<=' operation", final_type);
+            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '<=' operation", final_type, left_expr_type, right_expr_type);
             break;
         case T_GREATER_OR_EQUAL: // '>='
-            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '>=' operation", final_type);
+            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '>=' operation", final_type, left_expr_type, right_expr_type);
             break;
         ////////////////////
         case T_DOUBLE_QUES:  // ??
-            check_in_array(3, left_type, right_type, &err_msg, "Uncompatible types for performing '\?\?' operation", final_type);
+            check_in_array(3, left_type, right_type, &err_msg, "Uncompatible types for performing '\?\?' operation", final_type, left_expr_type, right_expr_type);
             break;
         ////////////////////
         case '=':
-            check_in_array(4, left_type, right_type, &err_msg, "Uncompatible types for performing '=' operation", final_type);
+            check_in_array(4, left_type, right_type, &err_msg, "Uncompatible types for performing '=' operation", final_type, left_expr_type, right_expr_type);
             break;
         ////////////////////
         case '<':
-            check_in_array(5, left_type, right_type, &err_msg, "Uncompatible types for performing '<' operation", final_type);
+            check_in_array(5, left_type, right_type, &err_msg, "Uncompatible types for performing '<' operation", final_type, left_expr_type, right_expr_type);
             break;
         case '>':
-            check_in_array(5, left_type, right_type, &err_msg, "Uncompatible types for performing '>' operation", final_type);
+            check_in_array(5, left_type, right_type, &err_msg, "Uncompatible types for performing '>' operation", final_type, left_expr_type, right_expr_type);
             break;
         default:
             err_msg = "Uknown operator type";
@@ -583,7 +592,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
         if (variable_decl->ident->var.data_type == DT_NONE)
             variable_decl->ident->var.data_type = expr_type;
         else // var_type value is useless, just avoid using NULL to avoid NULL checks in the function
-            return check_compatibility('=', variable_decl->ident->var.data_type, expr_type, &var_type);
+            return check_compatibility('=', variable_decl->ident->var.data_type, expr_type, &var_type, AST_VARIABLE, variable_decl->value->type);
     }
     else if (variable_decl->ident->var.data_type == DT_NONE)
         // Case when type and expression are missing
