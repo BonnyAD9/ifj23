@@ -57,10 +57,14 @@ static enum FoldResult es_fold_prefix(struct ExpansionStack *stack);
 static enum FoldResult es_fold_postfix(struct ExpansionStack *stack);
 /// Folds, parses function call parameters and folds again
 static bool es_call(struct ExpansionStack *stack, Parser *par);
+
+// implemented in parser.c
+bool parse_func_params(Parser *par, Vec *res);
 /// folds while there is more than single non terminal, returns the last
 /// non terminal
 static AstExpr *es_finish(struct ExpansionStack *stack);
 static void es_free(struct ExpansionStack *stack);
+static void si_free(struct StackItem *si);
 /// the precedence table
 static enum PrecedenceAction prec_table(Token stack, Token input);
 static bool is_infix_token(Token t);
@@ -126,6 +130,8 @@ AstExpr *parse_infix(Parser *par) {
             if (!es_call(&stack, par)) {
                 return NULL;
             }
+            break;
+        default:
             break;
         }
     }
@@ -331,7 +337,6 @@ static struct ExpansionStack es_new(void) {
         .stack = VEC_NEW(struct StackItem),
         .last_term = T_EOF,
         .is_stop_term = true,
-        .is_stop_term = true,
     };
 }
 
@@ -366,21 +371,26 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
             return false;
         }
         item.term.ident = itm;
-        return true;
+        break;
     }
     case T_LITERAL:
         switch (par->lex->subtype) {
         case DT_INT:
             item.term.int_v = par->lex->i_num;
-            return true;
+            break;
         case DT_DOUBLE:
             item.term.double_v = par->lex->d_num;
-            return true;
+            break;
         case DT_STRING:
             item.term.str = str_clone(par->lex->str);
-            return true;
+            break;
         }
+        break;
+    default:
+        return false;
     }
+
+    VEC_PUSH(&stack->stack, struct StackItem, item);
 
     return true;
 }
@@ -596,11 +606,73 @@ static enum FoldResult es_fold_postfix(struct ExpansionStack *stack) {
     return MATCH_OK;
 }
 
-static bool es_call(struct ExpansionStack *stack, Parser *par);
+static bool es_call(struct ExpansionStack *stack, Parser *par) {
+    if (!es_fold(stack)) {
+        return false;
+    }
 
-static AstExpr *es_finish(struct ExpansionStack *stack);
+    VEC_INSERT(
+        &stack->stack,
+        struct StackItem,
+        stack->stack.len - 2,
+        ((struct StackItem) {
+            .type = SI_STOP,
+        })
+    );
 
-static void es_free(struct ExpansionStack *stack);
+    Vec params = VEC_NEW(AstFuncCallParam);
+
+    if (!parse_func_params(par, &params)) {
+        return false;
+    }
+
+    VEC_INSERT(
+        &stack->stack,
+        struct StackItem,
+        stack->stack.len - 2,
+        ((struct StackItem) {
+            .type = SI_CALL_PARAMS,
+            .call_params = params,
+        })
+    );
+
+    return es_fold(stack);
+}
+
+static AstExpr *es_finish(struct ExpansionStack *stack) {
+    while (stack->stack.len > 2) {
+        if (!es_fold(stack)) {
+            return NULL;
+        }
+    }
+    struct StackItem last = VEC_POP(&stack->stack, struct StackItem);
+    if (last.type != SI_NTERM) {
+        return NULL;
+    }
+    return last.nterm;
+}
+
+static void es_free(struct ExpansionStack *stack) {
+    vec_free_with(&stack->stack, (FreeFun)si_free);
+}
+
+static void si_free(struct StackItem *si) {
+    switch (si->type) {
+    case SI_STOP:
+        break;
+    case SI_TERM:
+        if (si->term.type == T_LITERAL && si->term.subtype == DT_STRING) {
+            str_free(&si->term.str);
+        }
+        break;
+    case SI_NTERM:
+        ast_free_expr(&si->nterm);
+        break;
+    case SI_CALL_PARAMS:
+        vec_free_with(&si->call_params, (FreeFun)ast_free_func_call_param);
+        break;
+    }
+}
 
 static bool is_infix_token(Token t) {
     return t == '!' || t == '*' || t == '/' || t == '+' || t == '-'

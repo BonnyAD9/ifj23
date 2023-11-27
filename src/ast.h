@@ -50,25 +50,19 @@ typedef struct {
     AstExprType type;
     union {
         SymItem *variable;
-        AstLiteral *literal;
+        AstLiteral literal;
     };
 } AstFuncCallParam;
 
 typedef struct {
     SymItem *ident;
-    // type: AstFuncCallParam *
+    // type: AstFuncCallParam
     Vec arguments;
     // func type from table
 } AstFunctionCall;
 
 typedef struct {
     SymItem *ident;
-    String name;
-} AstFuncDeclParam;
-
-typedef struct {
-    SymItem *ident;
-    // type: AstFuncDeclParam
     Vec parameters;
     AstBlock *body;
     // func type from table
@@ -154,11 +148,9 @@ AstUnaryOp *ast_unary_op(Token operator, AstExpr *param);
 
 AstFuncCallParam *ast_func_call_var_param(SymItem *ident, String name);
 
-AstFuncCallParam *ast_func_call_lit_param(AstLiteral *literal, String name);
+AstFuncCallParam *ast_func_call_lit_param(AstLiteral literal, String name);
 
 AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters);
-
-AstFuncDeclParam *ast_func_decl_param(SymItem *ident, String name);
 
 AstFunctionDecl *ast_function_decl(SymItem *ident, Vec parameters, AstBlock *body);
 
@@ -214,11 +206,9 @@ void ast_free_binary_op(AstBinaryOp **value);
 
 void ast_free_unary_op(AstUnaryOp **value);
 
-void ast_free_func_call_param(AstFuncCallParam **value);
+void ast_free_func_call_param(AstFuncCallParam *value);
 
 void ast_free_function_call(AstFunctionCall **value);
-
-void ast_free_func_decl_param(AstFuncDeclParam **value);
 
 void ast_free_function_decl(AstFunctionDecl **value);
 

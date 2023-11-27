@@ -408,8 +408,8 @@ static Token read_str(Lexer *lex) {
     // Store string
     lex->str = sb_get(&lex->buffer);
 
-    lex->subtype = T_LITERAL;
-    return DT_STRING;
+    lex->subtype = DT_STRING;
+    return T_LITERAL;
 }
 
 Token ret_operator(Lexer *lex, char symbol, Token ret_val) {

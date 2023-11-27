@@ -279,7 +279,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
         let decremented_n = decrement(of: n, by: 1)   [arguments]
     */
     VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
-        AstFuncDeclParam param = VEC_AT(params, AstFuncDeclParam, arg.i);
+        FuncParam param = VEC_AT(params, FuncParam, arg.i);
         DataType param_data_type, arg_data_type;
 
         // Load also param data type
@@ -293,7 +293,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
                 return false;
         }
         else if (arg.v->type == AST_LITERAL) {
-            if (!sem_process_literal(arg.v->literal, &arg_data_type))
+            if (!sem_process_literal(&(arg.v->literal), &arg_data_type))
                 // Error already set by sem_process_literal()
                 return false;
         }
@@ -301,7 +301,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
             return sema_err("Unexpected argument type", ERR_INVALID_FUN);
 
         // Check for correct ident name
-        if (strcmp(arg.v->name.str, param.name.str))
+        if (strcmp(arg.v->name.str, param.label.str))
             return sema_err("Expected func argument differs in names", ERR_INVALID_FUN);
 
         // Check if correct type
