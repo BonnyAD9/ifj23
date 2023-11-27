@@ -309,7 +309,11 @@ void sym_scope_add(Symtable *symtable) {
     Tree new = tree_new();
 
     VEC_PUSH(&symtable->scopes, Tree, new);
-    VEC_PUSH(&symtable->scope_stack, Tree*, &VEC_LAST(&symtable->scopes, Tree));
+    VEC_PUSH(
+        &symtable->scope_stack,
+        Tree*,
+        &VEC_LAST(&symtable->scopes, Tree)
+    );
 }
 
 void sym_scope_pop(Symtable *symtable) {
@@ -317,30 +321,37 @@ void sym_scope_pop(Symtable *symtable) {
 }
 
 SymItem *sym_find(Symtable *symtable, String name) {
-    Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
-    Vec *data = tree_find(scope, name.str);
+    Tree *scope = NULL;
+    for (int i = symtable->scope_stack.len - 1; i >= 0; --i) {
+        scope = VEC_AT(&symtable->scope_stack, Tree*, i);
+        Vec *data = tree_find(scope, name.str);
 
-    if (data)
-        return &VEC_LAST(data, SymItem);
+        if (data)
+            return &VEC_LAST(data, SymItem);
+    }
 
-    name = str_clone(name);
+    if (!scope)
+        return NULL;
 
     Vec new = VEC_NEW(SymItem);
+    name = str_clone(name);
     SymItem item = {
         .name = name,
         .type = SYM_NONE,
         .declared = false,
     };
-    VEC_PUSH(data, SymItem, item);
+    VEC_PUSH(&new, SymItem, item);
 
     tree_insert(scope, name.str, new);
-    return &VEC_LAST(data, SymItem);
+    return &VEC_LAST(&new, SymItem);
 }
 
 SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
     Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
-    Vec *data = tree_find(scope, name.str);
+    if (!scope)
+        return NULL;
 
+    Vec *data = tree_find(scope, name.str);
     Type new_type = is_function ? SYM_FUNC : SYM_VAR;
 
     if (!data) {
@@ -348,9 +359,8 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
         name = str_clone(name);
         SymItem item = {
             .name = name,
-            .type = SYM_NONE,
-            .declared = false,
             .type = new_type,
+            .declared = true,
         };
         VEC_PUSH(&new, SymItem, item);
 
@@ -360,21 +370,20 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
 
     SymItem *item = &VEC_LAST(data, SymItem);
     if (!item->declared) {
-        item->declared = true;
         item->type = new_type;
+        item->declared = true;
         return item;
     }
 
-    if (is_function) {
-        // TODO: name conflict with function
-    }
+    // Doesn't allow redeclaration in global scope
+    if (symtable->scope_stack.len == 1)
+        return NULL;
 
     name = str_clone(name);
-
     SymItem new_item = {
         .name = name,
-        .type = SYM_NONE,
-        .declared = false,
+        .type = new_type,
+        .declared = true,
     };
     VEC_PUSH(data, SymItem, new_item);
     return &VEC_LAST(data, SymItem);
@@ -390,9 +399,9 @@ void sym_item_func(SymItem *ident, FuncData fun) {
     ident->func = fun;
 }
 
-ReturnType sym_func_get_ret(SymItem *data, String name) {
+DataType sym_func_get_ret(SymItem *data, String name) {
     if (data->type != SYM_FUNC)
-        return RET_VOID;
+        return DT_NONE;
 
     return data->func.return_type;
 }
@@ -411,15 +420,14 @@ FuncParam sym_func_param_new(SymItem *ident, String label) {
     };
 }
 
-VarData sym_var_new(DataType type, bool nullable, bool mutable) {
+VarData sym_var_new(DataType type, bool mutable) {
     return (VarData) {
         .data_type = type,
-        .nullable = nullable,
         .mutable = mutable
     };
 }
 
-FuncData sym_func_new(ReturnType ret, Vec params) {
+FuncData sym_func_new(DataType ret, Vec params) {
     return (FuncData) {
         .return_type = ret,
         .params = params

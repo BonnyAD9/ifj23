@@ -18,13 +18,6 @@ typedef enum {
 } Type;
 
 typedef enum {
-    RET_INT,
-    RET_DOUBLE,
-    RET_STRING,
-    RET_VOID
-} ReturnType;
-
-typedef enum {
     LOCAL,
     GLOBAL
 } Scope;
@@ -37,14 +30,13 @@ typedef struct {
 } FuncParam;
 
 typedef struct {
-    ReturnType return_type;
+    DataType return_type;
     // type: FuncParam
     Vec params;
 } FuncData;
 
 typedef struct {
     DataType data_type;
-    bool nullable;
     bool mutable;
 } VarData;
 
@@ -126,7 +118,7 @@ void sym_item_var(SymItem *ident, VarData var);
 void sym_item_func(SymItem *ident, FuncData fun);
 
 /// Gets return type of function with given name
-ReturnType sym_func_get_ret(SymItem *data, String name);
+DataType sym_func_get_ret(SymItem *data, String name);
 
 /// Gets params of function with given name
 Vec *sym_func_get_params(SymItem *data, String name);
@@ -135,10 +127,10 @@ Vec *sym_func_get_params(SymItem *data, String name);
 FuncParam sym_func_param_new(SymItem *ident, String label);
 
 /// Creates new variable data
-VarData sym_var_new(DataType type, bool nullable, bool mutable);
+VarData sym_var_new(DataType type, bool mutable);
 
 /// Creates new function data
-FuncData sym_func_new(ReturnType ret, Vec params);
+FuncData sym_func_new(DataType ret, Vec params);
 
 /// Frees func param
 void sym_free_func_param(FuncParam *par);
