@@ -20,15 +20,20 @@ typedef struct {
     Token operator;
     AstExpr *left;
     AstExpr *right;
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
 } AstBinaryOp;
 
 typedef struct {
     Token operator;
     AstExpr *param;
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
 } AstUnaryOp;
 
 typedef struct {
-    DataType type;
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
     union {
         int int_v;
         double double_v;
@@ -59,6 +64,8 @@ typedef struct {
     // type: AstFuncCallParam
     Vec arguments;
     // func type from table
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
 } AstFunctionCall;
 
 typedef struct {
@@ -66,10 +73,13 @@ typedef struct {
     Vec parameters;
     AstBlock *body;
     // func type from table
+    bool sema_checked;
 } AstFunctionDecl;
 
 typedef struct {
     AstExpr *expr;
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
 } AstReturn;
 
 typedef enum {
@@ -80,10 +90,12 @@ typedef enum {
 typedef struct {
     SymItem *ident;
     AstExpr *value;
+    bool sema_checked;
 } AstVariableDecl;
 
 typedef struct {
     AstConditionType type;
+    bool sema_checked;
     union {
         AstExpr *expr;
         SymItem *let;
@@ -94,20 +106,26 @@ typedef struct {
     AstCondition *condition;
     AstBlock *if_body;
     AstBlock *else_body;
+    bool sema_checked;
 } AstIf;
 
 typedef struct {
     AstCondition *condition;
     AstBlock *body;
+    bool sema_checked;
 } AstWhile;
 
 typedef struct {
     SymItem *ident;
     // data type from table
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
 } AstVariable;
 
 struct AstExpr {
     AstExprType type;
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
     union {
         AstBinaryOp *binary_op;
         AstUnaryOp *unary_op;
@@ -129,6 +147,8 @@ typedef enum {
 
 struct AstStmt {
     AstStmtType type;
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
     union {
         AstExpr *expr;
         AstBlock *block;

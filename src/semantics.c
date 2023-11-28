@@ -96,21 +96,18 @@ static int final_type_arr[8][8] = {
 /////////////////////////////////////////////////////////////////////////
 static bool sema_err(const char *msg, const int err_type);
 
-static bool sem_process_expr(AstExpr *expr);
-static bool process_expr(AstExpr *expr, DataType *final_type);
+static bool process_expr(AstExpr *expr);
 
-static bool sem_process_binary(AstBinaryOp *binary_op, DataType *final_type);
-static bool sem_process_unary(AstUnaryOp *unary_op, DataType *final_type);
-static bool sem_process_call(AstFunctionCall *func_call, DataType *final_type);
+static bool sem_process_binary(AstBinaryOp *binary_op);
+static bool sem_process_unary(AstUnaryOp *unary_op);
+static bool sem_process_call(AstFunctionCall *func_call);
 static bool check_func_params(SymItem *ident, Vec args);
-static bool sem_process_literal(AstLiteral *literal, DataType *final_type);
-static bool sem_process_variable(SymItem *ident, DataType *final_type);
+static bool sem_process_literal(AstLiteral *literal);
+static bool sem_process_variable(SymItem *ident);
 
 static unsigned int get_arr_index(DataType type);
-static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char **err_msg,
-                           const char *err_msg_cnt, DataType *final_type, AstExprType left_expr_type, AstExprType right_expr_type);
-static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type,
-                                AstExprType left_expr_type, AstExprType right_expr_type);
+static void check_in_array(unsigned int arr_sel, const char **err_msg, const char *err_msg_cnt, AstBinaryOp *binary_op);
+static bool check_compatibility(AstBinaryOp *binary_op);
 
 static bool sem_process_block(Vec stmts, bool top_level);
 static bool sem_process_stmt(AstStmt *stmt, bool top_level);
@@ -132,65 +129,73 @@ static bool sema_err(const char *msg, const int err_type) {
 /////////////////////////////////////////////////////////////////////////
 
 AstExpr *sem_expr(AstExpr *expr) {
-    if (sem_process_expr(expr))
+    if (process_expr(expr))
         return expr;
 
     ast_free_expr(&expr);
     return NULL;
 }
 
-static bool sem_process_expr(AstExpr *expr) {
-    DataType type;
-    return process_expr(expr, &type);
-}
+static bool process_expr(AstExpr *expr) {
+    if (expr->sema_checked)
+        return true;
+    expr->sema_checked = true;
 
-static bool process_expr(AstExpr *expr, DataType *final_type) {
+    bool ret_val;
     switch (expr->type) {
         case AST_BINARY_OP:
-            return sem_process_binary(expr->binary_op, final_type);
+            ret_val = sem_process_binary(expr->binary_op);
+            expr->data_type = expr->binary_op->data_type;
+            return ret_val;
         case AST_UNARY_OP:
-            return sem_process_unary(expr->unary_op, final_type);
+            ret_val = sem_process_unary(expr->unary_op);
+            expr->data_type = expr->unary_op->data_type;
+            return ret_val;
         case AST_FUNCTION_CALL:
-            return sem_process_call(expr->function_call, final_type);
+            ret_val = sem_process_call(expr->function_call);
+            expr->data_type = expr->function_call->data_type;
+            return ret_val;
         case AST_LITERAL:
-            return sem_process_literal(expr->literal, final_type);
+            ret_val = sem_process_literal(expr->literal);
+            expr->data_type = expr->literal->data_type;
+            return ret_val;
         case AST_VARIABLE:
-            return sem_process_variable(expr->variable->ident, final_type);
+            ret_val = sem_process_variable(expr->variable->ident);
+            expr->data_type = expr->variable->ident->var.data_type;
+            return ret_val;
         default:
             return sema_err("Uknown expression type", ERR_SEMANTIC);
     }
 }
 
 /////////////////////////////////////////////////////////////////////////
-
 AstExpr *sem_binary(AstExpr *left, Token op, AstExpr *right) {
-    DataType type;
     AstExpr *binary_expr = ast_binary_op_expr(ast_binary_op(op, left, right));
 
-    if (sem_process_binary(binary_expr->binary_op, &type))
+    if (process_expr(binary_expr))
         return binary_expr;
 
     ast_free_expr(&binary_expr);
     return NULL;
 }
 
-static bool sem_process_binary(AstBinaryOp *binary_op, DataType *final_type) {
+static bool sem_process_binary(AstBinaryOp *binary_op) {
+    if (binary_op->sema_checked)
+        return true;
+
     // Avoid f.e. funccall(a,b) = 5 type of expressions
     AstExprType left_expr_type = binary_op->left->type;
     if ((left_expr_type == AST_FUNCTION_CALL || left_expr_type == AST_LITERAL) && binary_op->operator == '=')
         return sema_err("Invalid l-value of expression", ERR_SEMANTIC);
 
-    bool left_side = process_expr(binary_op->left, final_type);
-    DataType left_side_type = *final_type;
-
-    bool right_side = process_expr(binary_op->right, final_type);
-    DataType right_side_type = *final_type;
+    bool left_side = process_expr(binary_op->left);
+    bool right_side = process_expr(binary_op->right);
 
     if (!left_side || !right_side)
         // Error is already set by lower instancies
         return false;
 
-    if (check_compatibility(binary_op->operator, left_side_type, right_side_type, final_type, binary_op->left->type, binary_op->right->type))
+    if (check_compatibility(binary_op))
         return true;
     return false;
 }
@@ -198,20 +203,22 @@ static bool sem_process_binary(AstBinaryOp *binary_op, DataType *final_type) {
 /////////////////////////////////////////////////////////////////////////
 
 AstExpr *sem_unary(AstExpr *expr, Token op) {
-    DataType type;
     AstExpr *unary_expr = ast_unary_op_expr(ast_unary_op(op, expr));
 
-    if (sem_process_unary(unary_expr->unary_op, &type))
+    if (process_expr(unary_expr))
         return unary_expr;
 
     ast_free_expr(&unary_expr);
     return NULL;
 }
 
-static bool sem_process_unary(AstUnaryOp *unary_op, DataType *final_type) {
-    bool eval_expr = process_expr(unary_op->param, final_type);
+static bool sem_process_unary(AstUnaryOp *unary_op) {
+    if (unary_op->sema_checked)
+        return true;
+
+    bool eval_expr = process_expr(unary_op->param);
     // Check for non-translateable options
-    if (*final_type == DT_NONE || !eval_expr)
+    if (unary_op->param->data_type == DT_NONE || !eval_expr)
         return sema_err("Invalid expression, cant convert to non-nil type", ERR_SEMANTIC);
 
     // Only allowed unary operator is '!'
@@ -219,9 +226,10 @@ static bool sem_process_unary(AstUnaryOp *unary_op, DataType *final_type) {
         return sema_err("Invalid unary operator", ERR_SEMANTIC);
 
     // Switch to NOT_NIL values if not already set
-    if (*final_type & DT_NIL)
+    if (unary_op->param->data_type & DT_NIL)
         // Clear nillable flag - XOR
-        *final_type ^= DT_NIL;
+        unary_op->data_type = unary_op->param->data_type ^ DT_NIL;
+    unary_op->sema_checked = true;
 
     return true;
 }
@@ -239,28 +247,32 @@ SymItem *calle_ident(AstExpr *expr) {
 }
 
 AstExpr *sem_call(AstExpr *calle, Vec params) {
-    DataType type;
     SymItem* ident = calle_ident(calle);
     if (!ident)
         return NULL;
 
     AstExpr *func_call_expr = ast_function_call_expr(ast_function_call(ident, params));
 
-    if (sem_process_call(func_call_expr->function_call, &type))
+    if (process_expr(func_call_expr))
         return func_call_expr;
 
     ast_free_expr(&func_call_expr);
     return NULL;
 }
 
-static bool sem_process_call(AstFunctionCall *func_call, DataType *final_type) {
+static bool sem_process_call(AstFunctionCall *func_call) {
+    if (func_call->sema_checked)
+        return true;
+
     if (!func_call->ident->declared)
         return sema_err("Undefined function", ERR_UNDEF_FUNCTION);
 
-    *final_type = sym_func_get_ret(func_call->ident, func_call->ident->name);
+    func_call->data_type = sym_func_get_ret(func_call->ident, func_call->ident->name);
 
-    if (check_func_params(func_call->ident, func_call->arguments))
+    if (check_func_params(func_call->ident, func_call->arguments)) {
+        func_call->sema_checked = true;
         return true;
+    }
     return false;
 }
 
@@ -283,19 +295,22 @@ static bool check_func_params(SymItem *ident, Vec args) {
         DataType param_data_type, arg_data_type;
 
         // Load also param data type
-        if (!sem_process_variable(param.ident, &param_data_type))
+        if (!sem_process_variable(param.ident))
             return false;
+        param_data_type = param.ident->var.data_type;
 
         if (arg.v->type == AST_VARIABLE) {
             // Check if variable is defined
-            if (!sem_process_variable(arg.v->variable, &arg_data_type))
+            if (!sem_process_variable(arg.v->variable))
                 // Error already set by sem_process_variable()
                 return false;
+            arg_data_type = arg.v->variable->var.data_type;
         }
         else if (arg.v->type == AST_LITERAL) {
-            if (!sem_process_literal(&(arg.v->literal), &arg_data_type))
+            if (!sem_process_literal(&(arg.v->literal)))
                 // Error already set by sem_process_literal()
                 return false;
+            arg_data_type = arg.v->literal.data_type;
         }
         else
             return sema_err("Unexpected argument type", ERR_INVALID_FUN);
@@ -318,7 +333,6 @@ static bool check_func_params(SymItem *ident, Vec args) {
 /////////////////////////////////////////////////////////////////////////
 
 AstExpr *sem_literal(FullToken token) {
-    DataType type;
     AstLiteral *literal;
 
     if (token.subtype == DT_INT)
@@ -330,37 +344,41 @@ AstExpr *sem_literal(FullToken token) {
     else // DT_NIL
         literal = ast_nil_literal();
 
-    if (sem_process_literal(literal, &type))
-        return ast_literal_expr(literal);
+    AstExpr *lite_expr = ast_literal_expr(literal);
 
-    ast_free_literal(&literal);
+    if (process_expr(lite_expr))
+        return lite_expr;
+
+    ast_free_expr(&lite_expr);
     return NULL;
 }
 
-static bool sem_process_literal(AstLiteral *literal, DataType *final_type) {
-    *final_type = literal->type;
-    // TODO Discuss need of this conversion
+static bool sem_process_literal(AstLiteral *literal) {
+    if (literal->sema_checked)
+        return true;
+
     // Implicit conversion to DOUBLE type for INT literal
-    if (literal->type == DT_INT || literal->type == DT_INT_NIL)
+    if (literal->data_type == DT_INT || literal->data_type == DT_INT_NIL)
         // INT(2) -> DOUBLE(4) , INT_NIL(3) -> DOUBLE_NIL(5)
-        *final_type = literal->type + 2;
+        literal->data_type += 2;
+    literal->sema_checked = true;
+
     return true;
 }
 
 /////////////////////////////////////////////////////////////////////////
 
 AstExpr *sem_variable(SymItem *ident) {
-    DataType type;
     AstExpr *var_expr = ast_variable_expr(ast_variable(ident));
 
-    if (sem_process_variable(var_expr->variable->ident, &type))
+    if (process_expr(var_expr))
         return var_expr;
 
     ast_free_expr(&var_expr);
     return NULL;
 }
 
-static bool sem_process_variable(SymItem *ident, DataType *final_type) {
+static bool sem_process_variable(SymItem *ident) {
     if (!ident->declared)
         return sema_err("Undeclared variable", ERR_UNDEF_FUNCTION);
 
@@ -370,8 +388,6 @@ static bool sem_process_variable(SymItem *ident, DataType *final_type) {
     if (ident->var.data_type & DT_NIL)
         // Throw warning about potencial nil
         WPRINTF("Variable can contain nil value");
-    if (final_type)
-        *final_type = ident->var.data_type;
     return true;
 }
 
@@ -393,71 +409,89 @@ static unsigned int get_arr_index(DataType type) {
     return 8;
 }
 
-static void check_in_array(unsigned int arr_sel, DataType left_type, DataType right_type, const char **err_msg, const char *err_msg_cnt, DataType *final_type, AstExprType left_expr_type, AstExprType right_expr_type) {
+static void check_in_array(unsigned int arr_sel, const char **err_msg, const char *err_msg_cnt, AstBinaryOp *binary_op) {
+    DataType left_type  = binary_op->left->data_type,
+             right_type = binary_op->right->data_type;
+
+    AstExprType left_expr_type  = binary_op->left->type,
+                right_expr_type = binary_op->right->type;
+
     // Check for unexpected type provided
     if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
         *err_msg = "Unexpected type provided";
     else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)]) {
         // Current check failed, if any of operands is LITERAL, try it again as these LITERALS are implicitly casted to DOUBLE
         // Motivation: f.e. if (a[Int] == 5[Int]) -> after implicit casting -> if (a[Int] == 5[Double]) => ERROR even when correct at the beggining
-        if (left_expr_type == AST_LITERAL || right_expr_type == AST_LITERAL) {
-            if (left_expr_type == AST_LITERAL && (left_type == DT_DOUBLE || left_type == DT_DOUBLE_NIL))
-                // Left operand is LITERAL - change type from DOUBLE -> INT and check again
-                return check_in_array(arr_sel, (left_type -= 2), right_type, err_msg, err_msg_cnt, final_type, left_expr_type, right_expr_type);
-            if (right_expr_type == AST_LITERAL && (right_type == DT_DOUBLE || right_type == DT_DOUBLE_NIL))
-                // Right operand is LITERAL - change type from DOUBLE -> INT and check again
-                return check_in_array(arr_sel, left_type, (right_type -= 2), err_msg, err_msg_cnt, final_type, left_expr_type, right_expr_type);
+
+        if (left_expr_type == AST_LITERAL && (left_type == DT_DOUBLE || left_type == DT_DOUBLE_NIL)) {
+            // Left operand is LITERAL - change type from DOUBLE -> INT and check again
+            binary_op->left->data_type -= 2;
+            check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
+            // Switch as need to respect implicit to double conversion
+            binary_op->left->data_type += 2;
+            return;
+        }
+        if (right_expr_type == AST_LITERAL && (right_type == DT_DOUBLE || right_type == DT_DOUBLE_NIL)) {
+            // Right operand is LITERAL - change type from DOUBLE -> INT and check again
+            binary_op->right->data_type -= 2;
+            check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
+            // Switch as need to respect implicit to double conversion
+            binary_op->right->data_type += 2;
+            return;
         }
         // Set error message to non-NILL otherwise keep it NULL
         *err_msg = err_msg_cnt;
     }
     else
-        *final_type = final_type_arr[get_arr_index(left_type)][get_arr_index(right_type)];
+        binary_op->data_type = final_type_arr[get_arr_index(left_type)][get_arr_index(right_type)];
 }
 
-static bool check_compatibility(Token operator, DataType left_type, DataType right_type, DataType *final_type, AstExprType left_expr_type, AstExprType right_expr_type) {
+static bool check_compatibility(AstBinaryOp *binary_op) {
+    if (binary_op->sema_checked)
+        return true;
+
     const char *err_msg = NULL;
-    switch (operator) {
+    switch (binary_op->operator) {
         case '*':
-            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '*' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(0, &err_msg, "Uncompatible types for performing '*' operation", binary_op);
             break;
         case '-':
-            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '-' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(0, &err_msg, "Uncompatible types for performing '-' operation", binary_op);
             break;
         case '/':
-            check_in_array(0, left_type, right_type, &err_msg, "Uncompatible types for performing '/' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(0, &err_msg, "Uncompatible types for performing '/' operation", binary_op);
             break;
         ////////////////////
         case '+':
-            check_in_array(1, left_type, right_type, &err_msg, "Uncompatible types for performing '+' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(1, &err_msg, "Uncompatible types for performing '+' operation", binary_op);
             break;
         ////////////////////
         case T_EQUALS:           // '=='
-            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '==' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(2, &err_msg, "Uncompatible types for performing '==' operation", binary_op);
             break;
         case T_DIFFERS:          // '!='
-            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '!=' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(2, &err_msg, "Uncompatible types for performing '!=' operation", binary_op);
             break;
         case T_LESS_OR_EQUAL:    // '<='
-            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '<=' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(2, &err_msg, "Uncompatible types for performing '<=' operation", binary_op);
             break;
         case T_GREATER_OR_EQUAL: // '>='
-            check_in_array(2, left_type, right_type, &err_msg, "Uncompatible types for performing '>=' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(2, &err_msg, "Uncompatible types for performing '>=' operation", binary_op);
             break;
         ////////////////////
         case T_DOUBLE_QUES:  // ??
-            check_in_array(3, left_type, right_type, &err_msg, "Uncompatible types for performing '\?\?' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(3, &err_msg, "Uncompatible types for performing '\?\?' operation", binary_op);
             break;
         ////////////////////
         case '=':
-            check_in_array(4, left_type, right_type, &err_msg, "Uncompatible types for performing '=' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(4, &err_msg, "Uncompatible types for performing '=' operation", binary_op);
             break;
         ////////////////////
         case '<':
-            check_in_array(5, left_type, right_type, &err_msg, "Uncompatible types for performing '<' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(5, &err_msg, "Uncompatible types for performing '<' operation", binary_op);
             break;
         case '>':
-            check_in_array(5, left_type, right_type, &err_msg, "Uncompatible types for performing '>' operation", final_type, left_expr_type, right_expr_type);
+            check_in_array(5, &err_msg, "Uncompatible types for performing '>' operation", binary_op);
             break;
         default:
             err_msg = "Uknown operator type";
@@ -467,6 +501,8 @@ static bool check_compatibility(Token operator, DataType left_type, DataType rig
     // If set, output error along with error message
     if (err_msg)
         return sema_err(err_msg, ERR_INCOM_TYPE);
+    binary_op->sema_checked = true;
+
     return true;
 }
 
@@ -493,21 +529,30 @@ static bool sem_process_block(Vec stmts, bool top_level) {
 }
 
 static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
+    if (stmt->sema_checked)
+        return true;
+    stmt->sema_checked = true;
+
+    bool ret_val;
     switch (stmt->type) {
         case AST_EXPR:
-            return sem_process_expr(stmt->expr);
+            ret_val = process_expr(stmt->expr);
+            stmt->data_type = stmt->expr->data_type;
+            return ret_val;
         case AST_BLOCK:
             return sem_process_block(stmt->block->stmts, top_level);
         case AST_FUNCTION_DECL:
-            if (top_level)
-                return sem_process_func_decl(stmt->function_decl);
-            return sema_err("Cant declare function in function", ERR_SEMANTIC);
+            if (!top_level)
+                return sema_err("Cant declare function in function", ERR_SEMANTIC);
+            return sem_process_func_decl(stmt->function_decl);
         case AST_VARIABLE_DECL:
             return sem_process_var_decl(stmt->variable_decl);
         case AST_RETURN:
-            if (!top_level)
-                return sem_process_return(stmt->return_v);
-            return sema_err("Return statement in main body is prohibited", ERR_SEMANTIC);
+            if (top_level)
+                return sema_err("Return statement in main body is prohibited", ERR_SEMANTIC);
+            ret_val = sem_process_return(stmt->return_v);
+            stmt->data_type = stmt->return_v->data_type;
+            return ret_val;
         case AST_IF:
             return sem_process_if(stmt->if_v);
         case AST_WHILE:
@@ -522,7 +567,7 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
 AstStmt *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body) {
     AstStmt *func_decl = ast_function_decl_stmt(ast_function_decl(ident, params, body));
 
-    if (sem_process_func_decl(func_decl->function_decl))
+    if (sem_process_stmt(func_decl, true))
         return func_decl;
 
     ast_free_stmt(&func_decl);
@@ -530,6 +575,9 @@ AstStmt *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBloc
 }
 
 bool sem_process_func_decl(AstFunctionDecl *func_decl) {
+    if (func_decl->sema_checked)
+        return true;
+
     if (!func_decl->ident->declared)
         return sema_err("Undeclared function", ERR_UNDEF_FUNCTION);
 
@@ -553,19 +601,20 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
             if (return_type != DT_VOID && !(*stmt.v)->return_v->expr)
                 return sema_err("Missing return expression for function", ERR_INVALID_RETURN);
 
-            DataType expr_type;
-            process_expr((*stmt.v)->return_v->expr, &expr_type);
+            process_expr((*stmt.v)->return_v->expr);
             // Check for type compatibility (same as for '=')
-            if (!compat_array[4][get_arr_index(return_type)][get_arr_index(expr_type)])
+            if (!compat_array[4][get_arr_index(return_type)][get_arr_index((*stmt.v)->return_v->expr->data_type)])
                 return sema_err("Uncompatible types for function return", ERR_INVALID_FUN);
         }
     }
+    func_decl->sema_checked = true;
+
     return true;
 }
 
 /////////////////////////////////////////////////////////////////////////
 AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr) {
-    if (!sem_process_variable(ident, NULL))
+    if (!sem_process_variable(ident))
         // Error already set in sem_process_variable()
         return NULL;
 
@@ -573,7 +622,7 @@ AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr
     ident->var.mutable = mutable;
     AstStmt *var_decl = ast_variable_decl_stmt(ast_variable_decl(ident, expr));
 
-    if (sem_process_var_decl(var_decl->variable_decl))
+    if (sem_process_stmt(var_decl, true)) // top_level is not relevant here
         return var_decl;
 
     ast_free_stmt(&var_decl);
@@ -581,26 +630,40 @@ AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr
 }
 
 static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
-    DataType var_type;
+    if (variable_decl->sema_checked)
+        return true;
 
     // Check expression
     if (variable_decl->value) {
-        DataType expr_type;
-        bool check_expr = process_expr(variable_decl->value, &expr_type);
+        bool check_expr = process_expr(variable_decl->value);
 
         // Check if expr type is inferiable
-        if (expr_type == DT_ANY_NIL || !check_expr)
-            return sema_err("Expression type cant be determined", ERR_UNKNOWN_TYPE);
+        if (!check_expr)
+            return sema_err("Invalid expression", ERR_UNKNOWN_TYPE);
 
         // Check if data type is given, or try determine it
-        if (variable_decl->ident->var.data_type == DT_NONE)
-            variable_decl->ident->var.data_type = expr_type;
-        else // var_type value is useless, just avoid using NULL to avoid NULL checks in the function
-            return check_compatibility('=', variable_decl->ident->var.data_type, expr_type, &var_type, AST_VARIABLE, variable_decl->value->type);
+        if (variable_decl->ident->var.data_type == DT_NONE) {
+            if (variable_decl->value->data_type == DT_ANY_NIL)
+                return sema_err("Expression type cant be determined", ERR_UNKNOWN_TYPE);
+            variable_decl->ident->var.data_type = variable_decl->value->data_type;
+        }
+        else
+            return check_compatibility(&((AstBinaryOp) {
+                .operator = '=',
+                .left = &((AstExpr) {
+                    .data_type = variable_decl->ident->var.data_type,
+                    .type      = AST_VARIABLE
+                }),
+                .right = &((AstExpr) {
+                    .data_type = variable_decl->value->data_type,
+                    .type      = variable_decl->value->type
+                })
+            }));
     }
     else if (variable_decl->ident->var.data_type == DT_NONE)
         // Case when type and expression are missing
         return sema_err("Variable declaration is missing both type and expression", ERR_UNKNOWN_TYPE);
+    variable_decl->sema_checked = true;
     // Else nothing to do, type is given but without expression
     return true;
 }
@@ -610,7 +673,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
 AstStmt *sem_return(AstExpr *expr) {
     AstStmt *ret_stmt = ast_return_stmt(ast_return(expr));
 
-    if (sem_process_return(ret_stmt->return_v))
+    if (sem_process_stmt(ret_stmt, false))
         return ret_stmt;
 
     ast_free_stmt(&ret_stmt);
@@ -618,11 +681,17 @@ AstStmt *sem_return(AstExpr *expr) {
 }
 
 static bool sem_process_return(AstReturn *return_v) {
-    DataType type;
-    bool ret_expr = process_expr(return_v->expr, &type);
+    if (return_v->sema_checked)
+        return true;
+
+    bool ret_expr = process_expr(return_v->expr);
     if (!ret_expr)
         // Error already set in sem_expr()
         return false;
+
+    return_v->sema_checked = true;
+    return_v->data_type = return_v->expr->data_type;
+
     return true;
 }
 
@@ -631,17 +700,21 @@ static bool sem_process_return(AstReturn *return_v) {
 AstCondition *sem_expr_condition(AstExpr *expr) {
     AstCondition *expr_cond = ast_expr_condition(expr);
 
-    if (sem_process_expr_condition(expr_cond->expr))
+    if (sem_process_expr_condition(expr_cond->expr)) {
+        expr_cond->sema_checked = true;
         return expr_cond;
+    }
 
     ast_free_condition(&expr_cond);
     return NULL;
 }
 
 static bool sem_process_expr_condition(AstExpr *expr) {
-    DataType type;
+    if (expr->sema_checked)
+        return true;
+
     // Check if expression is correct
-    bool cond_expr = process_expr(expr, &type);
+    bool cond_expr = process_expr(expr);
     if (!cond_expr)
         // Error already set in sem_expr()
         return false;
@@ -655,6 +728,8 @@ static bool sem_process_expr_condition(AstExpr *expr) {
         if ((oper < T_EQUALS || oper > T_GREATER_OR_EQUAL) && oper != '<' && oper != '>')
             return sema_err("Statement condition cant be evaluated", ERR_INCOM_TYPE);
     }
+    expr->sema_checked = true;
+
     return true;
 }
 
@@ -663,8 +738,10 @@ static bool sem_process_expr_condition(AstExpr *expr) {
 AstCondition *sem_let_condition(SymItem *ident) {
     AstCondition *let_cond = ast_let_condition(ident);
 
-    if (sem_process_let_condition(let_cond->let))
+    if (sem_process_let_condition(let_cond->let)) {
+        let_cond->sema_checked = true;
         return let_cond;
+    }
 
     ast_free_condition(&let_cond);
     return NULL;
@@ -687,7 +764,7 @@ static bool sem_process_let_condition(SymItem *ident) {
 AstStmt *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block) {
     AstStmt *if_stmt = ast_if_stmt(ast_if(cond, true_block, false_block));
 
-    if (sem_process_if(if_stmt->if_v))
+    if (sem_process_stmt(if_stmt, false)) // top_level is not relevant here
         return if_stmt;
 
     ast_free_stmt(&if_stmt);
@@ -695,6 +772,9 @@ AstStmt *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block)
 }
 
 static bool sem_process_if(AstIf *if_v) {
+    if (if_v->sema_checked)
+        return true;
+
     bool if_cond;
     if (if_v->condition->type == AST_COND_EXPR)
         if_cond = sem_process_expr_condition(if_v->condition->expr);
@@ -718,6 +798,8 @@ static bool sem_process_if(AstIf *if_v) {
             // Error already set in sem_block()
             return false;
     }
+    if_v->sema_checked = true;
+
     return true;
 }
 
@@ -734,7 +816,7 @@ AstStmt *sem_expr_stmt(AstExpr *expr) {
 AstStmt *sem_while(AstCondition *cond, AstBlock *loop) {
     AstStmt *while_stmt = ast_while_stmt(ast_while(cond, loop));
 
-    if (sem_process_while(while_stmt->while_v))
+    if (sem_process_stmt(while_stmt, false)) // top_level is not relevant here
         return while_stmt;
 
     ast_free_stmt(&while_stmt);
@@ -742,6 +824,9 @@ AstStmt *sem_while(AstCondition *cond, AstBlock *loop) {
 }
 
 static bool sem_process_while(AstWhile *while_v) {
+    if (while_v->sema_checked)
+        return true;
+
     bool while_cond;
     if (while_v->condition->type == AST_COND_EXPR)
         while_cond = sem_process_expr_condition(while_v->condition->expr);
@@ -752,10 +837,15 @@ static bool sem_process_while(AstWhile *while_v) {
         // Error already set in above func
         return false;
 
+    if (!while_v->body)
+        return sema_err("Missing while() body", ERR_SEMANTIC);
+    // Process cycle body
     bool while_body = sem_process_block(while_v->body->stmts, false);
     if (!while_body)
         // Error already set in sem_block()
         return false;
+    while_v->sema_checked = true;
+
     return true;
 }
 
@@ -771,14 +861,11 @@ bool sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res)
 }
 
 /////////////////////////////////////////////////////////////////////////
-/*
-AstExpr *sem_lex_variable(SymItem *ident) {
-    return ast_variable_expr(ast_variable(ident));
-}
-*/
-/////////////////////////////////////////////////////////////////////////
 
 bool sem_lex_literal(Lexer *lex, AstLiteral *res) {
+    if (res->sema_checked)
+        return true;
+
     if (lex->cur != T_LITERAL)
         return false;
 
@@ -790,6 +877,7 @@ bool sem_lex_literal(Lexer *lex, AstLiteral *res) {
         res = ast_string_literal(lex->str);
     else // DT_NIL
         res = ast_nil_literal();
+    res->sema_checked = true;
 
     return true;
 }

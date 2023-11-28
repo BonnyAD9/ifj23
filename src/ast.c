@@ -32,6 +32,7 @@ AstBinaryOp *ast_binary_op(Token operator, AstExpr *left, AstExpr *right) {
         .operator = operator,
         .left = left,
         .right = right,
+        .sema_checked = false
     );
 }
 
@@ -39,6 +40,7 @@ AstUnaryOp *ast_unary_op(Token operator, AstExpr *param) {
     STRUCT_ALLOC(AstUnaryOp,
         .operator = operator,
         .param = param,
+        .sema_checked = false
     );
 }
 
@@ -46,7 +48,7 @@ AstFuncCallParam *ast_func_call_var_param(SymItem *ident, String name) {
     STRUCT_ALLOC(AstFuncCallParam,
         .type = AST_VARIABLE,
         .name = name,
-        .variable = ident,
+        .variable = ident
     );
 }
 
@@ -54,7 +56,7 @@ AstFuncCallParam *ast_func_call_lit_param(AstLiteral literal, String name) {
     STRUCT_ALLOC(AstFuncCallParam,
         .type = AST_LITERAL,
         .name = name,
-        .literal = literal,
+        .literal = literal
     );
 }
 
@@ -62,6 +64,7 @@ AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters) {
     STRUCT_ALLOC(AstFunctionCall,
         .ident = ident,
         .arguments = parameters,
+        .sema_checked = false
     );
 }
 
@@ -70,12 +73,14 @@ AstFunctionDecl *ast_function_decl(SymItem *ident, Vec parameters, AstBlock *bod
         .ident = ident,
         .parameters = parameters,
         .body = body,
+        .sema_checked = false
     );
 }
 
 AstReturn *ast_return(AstExpr *expr) {
     STRUCT_ALLOC(AstReturn,
         .expr = expr,
+        .sema_checked = false
     );
 }
 
@@ -83,6 +88,7 @@ AstCondition *ast_expr_condition(AstExpr *expr) {
     STRUCT_ALLOC(AstCondition,
         .type = AST_COND_EXPR,
         .expr = expr,
+        .sema_checked = false
     );
 }
 
@@ -90,6 +96,7 @@ AstCondition *ast_let_condition(SymItem *let) {
     STRUCT_ALLOC(AstCondition,
         .type = AST_COND_LET,
         .let = let,
+        .sema_checked = false
     );
 }
 
@@ -98,6 +105,7 @@ AstIf *ast_if(AstCondition *condition, AstBlock *if_body, AstBlock *else_body) {
         .condition = condition,
         .if_body = if_body,
         .else_body = else_body,
+        .sema_checked = false
     );
 }
 
@@ -105,39 +113,45 @@ AstWhile *ast_while(AstCondition *condition, AstBlock *body) {
     STRUCT_ALLOC(AstWhile,
         .condition = condition,
         .body = body,
+        .sema_checked = false
     );
 }
 
 AstLiteral *ast_int_literal(int value) {
     STRUCT_ALLOC(AstLiteral,
-        .type = DT_INT,
+        .data_type = DT_INT,
         .int_v = value,
+        .sema_checked = false
     );
 }
 
 AstLiteral *ast_double_literal(double value) {
     STRUCT_ALLOC(AstLiteral,
-        .type = DT_DOUBLE,
+        .data_type = DT_DOUBLE,
         .double_v = value,
+        .sema_checked = false
     );
 }
 
 AstLiteral *ast_string_literal(String value) {
     STRUCT_ALLOC(AstLiteral,
-        .type = DT_STRING,
+        .data_type = DT_STRING,
         .string_v = value,
+        .sema_checked = false
     );
 }
 
 AstLiteral *ast_nil_literal() {
     STRUCT_ALLOC(AstLiteral,
-        .type = DT_ANY_NIL,
+        .data_type = DT_ANY_NIL,
+        .sema_checked = false
     );
 }
 
 AstVariable *ast_variable(SymItem *ident) {
     STRUCT_ALLOC(AstVariable,
         .ident = ident,
+        .sema_checked = false
     );
 }
 
@@ -145,6 +159,7 @@ AstVariableDecl *ast_variable_decl(SymItem *ident, AstExpr *value) {
     STRUCT_ALLOC(AstVariableDecl,
         .ident = ident,
         .value = value,
+        .sema_checked = false
     );
 }
 
@@ -152,6 +167,7 @@ AstExpr *ast_binary_op_expr(AstBinaryOp *value) {
     STRUCT_ALLOC(AstExpr,
         .type = AST_BINARY_OP,
         .binary_op = value,
+        .sema_checked = false
     );
 }
 
@@ -159,6 +175,7 @@ AstExpr *ast_unary_op_expr(AstUnaryOp *value) {
     STRUCT_ALLOC(AstExpr,
         .type = AST_UNARY_OP,
         .unary_op = value,
+        .sema_checked = false
     );
 }
 
@@ -166,6 +183,7 @@ AstExpr *ast_function_call_expr(AstFunctionCall *value) {
     STRUCT_ALLOC(AstExpr,
         .type = AST_FUNCTION_CALL,
         .function_call = value,
+        .sema_checked = false
     );
 }
 
@@ -173,6 +191,7 @@ AstExpr *ast_literal_expr(AstLiteral *value) {
     STRUCT_ALLOC(AstExpr,
         .type = AST_LITERAL,
         .literal = value,
+        .sema_checked = false
     );
 }
 
@@ -180,6 +199,7 @@ AstExpr *ast_variable_expr(AstVariable *value) {
     STRUCT_ALLOC(AstExpr,
         .type = AST_VARIABLE,
         .variable = value,
+        .sema_checked = false
     );
 }
 
@@ -187,6 +207,7 @@ AstStmt *ast_expr_stmt(AstExpr *value) {
     STRUCT_ALLOC(AstStmt,
         .type = AST_EXPR,
         .expr = value,
+        .sema_checked = false
     );
 }
 
@@ -194,6 +215,7 @@ AstStmt *ast_block_stmt(AstBlock *value) {
     STRUCT_ALLOC(AstStmt,
         .type = AST_BLOCK,
         .block = value,
+        .sema_checked = false
     );
 }
 
@@ -201,6 +223,7 @@ AstStmt *ast_function_decl_stmt(AstFunctionDecl *value) {
     STRUCT_ALLOC(AstStmt,
         .type = AST_FUNCTION_DECL,
         .function_decl = value,
+        .sema_checked = false
     );
 }
 
@@ -208,6 +231,7 @@ AstStmt *ast_variable_decl_stmt(AstVariableDecl *value) {
     STRUCT_ALLOC(AstStmt,
         .type = AST_VARIABLE_DECL,
         .variable_decl = value,
+        .sema_checked = false
     );
 }
 
@@ -215,6 +239,7 @@ AstStmt *ast_return_stmt(AstReturn *value) {
     STRUCT_ALLOC(AstStmt,
         .type = AST_RETURN,
         .return_v = value,
+        .sema_checked = false
     );
 }
 
@@ -222,6 +247,7 @@ AstStmt *ast_if_stmt(AstIf *value) {
     STRUCT_ALLOC(AstStmt,
         .type = AST_IF,
         .if_v = value,
+        .sema_checked = false
     );
 }
 
@@ -229,6 +255,7 @@ AstStmt *ast_while_stmt(AstWhile *value) {
     STRUCT_ALLOC(AstStmt,
         .type = AST_WHILE,
         .while_v = value,
+        .sema_checked = false
     );
 }
 

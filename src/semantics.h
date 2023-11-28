@@ -6,6 +6,7 @@
 #include "errors.h"
 #include "vec.h"
 #include "utils.h"
+#include "infix_parser.h"
 
 /////////////////////////////////////////////////////////////////////////
 bool         sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res);
@@ -26,7 +27,6 @@ AstExpr      *sem_unary(AstExpr *expr, Token op);
 AstExpr      *sem_variable(SymItem *ident);
 AstExpr      *sem_literal(FullToken token);
 AstExpr      *sem_call(AstExpr *calle, Vec params);
-//AstExpr      *sem_lex_variable(SymItem *ident);
 bool         sem_lex_literal(Lexer *lex, AstLiteral *res);
 AstExpr      *sem_binary(AstExpr *left, Token op, AstExpr *right);
 /////////////////////////////////////////////////////////////////////////
