@@ -18,7 +18,7 @@ AstCondition *sem_let_condition(SymItem *ident);
 
 AstStmt      *sem_expr_stmt(AstExpr *expr);
 AstStmt      *sem_while(AstCondition *cond, AstBlock *loop);
-AstStmt      *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr);
+AstStmt      *sem_var_decl(SymItem *ident, AstExpr *expr);
 AstStmt      *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body);
 AstStmt      *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block);
 AstStmt      *sem_return(AstExpr *expr);

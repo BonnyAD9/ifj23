@@ -451,7 +451,7 @@ static bool check_compatibility(AstBinaryOp *binary_op) {
         return true;
 
     const char *err_msg = NULL;
-    switch (binary_op->operator) {
+    switch ((int)binary_op->operator) {
         case '*':
             check_in_array(0, &err_msg, "Uncompatible types for performing '*' operation", binary_op);
             break;
@@ -613,13 +613,11 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
 }
 
 /////////////////////////////////////////////////////////////////////////
-AstStmt *sem_var_decl(bool mutable, SymItem *ident, DataType type, AstExpr *expr) {
+AstStmt *sem_var_decl(SymItem *ident, AstExpr *expr) {
     if (!sem_process_variable(ident))
         // Error already set in sem_process_variable()
         return NULL;
 
-    ident->var.data_type = type;
-    ident->var.mutable = mutable;
     AstStmt *var_decl = ast_variable_decl_stmt(ast_variable_decl(ident, expr));
 
     if (sem_process_stmt(var_decl, true)) // top_level is not relevant here
