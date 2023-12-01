@@ -358,9 +358,11 @@ static bool sem_process_literal(AstLiteral *literal) {
         return true;
 
     // Implicit conversion to DOUBLE type for INT literal
-    if (literal->data_type == DT_INT || literal->data_type == DT_INT_NIL)
+    if (literal->data_type == DT_INT || literal->data_type == DT_INT_NIL) {
         // INT(2) -> DOUBLE(4) , INT_NIL(3) -> DOUBLE_NIL(5)
         literal->data_type += 2;
+        literal->double_v = literal->int_v;
+    }
     literal->sema_checked = true;
 
     return true;
