@@ -2,6 +2,15 @@
 #include "debug_tools.h"
 
 /////////////////////////////////////////////////////////////////////////
+// Global variable for storing parent file position of variable
+FilePos var_pos = (FilePos) {};
+// Global variable for telling function check whether on top level or not
+bool sem_top_level = false;
+// Global vector for function call statements
+Vec* func_calls_to_check = NULL;
+/////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////
 static bool compat_array[6][8][8] = {
     // *********************** '*', '-', '/' ***********************
     // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL
@@ -161,6 +170,7 @@ static bool process_expr(AstExpr *expr) {
             expr->data_type = expr->literal->data_type;
             return ret_val;
         case AST_VARIABLE:
+            var_pos = expr->pos;
             ret_val = sem_process_variable(expr->variable->ident);
             expr->data_type = expr->variable->ident->var.data_type;
             return ret_val;
@@ -240,10 +250,6 @@ static bool sem_process_unary(AstUnaryOp *unary_op) {
         );
     }
 
-    // Only allowed unary operator is '!'
-    if (unary_op->operator != '!')
-        return sema_err(unary_op->pos, "Invalid unary operator", ERR_SEMANTIC);
-
     // Switch to NOT_NIL values if not already set
     if (unary_op->param->data_type & DT_NIL)
         // Clear nillable flag - XOR
@@ -283,6 +289,17 @@ AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
 }
 
 static bool sem_process_call(AstFunctionCall *func_call) {
+    if (!sem_top_level) {
+        // when sem_top_level is false, store this statement and check it when true
+        if (!func_calls_to_check) {
+            func_calls_to_check = malloc(sizeof(Vec));
+            *func_calls_to_check = VEC_NEW(AstFunctionCall*);
+        }
+        // Store this expression for future check
+        VEC_PUSH(func_calls_to_check, AstFunctionCall*, func_call);
+        return true;
+    }
+
     if (func_call->sema_checked)
         return true;
 
@@ -331,6 +348,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
         FuncParam param = VEC_AT(params, FuncParam, arg.i);
         DataType param_data_type, arg_data_type;
 
+        var_pos = arg.v->pos;
         // Load also param data type
         if (!sem_process_variable(param.ident))
             return false;
@@ -358,7 +376,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
         }
 
         // Check for correct ident name
-        if (strcmp(arg.v->name.str, param.label.str)) {
+        if (str_eq(arg.v->name, param.label)) {
             return sema_err(
                 arg.v->pos,
                 "Expected func argument differs in names",
@@ -445,7 +463,7 @@ AstExpr *sem_variable(FilePos pos, SymItem *ident) {
 static bool sem_process_variable(SymItem *ident) {
     if (!ident->declared) {
         return sema_err(
-            (FilePos) {},
+            var_pos,
             "Undeclared variable",
             ERR_UNDEF_FUNCTION
         );
@@ -453,7 +471,7 @@ static bool sem_process_variable(SymItem *ident) {
 
     if (ident->type != SYM_VAR) {
         return sema_err(
-            (FilePos) {},
+            var_pos,
             "Invalid type of ident provided",
             ERR_UNDEF_FUNCTION
         );
@@ -579,7 +597,29 @@ static bool check_compatibility(AstBinaryOp *binary_op) {
 
     return true;
 }
+/////////////////////////////////////////////////////////////////////////
 
+static bool check_func_calls(AstFunctionDecl *func_decl) {
+    bool ret_val = true;
+
+    if (func_calls_to_check) {
+        VEC_FOR_EACH(func_calls_to_check, AstFunctionCall*, func_call) {
+            if (str_eq(func_decl->ident->name, (*func_call.v)->ident->name)) {
+                // We found function call for our just declared function - check it
+                if (!sem_process_call((*func_call.v)))
+                    // Error already set in sem_process_call()
+                    ret_val = false;
+            }
+        }
+    }
+
+    if (func_calls_to_check->items == 0) {
+        // We empty vector, free it
+        free(func_calls_to_check);
+        func_calls_to_check = NULL;
+    }
+    return ret_val;
+}
 /////////////////////////////////////////////////////////////////////////
 
 AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level) {
@@ -607,7 +647,9 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
         return true;
     stmt->sema_checked = true;
 
+    sem_top_level = top_level;
     bool ret_val;
+
     switch (stmt->type) {
         case AST_EXPR:
             ret_val = process_expr(stmt->expr);
@@ -623,7 +665,9 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
                     ERR_SEMANTIC
                 );
             }
-            return sem_process_func_decl(stmt->function_decl);
+            ret_val = sem_process_func_decl(stmt->function_decl);
+            ret_val = ret_val && check_func_calls(stmt->function_decl);
+            return ret_val;
         case AST_VARIABLE_DECL:
             return sem_process_var_decl(stmt->variable_decl);
         case AST_RETURN:
@@ -671,14 +715,6 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
     if (func_decl->sema_checked)
         return true;
 
-    if (!func_decl->ident->declared) {
-        return sema_err(
-            func_decl->pos,
-            "Undeclared function",
-            ERR_UNDEF_FUNCTION
-        );
-    }
-
     if (!check_func_params(func_decl->ident, func_decl->parameters))
         // Error already set in check_func_params()
         return false;
@@ -692,6 +728,12 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
     // Now iterate through valid body for return statement
     VEC_FOR_EACH(&(func_decl->body->stmts), AstStmt*, stmt) {
         if ((*stmt.v)->type == AST_RETURN) {
+            // Firstly check return statement itself
+            bool return_val = sem_process_stmt((*stmt.v), false);
+            if (!return_val)
+                // Error already set in sem_process_stmt()
+                return false;
+
             DataType return_type = sym_func_get_ret(func_decl->ident, func_decl->ident->name);
             if (return_type == DT_VOID && (*stmt.v)->return_v->expr) {
                 return sema_err(
@@ -709,7 +751,6 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
                 );
             }
 
-            process_expr((*stmt.v)->return_v->expr);
             // Check for type compatibility (same as for '=')
             if (!compat_array
                 [4]
@@ -731,6 +772,7 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
 
 /////////////////////////////////////////////////////////////////////////
 AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
+    var_pos = pos;
     if (!sem_process_variable(ident))
         // Error already set in sem_process_variable()
         return NULL;
@@ -748,6 +790,7 @@ AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
 }
 
 static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
+    printf("Entering sem_process_var_decl()");
     if (variable_decl->sema_checked)
         return true;
 
@@ -775,7 +818,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
             }
             variable_decl->ident->var.data_type = variable_decl->value->data_type;
         }
-        else
+        else {
             return check_compatibility(&((AstBinaryOp) {
                 .operator = '=',
                 .left = &((AstExpr) {
@@ -787,6 +830,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
                     .type      = variable_decl->value->type
                 })
             }));
+        }
     }
     else if (variable_decl->ident->var.data_type == DT_NONE) {
         // Case when type and expression are missing
@@ -819,7 +863,7 @@ static bool sem_process_return(AstReturn *return_v) {
 
     bool ret_expr = process_expr(return_v->expr);
     if (!ret_expr)
-        // Error already set in sem_expr()
+        // Error already set in process_expr()
         return false;
 
     return_v->sema_checked = true;
@@ -849,7 +893,7 @@ static bool sem_process_expr_condition(AstExpr *expr) {
     // Check if expression is correct
     bool cond_expr = process_expr(expr);
     if (!cond_expr)
-        // Error already set in sem_expr()
+        // Error already set in process_expr()
         return false;
     // Check if given expression becomes only TRUE/FALSE
     if (expr->type != AST_BINARY_OP) {
@@ -859,20 +903,18 @@ static bool sem_process_expr_condition(AstExpr *expr) {
             ERR_INCOM_TYPE
         );
     }
-    else {
-        // Check for relational operators usage (f.e. operator '+' doesnt make sense and cant be evaluated as true/false)
-        Token oper = expr->binary_op->operator;
-        // T_EQUALS, T_DIFFERS, T_LESS_OR_EQUAL, T_GREATER_OR_EQUAL, '>', '<'
-        if ((oper < T_EQUALS || oper > T_GREATER_OR_EQUAL)
-            && oper != '<'
-            && oper != '>'
-        ) {
-            return sema_err(
-                expr->binary_op->pos,
-                "Statement condition cant be evaluated",
-                ERR_INCOM_TYPE
-            );
-        }
+    // Check for relational operators usage (f.e. operator '+' doesnt make sense and cant be evaluated as true/false)
+    Token oper = expr->binary_op->operator;
+    // T_EQUALS, T_DIFFERS, T_LESS_OR_EQUAL, T_GREATER_OR_EQUAL, '>', '<'
+    if ((oper < T_EQUALS || oper > T_GREATER_OR_EQUAL)
+        && oper != '<'
+        && oper != '>'
+    ) {
+        return sema_err(
+            expr->binary_op->pos,
+            "Statement condition cant be evaluated",
+            ERR_INCOM_TYPE
+        );
     }
     expr->sema_checked = true;
 
@@ -883,6 +925,7 @@ static bool sem_process_expr_condition(AstExpr *expr) {
 
 AstCondition *sem_let_condition(FilePos pos, SymItem *ident) {
     AstCondition *let_cond = ast_let_condition(pos, ident);
+    var_pos = pos;
 
     if (sem_process_let_condition(let_cond->let)) {
         let_cond->sema_checked = true;
@@ -894,12 +937,9 @@ AstCondition *sem_let_condition(FilePos pos, SymItem *ident) {
 }
 
 static bool sem_process_let_condition(SymItem *ident) {
-    if (!ident->declared)
-        return sema_err((FilePos) {}, "Undeclared variable", ERR_UNDEF_VAR);
-
     if (ident->type != SYM_VAR) {
         return sema_err(
-            (FilePos) {},
+            var_pos,
             "Invalid type of ident provided",
             ERR_SEMANTIC
         );
@@ -907,7 +947,7 @@ static bool sem_process_let_condition(SymItem *ident) {
 
     if (ident->var.mutable) {
         return sema_err(
-            (FilePos) {},
+            var_pos,
             "Mutable variable provided",
             ERR_SEMANTIC
         );
@@ -949,13 +989,6 @@ static bool sem_process_if(AstIf *if_v) {
         // Error already set in above func
         return false;
 
-    if (!if_v->if_body) {
-        return sema_err(
-            if_v->pos,
-            "Missing statement body",
-            ERR_SEMANTIC
-        );
-    }
     // Process if (and) else body
     bool if_body = sem_process_block(if_v->if_body->stmts, false);
     if (!if_body)

@@ -5,6 +5,7 @@
 
 #include "str.h" // String
 #include "stream.h"
+#include "enums.h"
 
 typedef enum {
     /// An error occured
@@ -82,6 +83,8 @@ typedef struct {
     int i_num;
     /// More detailed type of the token
     int subtype;
+    /// (optional) DataType for token
+    DataType datatype;
 } Lexer;
 
 /// Crates new lexer

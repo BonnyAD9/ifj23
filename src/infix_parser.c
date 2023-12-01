@@ -364,7 +364,7 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
         .pos = par->lex->token_start,
         .term = {
             .type = par->cur,
-            .subtype = par->lex->subtype,
+            .subtype = par->lex->datatype,
         },
     };
 
@@ -381,7 +381,7 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
         break;
     }
     case T_LITERAL:
-        switch (par->lex->subtype) {
+        switch (par->lex->datatype) {
         case DT_INT:
             item.term.int_v = par->lex->i_num;
             break;

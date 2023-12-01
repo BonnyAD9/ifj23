@@ -116,16 +116,20 @@ static Token read_ident(Lexer *lex) {
     // Store token data
     lex->str = sb_get(&lex->buffer);
 
-    if (str_eq(lex->str, STR("Double")))
+    if (str_eq(lex->str, STR("Double"))) {
+        lex->datatype = DT_DOUBLE;
         return T_TYPE;
+    }
     else if (str_eq(lex->str, STR("else")))
         return T_ELSE;
     else if (str_eq(lex->str, STR("func")))
         return T_FUNC;
     else if (str_eq(lex->str, STR("if")))
         return T_IF;
-    else if (str_eq(lex->str, STR("Int")))
+    else if (str_eq(lex->str, STR("Int"))) {
+        lex->datatype = DT_INT;
         return T_TYPE;
+    }
     else if (str_eq(lex->str, STR("let"))) {
         lex->subtype = TD_LET;
         return T_DECL;
@@ -135,13 +139,15 @@ static Token read_ident(Lexer *lex) {
         return T_DECL;
     }
     else if (str_eq(lex->str, STR("nil"))){
-        lex->subtype = DT_NIL;
+        lex->datatype = DT_NIL;
         return T_LITERAL;
     }
     else if (str_eq(lex->str, STR("return")))
         return T_RETURN;
-    else if (str_eq(lex->str, STR("String")))
+    else if (str_eq(lex->str, STR("String"))) {
+        lex->datatype = DT_STRING;
         return T_TYPE;
+    }
     else if (str_eq(lex->str, STR("var")))
         return T_DECL;
     else if (str_eq(lex->str, STR("while")))
@@ -220,7 +226,7 @@ static Token read_num(Lexer *lex) {
             // Error if no value was parsed or errno occured
             if (endval == lex->str.str || errno != 0)
                 return lex_error(lex, "Error while converting number \n");
-            lex->subtype = DT_DOUBLE;
+            lex->datatype = DT_DOUBLE;
             return T_LITERAL;
     }
     else {
@@ -229,7 +235,7 @@ static Token read_num(Lexer *lex) {
         lex->i_num = strtol(lex->str.str, &endval, 10);
         if (endval == lex->str.str || errno != 0)
             return lex_error(lex, "Error while converting number \n");
-        lex->subtype = DT_INT;
+        lex->datatype = DT_INT;
         return T_LITERAL;
     }
 }
@@ -312,7 +318,7 @@ static Token read_triple_str(Lexer *lex) {
     // Store string
     lex->str = sb_get(&lex->buffer);
 
-    lex->subtype = DT_STRING;
+    lex->datatype = DT_STRING;
     return T_LITERAL;
 }
 
@@ -325,7 +331,7 @@ static Token read_str(Lexer *lex) {
 
         // Empty string
         lex->str = STR("");
-        lex->subtype = DT_STRING;
+        lex->datatype = DT_STRING;
         return T_LITERAL;
     }
 
@@ -408,7 +414,7 @@ static Token read_str(Lexer *lex) {
     // Store string
     lex->str = sb_get(&lex->buffer);
 
-    lex->subtype = DT_STRING;
+    lex->datatype = DT_STRING;
     return T_LITERAL;
 }
 
