@@ -1,6 +1,10 @@
 #include "infix_parser.h"
 
+#include <stdint.h>
+
 #include "semantics.h"
+
+Token tok_next(Parser *par);
 
 enum StackItemType {
     SI_STOP,
@@ -57,6 +61,7 @@ static enum FoldResult es_fold_prefix(struct ExpansionStack *stack);
 static enum FoldResult es_fold_postfix(struct ExpansionStack *stack);
 /// Folds, parses function call parameters and folds again
 static bool es_call(struct ExpansionStack *stack, Parser *par);
+static size_t es_top_index(struct ExpansionStack *stack, enum StackItemType type);
 
 // implemented in parser.c
 bool parse_func_params(Parser *par, Vec *res);
@@ -290,7 +295,7 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         case '(':
             return PA_CALL;
         }
-        if (is_value_token(stack) || !is_infix_token(stack)) {
+        if (is_value_token(input) || !is_infix_token(input)) {
             return PA_END;
         }
         return PA_FOLD;
@@ -299,7 +304,7 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         if (input == '(' || input == ')') {
             return PA_ERR;
         }
-        if (!is_infix_token(stack)) {
+        if (!is_infix_token(input)) {
             return PA_END;
         }
         return PA_SHIFT;
@@ -334,7 +339,7 @@ static struct ExpansionStack es_new(void) {
     }));
 
     return (struct ExpansionStack) {
-        .stack = VEC_NEW(struct StackItem),
+        .stack = v,
         .last_term = T_EOF,
         .is_stop_term = true,
     };
@@ -343,10 +348,7 @@ static struct ExpansionStack es_new(void) {
 static bool es_shift(struct ExpansionStack *stack, Parser *par) {
     vec_reserve(&stack->stack, stack->stack.len + 2);
 
-    size_t i = stack->stack.len - 1;
-    while (VEC_AT(&stack->stack, struct StackItem, i).type != SI_TERM) {
-        --i;
-    }
+    size_t i = es_top_index(stack, SI_TERM);
 
     VEC_INSERT(&stack->stack, struct StackItem, i + 1, ((struct StackItem) {
         .type = SI_STOP,
@@ -363,6 +365,9 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
             .subtype = par->lex->subtype,
         },
     };
+
+    stack->last_term = par->cur;
+    stack->is_top_term = true;
 
     switch (par->cur) {
     case T_IDENT: {
@@ -387,10 +392,12 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
         }
         break;
     default:
-        return false;
+        break;
     }
 
     VEC_PUSH(&stack->stack, struct StackItem, item);
+
+    tok_next(par);
 
     return true;
 }
@@ -413,6 +420,25 @@ static bool es_fold(struct ExpansionStack *stack) {
         }
     }
 
+    stack->is_top_term = false;
+
+    size_t t_idx = es_top_index(stack, SI_TERM);
+    stack->last_term = VEC_AT(
+        &stack->stack,
+        struct StackItem,
+        t_idx
+    ).term.type;
+    size_t t_s = es_top_index(stack, SI_STOP);
+    if (t_s >= stack->stack.len - 1) {
+        stack->is_stop_term = false;
+    } else {
+        stack->is_stop_term = VEC_AT(
+            &stack->stack,
+            struct StackItem,
+            t_s + 1
+        ).type == SI_TERM;
+    }
+
     return res == MATCH_OK;
 }
 
@@ -427,8 +453,8 @@ static enum FoldResult es_fold_value(struct ExpansionStack *stack) {
     struct StackItem s0 = si[sl - 2];
     struct StackItem s1 = si[sl - 1];
 
-    if (s1.type != SI_STOP || s0.type != SI_TERM
-        || !is_value_token(s0.term.type)
+    if (s0.type != SI_STOP || s1.type != SI_TERM
+        || !is_value_token(s1.term.type)
     ) {
         return false;
     }
@@ -465,14 +491,14 @@ static enum FoldResult es_fold_bracket(struct ExpansionStack *stack) {
     struct StackItem s2 = si[sl - 2];
     struct StackItem s3 = si[sl - 1];
 
-    if (s0.type != SI_TERM || s0.term.type != '(' || s1.type != SI_NTERM
-        || s2.type != SI_TERM || s2.term.type != ')' || s3.type != SI_STOP
+    if (s1.type != SI_TERM || s1.term.type != '(' || s2.type != SI_NTERM
+        || s3.type != SI_TERM || s3.term.type != ')' || s0.type != SI_STOP
     ) {
         return NO_MATCH;
     }
 
     vec_pop_range(&stack->stack, 4);
-    VEC_PUSH(&stack->stack, struct StackItem, s1);
+    VEC_PUSH(&stack->stack, struct StackItem, s2);
 
     return MATCH_OK;
 }
@@ -489,13 +515,13 @@ static enum FoldResult es_fold_call(struct ExpansionStack *stack) {
     struct StackItem s1 = si[sl - 2];
     struct StackItem s2 = si[sl - 1];
 
-    if (s0.type != SI_NTERM || s1.type != SI_CALL_PARAMS
-        || s2.type != SI_STOP
+    if (s1.type != SI_NTERM || s2.type != SI_CALL_PARAMS
+        || s0.type != SI_STOP
     ) {
         return NO_MATCH;
     }
 
-    AstExpr *res = sem_call(s0.nterm, s1.call_params);
+    AstExpr *res = sem_call(s1.nterm, s2.call_params);
 
     if (!res) {
         return MATCH_ERR;
@@ -523,13 +549,13 @@ static enum FoldResult es_fold_binary(struct ExpansionStack *stack) {
     struct StackItem s2 = si[sl - 2];
     struct StackItem s3 = si[sl - 1];
 
-    if (s0.type != SI_NTERM || s1.type != SI_TERM || s2.type != SI_NTERM
-        || s3.type != SI_STOP
+    if (s1.type != SI_NTERM || s2.type != SI_TERM || s3.type != SI_NTERM
+        || s0.type != SI_STOP
     ) {
         return NO_MATCH;
     }
 
-    AstExpr *res = sem_binary(s0.nterm, s1.term.type, s2.nterm);
+    AstExpr *res = sem_binary(s1.nterm, s2.term.type, s3.nterm);
 
     if (!res) {
         return MATCH_ERR;
@@ -556,11 +582,11 @@ static enum FoldResult es_fold_prefix(struct ExpansionStack *stack) {
     struct StackItem s1 = si[sl - 2];
     struct StackItem s2 = si[sl - 1];
 
-    if (s0.type != SI_TERM || s1.type != SI_NTERM || s2.type != SI_STOP) {
+    if (s1.type != SI_TERM || s2.type != SI_NTERM || s0.type != SI_STOP) {
         return NO_MATCH;
     }
 
-    AstExpr *res = sem_unary(s1.nterm, s0.term.type);
+    AstExpr *res = sem_unary(s2.nterm, s1.term.type);
 
     if (!res) {
         return MATCH_ERR;
@@ -587,11 +613,11 @@ static enum FoldResult es_fold_postfix(struct ExpansionStack *stack) {
     struct StackItem s1 = si[sl - 2];
     struct StackItem s2 = si[sl - 1];
 
-    if (s0.type != SI_NTERM || s1.type != SI_TERM || s2.type != SI_STOP) {
+    if (s1.type != SI_NTERM || s2.type != SI_TERM || s0.type != SI_STOP) {
         return NO_MATCH;
     }
 
-    AstExpr *res = sem_unary(s0.nterm, s1.term.type);
+    AstExpr *res = sem_unary(s1.nterm, s2.term.type);
 
     if (!res) {
         return MATCH_ERR;
@@ -684,4 +710,15 @@ static bool is_infix_token(Token t) {
 
 static bool is_value_token(Token t) {
     return t == T_IDENT || t == T_LITERAL;
+}
+
+static size_t es_top_index(struct ExpansionStack *stack, enum StackItemType type) {
+    size_t i = stack->stack.len - 1;
+    while (VEC_AT(&stack->stack, struct StackItem, i).type != type) {
+        if (i == 0) {
+            return SIZE_MAX;
+        }
+        --i;
+    }
+    return i;
 }

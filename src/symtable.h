@@ -54,7 +54,8 @@ struct SymItem {
 };
 
 typedef struct node {
-    const char *key;
+    String key;
+    // TODO: change to SymItem *
     // SymItem vector
     Vec data;
     struct node *left_node;
@@ -76,13 +77,13 @@ typedef struct {
 Tree tree_new();
 
 /// Adds node into tree
-void tree_insert(Tree *tree, const char *key, Vec data);
+void tree_insert(Tree *tree, const String key, Vec data);
 
 /// Removes tree node by given key
-void tree_remove(Tree *tree, const char *key);
+void tree_remove(Tree *tree, const String key);
 
 /// Returns pointer to data of found node, if not found NULL
-Vec *tree_find(Tree *tree, const char *key);
+Vec *tree_find(Tree *tree, const String key);
 
 /// Frees the tree - owner's responsibility!
 void tree_free(Tree *tree);

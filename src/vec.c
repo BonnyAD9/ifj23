@@ -122,8 +122,13 @@ bool vec_insert(Vec *vec, size_t index, void *item) {
         return false;
     }
 
-    memmove(vec_at(vec, index + 1), vec_at(vec, index), vec->len - index);
+    memmove(
+        vec_at(vec, index + 1),
+        vec_at(vec, index),
+        (vec->len - index) * vec->item_size
+    );
     memcpy(vec_at(vec, index), item, vec->item_size);
+    ++vec->len;
     return true;
 }
 

@@ -9,7 +9,7 @@ static int node_balance(TreeNode *node);
 /// Returns bigger of two passed-in values
 static int max(int a_val, int b_val);
 /// Create new tree node with given key and data
-static TreeNode *create_node(const char *key, Vec data);
+static TreeNode *create_node(const String key, Vec data);
 /// Process right rotation with given tree node
 static TreeNode *right_rotate(TreeNode *y);
 /// Process left rotation with given tree node
@@ -19,11 +19,11 @@ static int _update_height_ret_balance(TreeNode *node);
 /// Recursively delete tree
 static void _tree_free(TreeNode *node);
 /// Recursively search for node with given key
-static Vec *_tree_find(TreeNode *node, const char *key);
+static Vec *_tree_find(TreeNode *node, const String key);
 /// Inserts new node into current tree
-static TreeNode *_tree_insert(TreeNode *node, const char *key, Vec data);
+static TreeNode *_tree_insert(TreeNode *node, const String key, Vec data);
 /// Deletes node in current tree
-static TreeNode *_tree_remove(TreeNode *node, const char *key);
+static TreeNode *_tree_remove(TreeNode *node, const String key);
 /// Prints tree structure and node values to stdout
 static void _visualise_tree(TreeNode *node);
 
@@ -62,6 +62,7 @@ static void _tree_free(TreeNode *node) {
     str_free(&node->data.func_params);
 */
     sym_data_free(&node->data);
+    str_free(&node->key);
     free(node);
     node = NULL;
 }
@@ -70,11 +71,11 @@ void tree_free(Tree *tree) {
     _tree_free(tree->root_node);
 }
 
-static Vec *_tree_find(TreeNode *node, const char *key) {
+static Vec *_tree_find(TreeNode *node, const String key) {
     // Search failed
     if (!node)
         return NULL;
-    int strcmp_val = strcmp(key, node->key);
+    int strcmp_val = strcmp(key.str, node->key.str);
     // Matching node found
     if (!strcmp_val)
         return &node->data;
@@ -85,17 +86,17 @@ static Vec *_tree_find(TreeNode *node, const char *key) {
     return _tree_find(node->left_node, key);
 }
 
-Vec *tree_find(Tree *tree, const char *key) {
+Vec *tree_find(Tree *tree, const String key) {
     return _tree_find(tree->root_node, key);
 }
 
-static TreeNode *create_node(const char *key, Vec data) {
+static TreeNode *create_node(const String key, Vec data) {
     TreeNode *new_node = malloc(sizeof(TreeNode));
     if (!new_node)
         return NULL;
 
     // Copy given key to node key
-    new_node->key = key;
+    new_node->key = str_clone(key);
 
     // Default value for leaf
     new_node->height = 1;
@@ -136,11 +137,11 @@ static int _update_height_ret_balance(TreeNode *node) {
     return node_balance(node);
 }
 
-static TreeNode *_tree_insert(TreeNode *node, const char *key, Vec data) {
+static TreeNode *_tree_insert(TreeNode *node, const String key, Vec data) {
     if (!node)
         return create_node(key, data);
 
-    int strcmp_val = strcmp(key, node->key);
+    int strcmp_val = strcmp(key.str, node->key.str);
     // Key value > node's key (in ASCII) -> go to right subtree
     if (strcmp_val > 0)
         node->right_node = _tree_insert(node->right_node, key, data);
@@ -156,7 +157,7 @@ static TreeNode *_tree_insert(TreeNode *node, const char *key, Vec data) {
     // node_balance > 1 or < -1
     if (abs(n_balance) > 1) {
         if (n_balance > 1) {
-            strcmp_val = strcmp(key, node->left_node->key);
+            strcmp_val = strcmp(key.str, node->left_node->key.str);
             // Key value < node left's key
             if (strcmp_val < 0)
                 return right_rotate(node);
@@ -167,7 +168,7 @@ static TreeNode *_tree_insert(TreeNode *node, const char *key, Vec data) {
             }
         }
         if (n_balance < -1) {
-            strcmp_val = strcmp(key, node->right_node->key);
+            strcmp_val = strcmp(key.str, node->right_node->key.str);
             // Key value > node right's key
             if (strcmp_val > 0)
                 return left_rotate(node);
@@ -181,17 +182,17 @@ static TreeNode *_tree_insert(TreeNode *node, const char *key, Vec data) {
     return node;
 }
 
-void tree_insert(Tree *tree, const char *key, Vec data) {
+void tree_insert(Tree *tree, const String key, Vec data) {
     tree->root_node = _tree_insert(tree->root_node, key, data);
     if (!tree->root_node)
         return;
 }
 
-static TreeNode *_tree_remove(TreeNode *node, const char *key) {
+static TreeNode *_tree_remove(TreeNode *node, const String key) {
     if (!node)
         return node;
 
-    int strcmp_val = strcmp(key, node->key);
+    int strcmp_val = strcmp(key.str, node->key.str);
     // Key value > node's key (in ASCII) -> go to right subtree
     if (strcmp_val > 0)
         node->right_node = _tree_remove(node->right_node, key);
@@ -205,12 +206,14 @@ static TreeNode *_tree_remove(TreeNode *node, const char *key) {
         if (!node->left_node) {
             temp = node;
             node = node->right_node;
+            str_free(&node->key);
             free(temp);
         }
         // Node with only one child - bridge over to it's left child and free node
         else if (!node->right_node) {
             temp = node;
             node = node->left_node;
+            str_free(&node->key);
             free(temp);
         }
         // Node with both children
@@ -256,7 +259,7 @@ static TreeNode *_tree_remove(TreeNode *node, const char *key) {
     return node;
 }
 
-void tree_remove(Tree *tree, const char *key) {
+void tree_remove(Tree *tree, const String key) {
     tree->root_node = _tree_remove(tree->root_node, key);
     if (!tree->root_node)
         return;
@@ -265,7 +268,7 @@ void tree_remove(Tree *tree, const char *key) {
 static void _visualise_tree(TreeNode *node) {
     if (node) {
         // Print node' key
-        fprintf(stdout, "| %s |\n", node->key);
+        fprintf(stdout, "| %s |\n", node->key.str);
         // Recursively print rest of tree
         _visualise_tree(node->left_node);
         _visualise_tree(node->right_node);
@@ -281,6 +284,57 @@ void tree_visualise(Tree *tree) {
 //                                 Symtable                                  //
 //===========================================================================//
 
+void sym_item_free(SymItem **item) {
+    SymItem *i = *item;
+    *item = NULL;
+    if (!i) {
+        return;
+    }
+
+    str_free(&i->name);
+    if (i->type == SYM_FUNC) {
+        vec_free_with(&i->func.params, (FreeFun)sym_free_func_param);
+        vec_free(&i->func.params);
+    }
+    free(i);
+}
+
+bool sym_item_insert_new(Vec *data, String name, bool declared, Type type) {
+    name = str_clone(name);
+    if (!name.str) {
+        return false;
+    }
+    SymItem *item = malloc(sizeof(SymItem));
+    if (!item) {
+        str_free(&name);
+        return false;
+    }
+    *item = (SymItem) {
+        .name = name,
+        .type = type,
+        .declared = declared,
+    };
+
+    switch (type) {
+    case SYM_FUNC:
+        item->func.return_type = DT_NONE;
+        item->func.params = VEC_NEW(FuncParam);
+        break;
+    case SYM_VAR:
+        item->var.data_type = DT_NONE;
+        item->var.mutable = false;
+        break;
+    default:
+        break;
+    }
+
+    if (!vec_push(data, &item)) {
+        sym_item_free(&item);
+        return false;
+    }
+    return true;
+}
+
 Symtable sym_new() {
     return (Symtable) {
         .scopes = VEC_NEW(Tree),
@@ -295,14 +349,7 @@ void sym_free(Symtable *symtable) {
 }
 
 void sym_data_free(Vec *data) {
-    VEC_FOR_EACH(data, SymItem, item) {
-        str_free(&item.v->name);
-        if (item.v->type == SYM_FUNC) {
-            vec_free_with(&item.v->func.params, (FreeFun)sym_free_func_param);
-            vec_free(&item.v->func.params);
-        }
-
-    }
+    vec_free_with(data, (FreeFun)sym_item_free);
 }
 
 void sym_scope_add(Symtable *symtable) {
@@ -324,25 +371,21 @@ SymItem *sym_find(Symtable *symtable, String name) {
     Tree *scope = NULL;
     for (int i = symtable->scope_stack.len - 1; i >= 0; --i) {
         scope = VEC_AT(&symtable->scope_stack, Tree*, i);
-        Vec *data = tree_find(scope, name.str);
+        Vec *data = tree_find(scope, name);
 
         if (data)
-            return &VEC_LAST(data, SymItem);
+            return VEC_LAST(data, SymItem *);
     }
 
     if (!scope)
         return NULL;
 
-    Vec new = VEC_NEW(SymItem);
-    name = str_clone(name);
-    SymItem item = {
-        .name = name,
-        .type = SYM_NONE,
-        .declared = false,
-    };
-    VEC_PUSH(&new, SymItem, item);
+    Vec new = VEC_NEW(SymItem *);
+    if (!sym_item_insert_new(&new, name, false, SYM_NONE)) {
+        return NULL;
+    }
 
-    tree_insert(scope, name.str, new);
+    tree_insert(scope, name, new);
     return &VEC_LAST(&new, SymItem);
 }
 
@@ -351,24 +394,20 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
     if (!scope)
         return NULL;
 
-    Vec *data = tree_find(scope, name.str);
+    Vec *data = tree_find(scope, name);
     Type new_type = is_function ? SYM_FUNC : SYM_VAR;
 
     if (!data) {
-        Vec new = VEC_NEW(SymItem);
-        name = str_clone(name);
-        SymItem item = {
-            .name = name,
-            .type = new_type,
-            .declared = true,
-        };
-        VEC_PUSH(&new, SymItem, item);
+        Vec new = VEC_NEW(SymItem *);
+        if (!sym_item_insert_new(&new, name, true, new_type)) {
+            return NULL;
+        }
 
-        tree_insert(scope, name.str, new);
-        return &VEC_LAST(&new, SymItem);
+        tree_insert(scope, name, new);
+        return VEC_LAST(&new, SymItem *);
     }
 
-    SymItem *item = &VEC_LAST(data, SymItem);
+    SymItem *item = VEC_LAST(data, SymItem *);
     if (!item->declared) {
         item->type = new_type;
         item->declared = true;
@@ -379,14 +418,10 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
     if (symtable->scope_stack.len == 1)
         return NULL;
 
-    name = str_clone(name);
-    SymItem new_item = {
-        .name = name,
-        .type = new_type,
-        .declared = true,
-    };
-    VEC_PUSH(data, SymItem, new_item);
-    return &VEC_LAST(data, SymItem);
+    if (!sym_item_insert_new(data, name, true, new_type)) {
+        return NULL;
+    }
+    return VEC_LAST(data, SymItem *);
 }
 
 void sym_item_var(SymItem *ident, VarData var) {

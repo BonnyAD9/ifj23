@@ -12,7 +12,7 @@
 // TODO: remove, it is here only to show errors when it is used
 #define todo_tree(...) {+++}
 
-static Token tok_next(Parser *par);
+Token tok_next(Parser *par);
 
 Parser parser_new(Lexer *lex, Symtable *table) {
     return (Parser) {
@@ -54,7 +54,7 @@ AstBlock *parser_parse(Parser *par) {
 void parser_free(Parser *p) { } // current implementation of parser has
                                 // nothing to free
 
-static Token tok_next(Parser *par) {
+Token tok_next(Parser *par) {
     return par->cur = lex_next(par->lex);
 }
 
