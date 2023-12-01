@@ -9,26 +9,42 @@
 #include "infix_parser.h"
 
 /////////////////////////////////////////////////////////////////////////
-bool         sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res);
+bool sem_func_param(
+    String label,
+    SymItem *ident,
+    DataType type,
+    FuncParam *res
+);
 
-AstBlock     *sem_block(Vec stmts, bool top_level);
+AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level);
 
 AstCondition *sem_expr_condition(AstExpr *expr);
-AstCondition *sem_let_condition(SymItem *ident);
+AstCondition *sem_let_condition(FilePos pos, SymItem *ident);
 
-AstStmt      *sem_expr_stmt(AstExpr *expr);
-AstStmt      *sem_while(AstCondition *cond, AstBlock *loop);
-AstStmt      *sem_var_decl(SymItem *ident, AstExpr *expr);
-AstStmt      *sem_func_decl(SymItem *ident, Vec params, DataType return_type, AstBlock *body);
-AstStmt      *sem_if(AstCondition *cond, AstBlock *true_block, AstBlock *false_block);
-AstStmt      *sem_return(AstExpr *expr);
+AstStmt *sem_expr_stmt(AstExpr *expr);
+AstStmt *sem_while(FilePos pos, AstCondition *cond, AstBlock *loop);
+AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr);
+AstStmt *sem_func_decl(
+    FilePos pos,
+    SymItem *ident,
+    Vec params,
+    DataType return_type,
+    AstBlock *body
+);
+AstStmt *sem_if(
+    FilePos pos,
+    AstCondition *cond,
+    AstBlock *true_block,
+    AstBlock *false_block
+);
+AstStmt *sem_return(FilePos pos, AstExpr *expr);
 
-AstExpr      *sem_unary(AstExpr *expr, Token op);
-AstExpr      *sem_variable(SymItem *ident);
-AstExpr      *sem_literal(FullToken token);
-AstExpr      *sem_call(AstExpr *calle, Vec params);
-bool         sem_lex_literal(Lexer *lex, AstLiteral *res);
-AstExpr      *sem_binary(AstExpr *left, Token op, AstExpr *right);
+AstExpr *sem_unary(FilePos pos, AstExpr *expr, Token op);
+AstExpr *sem_variable(FilePos pos, SymItem *ident);
+AstExpr *sem_literal(FilePos pos, FullToken token);
+AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params);
+bool sem_lex_literal(Lexer *lex, AstLiteral *res);
+AstExpr *sem_binary(FilePos pos, AstExpr *left, Token op, AstExpr *right);
 /////////////////////////////////////////////////////////////////////////
 
 #endif // SEMANTICS_H_INCLUDED

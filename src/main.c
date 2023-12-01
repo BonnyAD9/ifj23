@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#define DEBUG_FILE "test/test1.swift"
-
 #include "utils.h"
 #include "lexer.h"
 #include "stream.h"
@@ -11,6 +9,7 @@
 #include "ast.h"
 #include "parser.h"
 #include "printer.h"
+#include "debug_tools.h"
 
 int main(void) {
     FILE* file = fopen(DEBUG_FILE, "r");

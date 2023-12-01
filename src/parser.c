@@ -5,6 +5,7 @@
 #include "ast.h"
 #include "semantics.h"
 #include "infix_parser.h"
+#include "debug_tools.h"
 
 #include <stdlib.h> // free
 #include <limits.h> // INT_MAX
@@ -24,7 +25,7 @@ Parser parser_new(Lexer *lex, Symtable *table) {
 
 static void *parse_error(Parser *par, int err_type, char *msg) {
     printf(
-        ":%zu:%zu: error: %s",
+        DEBUG_FILE ":%zu:%zu: error: %s",
         par->lex->token_start.line,
         par->lex->token_start.column,
         msg
@@ -61,6 +62,7 @@ Token tok_next(Parser *par) {
 static AstBlock *parse_block(Parser *par, bool top_level) {
     sym_scope_add(par->table);
 
+    FilePos pos = par->lex->token_start;
     tok_next(par); // skip '{'
 
     Token end = top_level ? T_EOF : '}';
@@ -87,7 +89,7 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
     }
 
     sym_scope_pop(par->table);
-    return sem_block(stmts, top_level);
+    return sem_block(pos, stmts, top_level);
 }
 
 static AstStmt *parse_statement(Parser *par) {
@@ -108,6 +110,7 @@ static AstStmt *parse_statement(Parser *par) {
 }
 
 static AstStmt *parse_if(Parser *par) {
+    FilePos pos = par->lex->token_start;
     tok_next(par); // skip the if
 
     AstCondition *cond = parse_condition(par);
@@ -126,7 +129,7 @@ static AstStmt *parse_if(Parser *par) {
     }
 
     if (par->cur != T_ELSE) {
-        return sem_if(cond, true_block, NULL);
+        return sem_if(pos, cond, true_block, NULL);
     }
 
     tok_next(par); // skip the else
@@ -142,7 +145,7 @@ static AstStmt *parse_if(Parser *par) {
         return NULL;
     }
 
-    return sem_if(cond, true_block, false_block);
+    return sem_if(pos, cond, true_block, false_block);
 }
 
 static AstCondition *parse_condition(Parser *par) {
@@ -158,6 +161,8 @@ static AstCondition *parse_condition(Parser *par) {
         );
     }
 
+    FilePos pos = par->lex->token_start;
+
     if (tok_next(par) != T_IDENT) {
         return parse_error(
             par,
@@ -168,7 +173,7 @@ static AstCondition *parse_condition(Parser *par) {
 
     SymItem *ident = sym_find(par->table, par->lex->str);
 
-    return sem_let_condition(ident);
+    return sem_let_condition(pos, ident);
 }
 
 static AstExpr *parse_expression(Parser *par) {
@@ -243,7 +248,9 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
 }
 
 static AstStmt *parse_while(Parser *par) {
+    FilePos pos = par->lex->token_start;
     tok_next(par); // skip the while
+
     AstCondition *cond = parse_condition(par);
     if (!cond) {
         return false;
@@ -260,11 +267,12 @@ static AstStmt *parse_while(Parser *par) {
         return NULL;
     }
 
-    return sem_while(cond, loop);
+    return sem_while(pos, cond, loop);
 }
 
 static AstStmt *parse_decl(Parser *par) {
     bool mutable = par->lex->subtype == TD_VAR;
+    FilePos pos = par->lex->token_start;
 
     if (tok_next(par) != T_IDENT) {
         return NULL;
@@ -275,6 +283,7 @@ static AstStmt *parse_decl(Parser *par) {
         return NULL;
     }
 
+    ident->file_pos = par->lex->token_start;
     tok_next(par);
 
     DataType type = DT_NONE;
@@ -289,7 +298,7 @@ static AstStmt *parse_decl(Parser *par) {
     sym_item_var(ident, sym_var_new(type, mutable));
 
     if (par->cur != '=') {
-        return sem_var_decl(ident, NULL);
+        return sem_var_decl(pos, ident, NULL);
     }
 
     tok_next(par);
@@ -298,7 +307,7 @@ static AstStmt *parse_decl(Parser *par) {
         return NULL;
     }
 
-    return sem_var_decl(ident, init);
+    return sem_var_decl(pos, ident, init);
 }
 
 static bool parse_type(Parser *par, DataType *res) {
@@ -318,14 +327,21 @@ static bool parse_type(Parser *par, DataType *res) {
 }
 
 static AstStmt *parse_func(Parser *par) {
+    FilePos pos = par->lex->token_start;
     tok_next(par); // skip the func
+
     if (par->cur != T_IDENT) {
         return parse_error(par, ERR_SYNTAX, "expected function identifier");
     }
 
     SymItem *ident = sym_declare(par->table, par->lex->str, true);
+    if (!ident) {
+        return NULL;
+    }
 
+    ident->file_pos = par->lex->token_start;
     tok_next(par);
+
     if (par->cur != '(') {
         return parse_error(
             par,
@@ -384,7 +400,7 @@ static AstStmt *parse_func(Parser *par) {
 
     sym_scope_pop(par->table);
 
-    return sem_func_decl(ident, params, type, block);
+    return sem_func_decl(pos, ident, params, type, block);
 }
 
 static bool parse_func_decl_param(Parser *par, FuncParam *res) {
@@ -423,10 +439,12 @@ static bool parse_func_decl_param(Parser *par, FuncParam *res) {
 }
 
 static AstStmt *parse_return(Parser *par) {
+    FilePos pos = par->lex->token_start;
     tok_next(par);
+
     AstExpr *expr = parse_expression(par);
     if (!expr) {
         return NULL;
     }
-    return sem_return(expr);
+    return sem_return(pos, expr);
 }

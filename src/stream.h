@@ -43,4 +43,7 @@ FilePos stream_get_pos(const Stream *s);
 /// Gets filename of currently opened input source
 const char *get_filename(const Stream *s);
 
+/// Returns the position that is first in the file
+FilePos pos_min(FilePos a, FilePos b);
+
 #endif // STREAM_H_INCLUDED

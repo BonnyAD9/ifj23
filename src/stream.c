@@ -59,3 +59,9 @@ FilePos stream_get_pos(const Stream *s) {
 const char *get_filename(const Stream *s) {
     return s->filename;
 }
+
+FilePos pos_min(FilePos a, FilePos b) {
+    return a.line < b.line || ((a.line == b.line) && a.column < b.column)
+        ? a
+        : b;
+}

@@ -4,6 +4,7 @@
 #include "vec.h"      // Vec
 #include "symtable.h" // SymItem
 #include "enums.h"    // DataType
+#include "stream.h"   // FilePos
 // Forward declarations
 
 // Expression, something that has value
@@ -14,31 +15,45 @@ typedef struct AstStmt AstStmt;
 typedef struct {
     // type: AstStmt *
     Vec stmts;
+
+    // position of the start of the block
+    FilePos pos;
 } AstBlock;
 
 typedef struct {
     Token operator;
     AstExpr *left;
     AstExpr *right;
+
     DataType data_type; // Undefined value unless sema_checked is true!
     bool sema_checked;
+
+    // position of the operator character
+    FilePos pos;
 } AstBinaryOp;
 
 typedef struct {
     Token operator;
     AstExpr *param;
+
     DataType data_type; // Undefined value unless sema_checked is true!
     bool sema_checked;
+
+    // position of the operator character
+    FilePos pos;
 } AstUnaryOp;
 
 typedef struct {
     DataType data_type; // Undefined value unless sema_checked is true!
-    bool sema_checked;
     union {
         int int_v;
         double double_v;
         String string_v;
     };
+
+    bool sema_checked;
+
+    FilePos pos;
 } AstLiteral;
 
 typedef enum {
@@ -57,15 +72,21 @@ typedef struct {
         SymItem *variable;
         AstLiteral literal;
     };
+
+    FilePos pos;
 } AstFuncCallParam;
 
 typedef struct {
     SymItem *ident;
     // type: AstFuncCallParam
     Vec arguments;
+
     // func type from table
     DataType data_type; // Undefined value unless sema_checked is true!
     bool sema_checked;
+
+    // position of the open bracket in the call
+    FilePos pos;
 } AstFunctionCall;
 
 typedef struct {
@@ -74,12 +95,19 @@ typedef struct {
     AstBlock *body;
     // func type from table
     bool sema_checked;
+
+    // position of the func keyword
+    FilePos pos;
 } AstFunctionDecl;
 
 typedef struct {
     AstExpr *expr;
+
     DataType data_type; // Undefined value unless sema_checked is true!
     bool sema_checked;
+
+    // position of the return keyword
+    FilePos pos;
 } AstReturn;
 
 typedef enum {
@@ -90,42 +118,60 @@ typedef enum {
 typedef struct {
     SymItem *ident;
     AstExpr *value;
+
     bool sema_checked;
+
+    // position of the let/var keyword
+    FilePos pos;
 } AstVariableDecl;
 
 typedef struct {
     AstConditionType type;
-    bool sema_checked;
     union {
         AstExpr *expr;
         SymItem *let;
     };
+
+    bool sema_checked;
+
+    // position of the first token of the condition
+    FilePos pos;
 } AstCondition;
 
 typedef struct {
     AstCondition *condition;
     AstBlock *if_body;
     AstBlock *else_body;
+
     bool sema_checked;
+
+    // position of the if keyword
+    FilePos pos;
 } AstIf;
 
 typedef struct {
     AstCondition *condition;
     AstBlock *body;
+
     bool sema_checked;
+
+    // position of the while keyword
+    FilePos pos;
 } AstWhile;
 
 typedef struct {
     SymItem *ident;
+
     // data type from table
     DataType data_type; // Undefined value unless sema_checked is true!
     bool sema_checked;
+
+    // position of the identifier
+    FilePos pos;
 } AstVariable;
 
 struct AstExpr {
     AstExprType type;
-    DataType data_type; // Undefined value unless sema_checked is true!
-    bool sema_checked;
     union {
         AstBinaryOp *binary_op;
         AstUnaryOp *unary_op;
@@ -133,6 +179,12 @@ struct AstExpr {
         AstLiteral *literal;
         AstVariable *variable;
     };
+
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
+
+    // position of the first token of the expression
+    FilePos pos;
 };
 
 typedef enum {
@@ -147,8 +199,6 @@ typedef enum {
 
 struct AstStmt {
     AstStmtType type;
-    DataType data_type; // Undefined value unless sema_checked is true!
-    bool sema_checked;
     union {
         AstExpr *expr;
         AstBlock *block;
@@ -158,67 +208,73 @@ struct AstStmt {
         AstIf *if_v;
         AstWhile *while_v;
     };
+
+    DataType data_type; // Undefined value unless sema_checked is true!
+    bool sema_checked;
+
+    // position of the first token of the statement
+    FilePos pos;
 };
 
-AstBlock *ast_block(Vec stmts);
+AstBlock *ast_block(FilePos pos, Vec stmts);
 
-AstBinaryOp *ast_binary_op(Token operator, AstExpr *left, AstExpr *right);
+AstBinaryOp *ast_binary_op(FilePos pos, Token operator, AstExpr *left, AstExpr *right);
 
-AstUnaryOp *ast_unary_op(Token operator, AstExpr *param);
+AstUnaryOp *ast_unary_op(FilePos pos, Token operator, AstExpr *param);
 
-AstFuncCallParam *ast_func_call_var_param(SymItem *ident, String name);
+AstFuncCallParam *ast_func_call_var_param(FilePos pos, SymItem *ident, String name);
 
-AstFuncCallParam *ast_func_call_lit_param(AstLiteral literal, String name);
+AstFuncCallParam *ast_func_call_lit_param(FilePos pos, AstLiteral literal, String name);
 
-AstFunctionCall *ast_function_call(SymItem *ident, Vec parameters);
+AstFunctionCall *ast_function_call(FilePos pos, SymItem *ident, Vec parameters);
 
-AstFunctionDecl *ast_function_decl(SymItem *ident, Vec parameters, AstBlock *body);
+AstFunctionDecl *ast_function_decl(FilePos pos, SymItem *ident, Vec parameters, AstBlock *body);
 
-AstReturn *ast_return(AstExpr *expr);
+AstReturn *ast_return(FilePos pos, AstExpr *expr);
 
 AstCondition *ast_expr_condition(AstExpr *expr);
 
-AstCondition *ast_let_condition(SymItem *let);
+AstCondition *ast_let_condition(FilePos pos, SymItem *let);
 
-AstIf *ast_if(AstCondition *condition, AstBlock *if_body, AstBlock *else_body);
+AstIf *ast_if(FilePos pos, AstCondition *condition, AstBlock *if_body, AstBlock *else_body);
 
-AstWhile *ast_while(AstCondition *condition, AstBlock *body);
+AstWhile *ast_while(FilePos pos, AstCondition *condition, AstBlock *body);
 
-AstLiteral *ast_int_literal(int value);
+AstLiteral *ast_int_literal(FilePos pos, int value);
 
-AstLiteral *ast_double_literal(double value);
+AstLiteral *ast_double_literal(FilePos pos, double value);
 
-AstLiteral *ast_string_literal(String value);
+AstLiteral *ast_string_literal(FilePos pos, String value);
 
-AstLiteral *ast_nil_literal();
+AstLiteral *ast_nil_literal(FilePos pos);
 
-AstVariable *ast_variable(SymItem *ident);
+AstVariable *ast_variable(FilePos pos, SymItem *ident);
 
-AstVariableDecl *ast_variable_decl(SymItem *ident, AstExpr *value);
+AstVariableDecl *ast_variable_decl(FilePos pos, SymItem *ident, AstExpr *value);
 
-AstExpr *ast_binary_op_expr(AstBinaryOp *value);
+AstExpr *ast_binary_op_expr(FilePos pos, AstBinaryOp *value);
 
-AstExpr *ast_unary_op_expr(AstUnaryOp *value);
+AstExpr *ast_unary_op_expr(FilePos pos, AstUnaryOp *value);
 
-AstExpr *ast_function_call_expr(AstFunctionCall *value);
+AstExpr *ast_function_call_expr(FilePos pos, AstFunctionCall *value);
 
-AstExpr *ast_literal_expr(AstLiteral *value);
+AstExpr *ast_literal_expr(FilePos pos, AstLiteral *value);
 
-AstExpr *ast_variable_expr(AstVariable *value);
+AstExpr *ast_variable_expr(FilePos pos, AstVariable *value);
 
 AstStmt *ast_expr_stmt(AstExpr *value);
 
-AstStmt *ast_block_stmt(AstBlock *value);
+AstStmt *ast_block_stmt(FilePos pos, AstBlock *value);
 
-AstStmt *ast_function_decl_stmt(AstFunctionDecl *value);
+AstStmt *ast_function_decl_stmt(FilePos pos, AstFunctionDecl *value);
 
-AstStmt *ast_variable_decl_stmt(AstVariableDecl *value);
+AstStmt *ast_variable_decl_stmt(FilePos pos, AstVariableDecl *value);
 
-AstStmt *ast_return_stmt(AstReturn *value);
+AstStmt *ast_return_stmt(FilePos pos, AstReturn *value);
 
-AstStmt *ast_if_stmt(AstIf *value);
+AstStmt *ast_if_stmt(FilePos pos, AstIf *value);
 
-AstStmt *ast_while_stmt(AstWhile *value);
+AstStmt *ast_while_stmt(FilePos pos, AstWhile *value);
 
 void ast_free_block(AstBlock **value);
 

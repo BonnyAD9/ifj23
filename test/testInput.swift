@@ -1,3 +1,5 @@
+let a: Int? = nil
+
 let a=a??0
 
 5*(5+i)

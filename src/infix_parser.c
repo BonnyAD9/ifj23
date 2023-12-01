@@ -32,6 +32,7 @@ enum FoldResult {
 
 struct StackItem {
     enum StackItemType type;
+    FilePos pos;
     union {
         FullToken term;
         AstExpr *nterm;
@@ -360,6 +361,7 @@ static bool es_shift(struct ExpansionStack *stack, Parser *par) {
 static bool es_push(struct ExpansionStack *stack, Parser *par) {
     struct StackItem item = {
         .type = SI_TERM,
+        .pos = par->lex->token_start,
         .term = {
             .type = par->cur,
             .subtype = par->lex->subtype,
@@ -460,16 +462,16 @@ static enum FoldResult es_fold_value(struct ExpansionStack *stack) {
     }
 
     AstExpr *res = NULL;
+    vec_pop_range(&stack->stack, 2);
 
     res = s1.term.type == T_IDENT
-        ? sem_variable(s1.term.ident)
-        : sem_literal(s1.term);
+        ? sem_variable(s1.pos, s1.term.ident)
+        : sem_literal(s1.pos, s1.term);
 
     if (!res) {
         return MATCH_ERR;
     }
 
-    vec_pop_range(&stack->stack, 2);
     VEC_PUSH(&stack->stack, struct StackItem, ((struct StackItem) {
         .type = SI_NTERM,
         .nterm = res,
@@ -521,13 +523,14 @@ static enum FoldResult es_fold_call(struct ExpansionStack *stack) {
         return NO_MATCH;
     }
 
-    AstExpr *res = sem_call(s1.nterm, s2.call_params);
+    vec_pop_range(&stack->stack, 3);
+
+    AstExpr *res = sem_call(s2.pos, s1.nterm, s2.call_params);
 
     if (!res) {
         return MATCH_ERR;
     }
 
-    vec_pop_range(&stack->stack, 3);
     VEC_PUSH(&stack->stack, struct StackItem, ((struct StackItem) {
         .type = SI_NTERM,
         .nterm = res,
@@ -555,13 +558,14 @@ static enum FoldResult es_fold_binary(struct ExpansionStack *stack) {
         return NO_MATCH;
     }
 
-    AstExpr *res = sem_binary(s1.nterm, s2.term.type, s3.nterm);
+    vec_pop_range(&stack->stack, 4);
+
+    AstExpr *res = sem_binary(s2.pos, s1.nterm, s2.term.type, s3.nterm);
 
     if (!res) {
         return MATCH_ERR;
     }
 
-    vec_pop_range(&stack->stack, 4);
     VEC_PUSH(&stack->stack, struct StackItem, ((struct StackItem) {
         .type = SI_NTERM,
         .nterm = res,
@@ -586,13 +590,14 @@ static enum FoldResult es_fold_prefix(struct ExpansionStack *stack) {
         return NO_MATCH;
     }
 
-    AstExpr *res = sem_unary(s2.nterm, s1.term.type);
+    vec_pop_range(&stack->stack, 3);
+
+    AstExpr *res = sem_unary(s1.pos, s2.nterm, s1.term.type);
 
     if (!res) {
         return MATCH_ERR;
     }
 
-    vec_pop_range(&stack->stack, 3);
     VEC_PUSH(&stack->stack, struct StackItem, ((struct StackItem) {
         .type = SI_NTERM,
         .nterm = res,
@@ -617,13 +622,14 @@ static enum FoldResult es_fold_postfix(struct ExpansionStack *stack) {
         return NO_MATCH;
     }
 
-    AstExpr *res = sem_unary(s1.nterm, s2.term.type);
+    vec_pop_range(&stack->stack, 3);
+
+    AstExpr *res = sem_unary(s2.pos, s1.nterm, s2.term.type);
 
     if (!res) {
         return MATCH_ERR;
     }
 
-    vec_pop_range(&stack->stack, 3);
     VEC_PUSH(&stack->stack, struct StackItem, ((struct StackItem) {
         .type = SI_NTERM,
         .nterm = res,
