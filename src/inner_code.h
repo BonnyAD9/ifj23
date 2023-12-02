@@ -84,18 +84,37 @@ typedef struct {
 typedef struct {
     // NULL to push to stack
     SymItem *dst;
-    InstSymb *first;
-    InstSymb *second;
+    InstSymb first;
+    InstSymb second;
 } InstBinary;
 
 typedef struct {
     // NULL to push to stack
     SymItem *dst;
-    InstSymb *par;
-} InstUnary;
+    SymItem *src;
+} InstIfNil;
 
 typedef struct {
-    InstSymb *value;
+    InstSymb value;
+} InstExit;
+
+typedef struct {
+    SymItem *ident;
+} InstLabel;
+
+typedef struct {
+    SymItem *label;
+    InstSymb first;
+    InstSymb second;
+} InstJmpBin;
+
+typedef struct {
+    SymItem *label;
+    SymItem *src;
+} InstJmpNil;
+
+typedef struct {
+    InstSymb value;
 } InstExit;
 
 typedef struct {
@@ -107,7 +126,12 @@ typedef struct {
         InstReturn return_v; // IT_RETURN
         InstBinary binary;   // IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ
                              // IT_LTE, IT_GTE
-        InstUnary unary;     // IT_ISNIL, IT_NOTNIL
+        InstIfNil unary;     // IT_ISNIL, IT_NOTNIL
+        InstExit exit;       // IT_EXIT
+        InstLabel label;     // IT_LABEL, IT_JMP, IT_JIF
+        InstJmpBin jmp_bin;  // IT_JEQ, IT_JNEQ, IT_JGT, IT_JLT, IT_JLTE,
+                             // IT_JGTE
+        InstJmpNil jmp_nil;  // IT_JISNIL, IT_JNONIL
         InstExit exit;       // IT_EXIT
     };
 } Instruction;
