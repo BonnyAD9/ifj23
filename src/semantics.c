@@ -758,11 +758,9 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
 }
 
 /////////////////////////////////////////////////////////////////////////
+
 AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
     var_pos = pos;
-    if (!sem_process_variable(ident))
-        // Error already set in sem_process_variable()
-        return NULL;
 
     AstStmt *var_decl = ast_variable_decl_stmt(
         pos,
