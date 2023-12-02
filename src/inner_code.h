@@ -4,7 +4,23 @@
 #include "symtable.h"
 #include "ast.h"
 
-#define INST_NONE_SYMB ((InstOptSymb) { .has_value = false })
+#define INST_NONE_IDENT ((InstOptIdent) { .has_value = false })
+#define INST_STACK_IDENT ((InstOptIdent) { \
+    .has_value = true, \
+    .ident = NULL, \
+})
+#define INST_IDENT(id) ((InstOptIdent) { \
+    .has_value = true, \
+    .ident = (id), \
+})
+#define INST_SYMB_ID(id) ((InstSymb) { \
+    .type = IS_IDENT, \
+    .ident = (id), \
+})
+#define INST_SYMB_LIT(lit) ((InstSymb) { \
+    .type = IS_LITERAL, \
+    .literal = lit, \
+})
 
 typedef enum {
     IT_MOVE,   // move, pops, pushs
@@ -14,6 +30,7 @@ typedef enum {
                // str2ints, read, write, strlen, getchar, setchar, pops
                // pushs
     IT_RETURN, // return, popframe, createframe, pushs
+    IT_SUB,    // sub, subs
     IT_ADD,    // add, adds, concat
     IT_MUL,    // mul, muls
     IT_DIV,    // div, idiv, divs, idivs
@@ -23,6 +40,7 @@ typedef enum {
     IT_ISNIL,  // type, eq
     IT_LTE,    // lt, lts, eq, eqs
     IT_GTE,    // gt, gts, eq, eqs
+    IT_NEQ,    // eq, eqs, pushs
     IT_NOTNIL, // eq, type
     IT_LABEL,  // label
     IT_JUMP,   // jump
@@ -66,6 +84,11 @@ typedef struct {
     InstSymb value;
 } InstOptSymb;
 
+typedef struct {
+    bool has_value;
+    SymItem *ident;
+} InstOptIdent;
+
 // IT_MOVE
 typedef struct {
     // NULL to push to stack
@@ -92,7 +115,7 @@ typedef struct {
     InstOptSymb value;
 } InstReturn;
 
-// IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ, IT_LTE, IT_GTE
+// IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ, IT_LTE, IT_GTE, IT_SUB, IT_NEQ
 typedef struct {
     // NULL to push to stack
     SymItem *dst;
@@ -138,9 +161,9 @@ typedef struct {
         InstCall call;       // IT_CALL
         InstReturn return_v; // IT_RETURN
         InstBinary binary;   // IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ
-                             // IT_LTE, IT_GTE
+                             // IT_LTE, IT_GTE, IT_SUB, IT_NEQ
         InstIfNil if_nil;    // IT_ISNIL, IT_NOTNIL
-        InstLabel label;     // IT_LABEL, IT_JMP, IT_JIF
+        InstLabel label;     // IT_LABEL, IT_JUMP, IT_JIF
         InstJmpBin jmp_bin;  // IT_JEQ, IT_JNEQ, IT_JGT, IT_JLT, IT_JLTE,
                              // IT_JGTE
         InstJmpNil jmp_nil;  // IT_JISNIL, IT_JNONIL

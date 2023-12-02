@@ -1,5 +1,7 @@
 #include "inner_code.h"
 
+#include "assert.h"
+
 void todo_sym_gen_unique_names(Symtable *sym);
 SymItem *todo_sym_tmp_var(Symtable *sym, DataType type);
 SymItem *todo_sym_label(Symtable *sym);
@@ -12,25 +14,25 @@ static bool ic_gen_block(Symtable *sym, AstBlock *block, Vec *code);
 static bool ic_gen_binary(
     Symtable *sym,
     AstBinaryOp *op,
-    InstOptSymb value,
+    InstOptIdent dst,
     Vec *code
 );
 static bool ic_gen_unary(
     Symtable *sym,
-    AstBinaryOp *op,
-    InstOptSymb value,
+    AstUnaryOp *op,
+    InstOptIdent dst,
     Vec *code
 );
 static bool ic_gen_literal(
     Symtable *sym,
     AstLiteral *op,
-    InstOptSymb value,
+    InstOptIdent dst,
     Vec *code
 );
 static bool ic_gen_call(
     Symtable *sym,
     AstFunctionCall *call,
-    InstOptSymb value,
+    InstOptIdent dst,
     Vec *code
 );
 static bool ic_gen_return(
@@ -42,7 +44,7 @@ static bool ic_gen_var_decl(Symtable *sym, AstVariableDecl *decl, Vec *code);
 static bool ic_gen_condition(
     Symtable *sym,
     AstCondition *cond,
-    InstOptSymb value,
+    InstOptIdent dst,
     Vec *code
 );
 static bool ic_gen_if(Symtable *sym, AstIf *if_v, Vec *code);
@@ -50,13 +52,13 @@ static bool ic_gen_while(Symtable *sym, AstWhile *while_v, Vec *code);
 static bool ic_gen_variable(
     Symtable *sym,
     AstVariable *var,
-    InstOptSymb value,
+    InstOptIdent dst,
     Vec *code
 );
 static bool ic_gen_expr(
     Symtable *sym,
     AstExpr *expr,
-    InstOptSymb value,
+    InstOptIdent dst,
     Vec *code
 );
 static bool ic_gen_stmt(Symtable *sym, AstStmt *stmt, Vec *code);
@@ -173,12 +175,211 @@ static bool ic_gen_block(Symtable *sym, AstBlock *block, Vec *code) {
     }
 }
 
-static bool ic_gen_binary(Symtable *sym, AstBinaryOp *op, InstOptSymb value, Vec *code) {
-    if (!value.has_value && op->operator != T_DOUBLE_QUES) {
-        ic_gen_expr(sym, op->left, INST_NONE_SYMB, code);
-        ic_gen_expr(sym, op->right, INST_NONE_SYMB, code);
-        return;
+static bool ic_gen_binary(
+    Symtable *sym,
+    AstBinaryOp *op,
+    InstOptIdent dst,
+    Vec *code
+) {
+    Instruction inst;
+
+    if (op->operator == T_DOUBLE_QUES) {
+        //   DECL tmp
+        //   MOVE tmp, eval(op->left)
+        //   JISNIL tmp, l_nil
+        //   MOVE dst, tmp
+        //   JUMP l_end
+        // l_nil:
+        //   MOVE dst, eval(op->right)
+        // l_end:
+
+        // DECL tmp
+        SymItem *tmp = todo_sym_tmp_var(sym, op->left->data_type);
+        if (!tmp) {
+            return false;
+        }
+        inst = (Instruction) {
+            .type = IT_DECL,
+            .decl = { .var = tmp }
+        };
+        if (!vec_push(code, &inst)) {
+            return false;
+        }
+
+        // MOVE tmp, eval(op->left)
+        if (!ic_gen_expr(sym, op->left, INST_IDENT(tmp), code)) {
+            return false;
+        }
+
+        SymItem *l_nil = todo_sym_label(sym);
+        if (!l_nil) {
+            return false;
+        }
+
+        SymItem *l_end = todo_sym_label(sym);
+        if (!l_end) {
+            return false;
+        }
+
+        Instruction insts[] = {
+            { // JISNIL tmp, l_nil
+                .type = IT_JISNIL,
+                .jmp_nil = { .label = l_nil, .src = tmp }
+            },
+            { // MOVE dst, tmp
+                .type = IT_MOVE,
+                .move = { .dst = dst.ident, .src = INST_SYMB_ID(tmp) }
+            },
+            { // JUMP l_end
+                .type = IT_JUMP,
+                .label = { .ident = l_end }
+            },
+            { // l_nil:
+                .type = IT_LABEL,
+                .label = { .ident = l_nil }
+            }
+        };
+
+        if (!vec_push_span(code, SPAN_ARR(insts))) {
+            return false;
+        }
+
+        // MOVE dst, eval(op->right)
+        if (!ic_gen_expr(sym, op->right, dst, code)) {
+            return false;
+        }
+
+        // l_end:
+        inst = (Instruction) {
+            .type = IT_LABEL,
+            .label = {
+                .ident = l_end,
+            },
+        };
+        return vec_push(code, &inst);
     }
 
+    if (op->operator == '=') {
+        // MOVE op->left->variable->ident, eval(op->right)
+        return ic_gen_expr(
+            sym,
+            op->right,
+            INST_IDENT(op->left->variable->ident),
+            code
+        );
+    }
 
+    if (!dst.has_value) {
+        // eval(op->left)
+        // eval(op->right)
+        return ic_gen_expr(sym, op->left, INST_NONE_IDENT, code)
+            && ic_gen_expr(sym, op->right, INST_NONE_IDENT, code);
+    }
+
+    // PUSH eval(op->left)
+    // PUSH eval(op->right)
+    // OP top1(stack), top(stack)
+
+    // PUSH eval(op->left)
+    if (!ic_gen_expr(sym, op->left, INST_IDENT(NULL), code)) {
+        return false;
+    }
+
+    // PUSH eval(op->right)
+    if (!ic_gen_expr(sym, op->right, INST_IDENT(NULL), code)) {
+        return false;
+    }
+
+    // OP dst, top1(stack), top(stack)
+    inst = (Instruction) {
+        .binary = {
+            .dst = dst.ident,
+            .first = NULL,
+            .second = NULL,
+        },
+    };
+    switch ((int)op->operator) {
+    case '+':
+        inst.type = IT_ADD;
+        break;
+    case '-':
+        inst.type = IT_SUB;
+        break;
+    case '*':
+        inst.type = IT_MUL;
+        break;
+    case '/':
+        inst.type = IT_DIV;
+        break;
+    case '<':
+        inst.type = IT_LT;
+        break;
+    case '>':
+        inst.type = IT_GT;
+        break;
+    case T_EQUALS:
+        inst.type = IT_EQ;
+        break;
+    case T_DIFFERS:
+        inst.type = IT_NEQ;
+        break;
+    case T_LESS_OR_EQUAL:
+        inst.type = IT_LTE;
+        break;
+    case T_GREATER_OR_EQUAL:
+        inst.type = IT_GTE;
+        break;
+    default:
+        // if this happens, it is bug
+        assert(false);
+        return false;
+    }
+    return vec_push(code, &inst);
+}
+
+static bool ic_gen_unary(
+    Symtable *sym,
+    AstUnaryOp *op,
+    InstOptIdent dst,
+    Vec *code
+) {
+    if (op == '!' || op == '+' || !dst.has_value) {
+        // MOVE dst, eval(op->param)
+        return ic_gen_expr(sym, op->param, dst, code);
+    }
+
+    // PUSH 0
+    // PUSH eval(op->param)
+    // SUB top1(stack), top(stack)
+
+    assert(op == '-');
+
+    // PUSH 0
+    InstLiteral zero = { .type = DT_INT, .int_v = 0 };
+    if (op->param->data_type == DT_DOUBLE) {
+        zero = (InstLiteral) { .type = DT_DOUBLE, .double_v = 0 };
+    }
+    Instruction inst = {
+        .type = IT_MOVE,
+        .move = { .dst = NULL, .src = INST_SYMB_LIT(zero) },
+    };
+    if (!vec_push(sym, &inst)) {
+        return false;
+    }
+
+    // PUSH eval(op->param)
+    if (!ic_gen_expr(sym, op->param, INST_STACK_IDENT, code)) {
+        return false;
+    }
+
+    // SUB dst, top1(stack), top(stack)
+    inst = (Instruction) {
+        .type = IT_SUB,
+        .binary = {
+            .dst = dst.ident,
+            .first = INST_SYMB_ID(NULL),
+            .second = INST_SYMB_ID(NULL),
+        },
+    };
+    return vec_push(code, &inst);
 }
