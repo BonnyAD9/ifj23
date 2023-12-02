@@ -444,6 +444,7 @@ AstExpr *sem_variable(FilePos pos, SymItem *ident) {
         pos,
         ast_variable(pos, ident)
     );
+
     if (!var_expr) {
         return NULL;
     }
@@ -1067,12 +1068,9 @@ static bool sem_process_while(AstWhile *while_v) {
 /////////////////////////////////////////////////////////////////////////
 
 bool sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res) {
-    // Check for correct param type (not VOID, NIL ...)
-    if (type != DT_VOID && type != DT_ANY && type != DT_ANY_NIL && type != DT_NONE) {
-        *res = sym_func_param_new(ident, label);
-        return true;
-    }
-    return false;
+    ident->var.data_type = type;
+    *res = sym_func_param_new(ident, label);
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////////////
