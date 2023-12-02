@@ -86,7 +86,7 @@ void tree_remove(Tree *tree, const String key);
 Vec *tree_find(Tree *tree, const String key);
 
 /// Frees the tree - owner's responsibility!
-void tree_free(Tree *tree);
+void tree_free(Tree **tree);
 
 void tree_visualise(Tree *tree);
 

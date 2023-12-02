@@ -25,7 +25,7 @@ Parser parser_new(Lexer *lex, Symtable *table) {
 
 static void *parse_error(Parser *par, int err_type, char *msg) {
     printf(
-        DEBUG_FILE ":%zu:%zu: error: %s",
+        DEBUG_FILE ":%zu:%zu: error: %s\n",
         par->lex->token_start.line,
         par->lex->token_start.column,
         msg
@@ -321,6 +321,7 @@ static bool parse_type(Parser *par, DataType *res) {
     tok_next(par);
     if (par->cur == '?') {
         *res |= DT_NIL;
+        tok_next(par);
     }
 
     return true;
@@ -352,8 +353,9 @@ static AstStmt *parse_func(Parser *par) {
 
     Vec params = VEC_NEW(FuncParam);
     sym_scope_add(par->table);
+    tok_next(par);
 
-    while (tok_next(par) != ')') {
+    while (par->cur != ')') {
         FuncParam param;
         if (!parse_func_decl_param(par, &param)) {
             sym_scope_pop(par->table);

@@ -116,16 +116,20 @@ static Token read_ident(Lexer *lex) {
     // Store token data
     lex->str = sb_get(&lex->buffer);
 
-    if (str_eq(lex->str, STR("Double")))
+    if (str_eq(lex->str, STR("Double"))) {
+        lex->subtype = DT_DOUBLE;
         return T_TYPE;
+    }
     else if (str_eq(lex->str, STR("else")))
         return T_ELSE;
     else if (str_eq(lex->str, STR("func")))
         return T_FUNC;
     else if (str_eq(lex->str, STR("if")))
         return T_IF;
-    else if (str_eq(lex->str, STR("Int")))
+    else if (str_eq(lex->str, STR("Int"))) {
+        lex->subtype = DT_INT;
         return T_TYPE;
+    }
     else if (str_eq(lex->str, STR("let"))) {
         lex->subtype = TD_LET;
         return T_DECL;
@@ -140,8 +144,10 @@ static Token read_ident(Lexer *lex) {
     }
     else if (str_eq(lex->str, STR("return")))
         return T_RETURN;
-    else if (str_eq(lex->str, STR("String")))
+    else if (str_eq(lex->str, STR("String"))) {
+        lex->subtype = DT_STRING;
         return T_TYPE;
+    }
     else if (str_eq(lex->str, STR("var")))
         return T_DECL;
     else if (str_eq(lex->str, STR("while")))
