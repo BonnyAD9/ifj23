@@ -278,8 +278,10 @@ SymItem *calle_ident(AstExpr *expr) {
 
 AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
     SymItem* ident = calle_ident(calle);
-    if (!ident)
+    if (!ident) {
+        vec_free_with(&params, (FreeFun)ast_free_func_call_param);
         return NULL;
+    }
 
     AstExpr *func_call_expr = ast_function_call_expr(
         ident->file_pos,
@@ -336,7 +338,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
             ERR_SEMANTIC
         );
     }
-
+    // i func decl jsou to vektory FuncParam u func call jsou to FuncCallParam, udelat of pro jednu a druhou verzi
     /*
         func decrement(of n: Int, by m: Int) -> Int { [params]
             return n - m
@@ -347,7 +349,6 @@ static bool check_func_params(SymItem *ident, Vec args) {
         FuncParam param = VEC_AT(params, FuncParam, arg.i);
         DataType param_data_type, arg_data_type;
 
-        var_pos = arg.v->pos;
         // Load also param data type
         if (!sem_process_variable(param.ident))
             return false;
