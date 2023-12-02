@@ -132,6 +132,20 @@ bool vec_insert(Vec *vec, size_t index, void *item) {
     return true;
 }
 
+void vec_remove(Vec *vec, size_t index) {
+    if (index == vec->len - 1) {
+        vec_pop(vec);
+        return;
+    }
+
+    memmove(
+        vec_at(vec, index),
+        vec_at(vec, index + 1),
+        (vec->len - index - 1) * vec->item_size
+    );
+    --vec->len;
+}
+
 Span span_new(void *data, size_t item_size, size_t len) {
     return (Span) {
         .items = data,

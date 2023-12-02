@@ -2,6 +2,9 @@
 #define INNER_CODE_H_INCLUDED
 
 #include "symtable.h"
+#include "ast.h"
+
+#define INST_NONE_SYMB ((InstOptSymb) { .has_value = false })
 
 typedef enum {
     IT_MOVE,   // move, pops, pushs
@@ -59,15 +62,23 @@ typedef struct {
 } InstSymb;
 
 typedef struct {
+    bool has_value;
+    InstSymb value;
+} InstOptSymb;
+
+// IT_MOVE
+typedef struct {
     // NULL to push to stack
     SymItem *dst;
     InstSymb src;
 } InstMove;
 
+// IT_DECL
 typedef struct {
     SymItem *var;
 } InstDecl;
 
+// IT_CALL
 typedef struct {
     SymItem *dst;
     SymItem *ident;
@@ -75,12 +86,13 @@ typedef struct {
     Vec params;
 } InstCall;
 
+// IT_RETURN
 typedef struct {
     size_t pop_count;
-    bool has_value;
-    InstSymb value;
+    InstOptSymb value;
 } InstReturn;
 
+// IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ, IT_LTE, IT_GTE
 typedef struct {
     // NULL to push to stack
     SymItem *dst;
@@ -88,31 +100,32 @@ typedef struct {
     InstSymb second;
 } InstBinary;
 
+// IT_ISNIL, IT_NOTNIL
 typedef struct {
     // NULL to push to stack
     SymItem *dst;
     SymItem *src;
 } InstIfNil;
 
-typedef struct {
-    InstSymb value;
-} InstExit;
-
+// IT_LABEL, IT_JMP, IT_JIF
 typedef struct {
     SymItem *ident;
 } InstLabel;
 
+// IT_JEQ, IT_JNEQ, IT_JGT, IT_JLT, IT_JLTE, IT_JGTE
 typedef struct {
     SymItem *label;
     InstSymb first;
     InstSymb second;
 } InstJmpBin;
 
+// IT_JISNIL, IT_JNONIL
 typedef struct {
     SymItem *label;
     SymItem *src;
 } InstJmpNil;
 
+// IT_EXIT
 typedef struct {
     InstSymb value;
 } InstExit;
@@ -126,8 +139,7 @@ typedef struct {
         InstReturn return_v; // IT_RETURN
         InstBinary binary;   // IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ
                              // IT_LTE, IT_GTE
-        InstIfNil unary;     // IT_ISNIL, IT_NOTNIL
-        InstExit exit;       // IT_EXIT
+        InstIfNil if_nil;    // IT_ISNIL, IT_NOTNIL
         InstLabel label;     // IT_LABEL, IT_JMP, IT_JIF
         InstJmpBin jmp_bin;  // IT_JEQ, IT_JNEQ, IT_JGT, IT_JLT, IT_JLTE,
                              // IT_JGTE
@@ -149,5 +161,10 @@ typedef struct {
     Vec code;
 } InnerCode;
 
+bool ic_inner_code(Symtable *table, AstBlock *block, InnerCode *res);
+void ic_free_func_code(FunctionCode *code);
+void ic_free_instruction(Instruction *inst);
+void ic_free_symb(InstSymb *symb);
+void ic_free_opt_symb(InstOptSymb *symb);
 
 #endif // INNER_CODE_H_INCLUDED
