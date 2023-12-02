@@ -646,7 +646,7 @@ static bool es_call(struct ExpansionStack *stack, Parser *par) {
     VEC_INSERT(
         &stack->stack,
         struct StackItem,
-        stack->stack.len - 2,
+        stack->stack.len - 1,
         ((struct StackItem) {
             .type = SI_STOP,
         })
@@ -658,10 +658,9 @@ static bool es_call(struct ExpansionStack *stack, Parser *par) {
         return false;
     }
 
-    VEC_INSERT(
+    VEC_PUSH(
         &stack->stack,
         struct StackItem,
-        stack->stack.len - 2,
         ((struct StackItem) {
             .type = SI_CALL_PARAMS,
             .call_params = params,
