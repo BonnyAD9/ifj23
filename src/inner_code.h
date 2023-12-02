@@ -21,6 +21,17 @@ typedef enum {
     IT_LTE,    // lt, lts, eq, eqs
     IT_GTE,    // gt, gts, eq, eqs
     IT_NOTNIL, // eq, type
+    IT_LABEL,  // label
+    IT_JUMP,   // jump
+    IT_JIF,    // jumpifeq, jumpifeqs
+    IT_JEQ,    // jumpifeq, jumpifeqs
+    IT_JNEQ,   // jumpifneq, jumpifneqs
+    IT_JLT,    // jumpifeq, jumpifeqs, lt, lts
+    IT_JGT,    // jumpifeq, jumpifeqs, gt, gts
+    IT_JISNIL, // jumpifeq, jumpifeqs, type, pops
+    IT_JLTE,   // jumpifneq, jumpifneqs, gt
+    IT_JGTE,   // jumpifneq, jumpifneqs, lt
+    IT_JNONIL, // jumpifneq, jumpifneqs, type, pushs
     IT_EXIT,   // exit, pops
 } InstType;
 
@@ -100,5 +111,19 @@ typedef struct {
         InstExit exit;       // IT_EXIT
     };
 } Instruction;
+
+typedef struct {
+    SymItem *ident;
+    // type: Instruction
+    Vec code;
+} FunctionCode;
+
+typedef struct {
+    // type: FunctionCode
+    Vec functions;
+    // type: Instruction
+    Vec code;
+} InnerCode;
+
 
 #endif // INNER_CODE_H_INCLUDED
