@@ -298,7 +298,7 @@ static AstStmt *parse_decl(Parser *par) {
         if (!parse_type(par, &type)) {
             return NULL;
         }
-        tok_next(par);
+        //tok_next(par);
     }
 
     sym_item_var(ident, sym_var_new(type, mutable));
