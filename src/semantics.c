@@ -168,7 +168,7 @@ static bool process_expr(AstExpr *expr) {
             return ret_val;
         case AST_FUNCTION_CALL:
             ret_val = sem_process_call(expr->function_call);
-            expr->data_type = expr->function_call->data_type;
+            expr->data_type = expr->function_call->ident->func.return_type;
             expr->sema_checked = expr->function_call->sema_checked;
             return ret_val;
         case AST_LITERAL:
@@ -179,7 +179,7 @@ static bool process_expr(AstExpr *expr) {
         case AST_VARIABLE:
             ret_val = sem_process_variable(expr->variable->ident);
             expr->data_type = expr->variable->ident->var.data_type;
-            expr->sema_checked = expr->variable->sema_checked = true;
+            expr->sema_checked = expr->variable->sema_checked = sem_top_level;
             return ret_val;
         default:
             return sema_err(expr->pos, "Uknown expression type", ERR_SEMANTIC);
@@ -187,6 +187,7 @@ static bool process_expr(AstExpr *expr) {
 }
 
 /////////////////////////////////////////////////////////////////////////
+
 AstExpr *sem_binary(FilePos pos, AstExpr *left, Token op, AstExpr *right) {
     AstExpr *binary_expr = ast_binary_op_expr(
         left->pos,
@@ -223,6 +224,10 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
         // Error is already set by lower instancies
         return false;
 
+    // In case of right expression being func_call before func_decl, leave this unchecked for main body
+    if (binary_op->right->type == AST_FUNCTION_CALL && !sem_top_level)
+        return true;
+
     if (check_compatibility(binary_op))
         return true;
     return false;
@@ -248,6 +253,10 @@ static bool sem_process_unary(AstUnaryOp *unary_op) {
         return true;
 
     bool eval_expr = process_expr(unary_op->param);
+
+    if (!unary_op->param->sema_checked)
+        return true;
+
     // Check for non-translateable options
     if (unary_op->param->data_type == DT_NONE || !eval_expr) {
         return sema_err(
@@ -281,6 +290,7 @@ SymItem *calle_ident(AstExpr *expr) {
 AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
     SymItem* ident = calle_ident(calle);
     ast_free_expr(&calle);
+
     if (!ident) {
         // Error already set in calle_ident()
         vec_free_with(&params, (FreeFun)ast_free_func_call_param);
@@ -353,6 +363,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
     VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
         param = VEC_AT(params, FuncParam, arg.i);
         var_pos = arg.v->pos;
+
         // Load also param data type
         if (!sem_process_variable(param.ident))
             return false;
@@ -442,9 +453,9 @@ static bool sem_process_literal(AstLiteral *literal) {
 /////////////////////////////////////////////////////////////////////////
 
 static bool use_before_decl(FilePos decl, FilePos usage) {
-    if ((usage.column + usage.line) < (decl.column + decl.line))
-        return false;
-    return true;
+    if (((usage.line) < (decl.line)) || (decl.column == decl.line && decl.line == 0))
+        return true;
+    return false;
 }
 
 AstExpr *sem_variable(FilePos pos, SymItem *ident) {
@@ -452,8 +463,6 @@ AstExpr *sem_variable(FilePos pos, SymItem *ident) {
         pos,
         ast_variable(pos, ident)
     );
-
-    var_pos = pos;
 
     if (!var_expr) {
         return NULL;
@@ -470,7 +479,8 @@ static bool sem_process_variable(SymItem *ident) {
     // Keep declaration check for main body
     if (!sem_top_level)
         return true;
-    if (!ident->declared) {
+
+    if (!ident->declared || use_before_decl(ident->file_pos, var_pos)) {
         return sema_err(
             var_pos,
             "Undeclared variable",
@@ -519,7 +529,7 @@ static void check_in_array(unsigned int arr_sel, const char **err_msg, const cha
 
     // Check for unexpected type provided
     if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
-        *err_msg = "Cant find data type";
+        *err_msg = "Cant find data type - probably undefined";
     else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)]) {
         // If an error occured, check for any literal involved and try it agin with to-DOUBLE casting
         if (left_expr_type == AST_LITERAL && (left_type == DT_INT || left_type == DT_INT_NIL)) {
@@ -593,10 +603,14 @@ static bool check_compatibility(AstBinaryOp *binary_op) {
             break;
     }
 
-    // If set, output error along with error message
-    if (err_msg)
-        return sema_err(binary_op->pos, err_msg, ERR_INCOM_TYPE);
     binary_op->sema_checked = binary_op->left->sema_checked && binary_op->right->sema_checked;
+
+    if (err_msg) {
+        if (!sem_top_level)
+            return true;
+        // If set, output error along with error message
+        return sema_err(binary_op->pos, err_msg, ERR_INCOM_TYPE);
+    }
 
     return true;
 }
@@ -611,11 +625,12 @@ AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level) {
         bool block_valid;
         set_block_checked(block, &block_valid);
         if (!block_valid) {
-            ret_val = sema_err(
+            WPRINTF("Unexpected sema_checked value after top_level true block");
+            /*ret_val = sema_err(
                 pos,
                 "Unexpected sema_checked value after top_level true block",
                 ERR_SEMANTIC
-            );
+            );*/
         }
     }
     if (ret_val)
@@ -628,9 +643,11 @@ AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level) {
 static bool sem_process_block(Vec stmts, bool top_level) {
     VEC_FOR_EACH(&(stmts), AstStmt*, stmt) {
         bool stmt_valid = sem_process_stmt((*stmt.v), top_level);
-        if (!stmt_valid)
+        if (!stmt_valid) {
+            (*stmt.v)->sema_checked = true;
             // Error already set in sem_process_stmt()
             return false;
+        }
     }
     return true;
 }
@@ -644,6 +661,7 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
         return true;
 
     sem_top_level = top_level;
+    var_pos = stmt->pos;
     bool ret_val;
 
     switch (stmt->type) {
@@ -774,6 +792,8 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
 }
 
 /////////////////////////////////////////////////////////////////////////
+// TODO Checking for duplicit ident names on the same scope
+// TODO few others in testInput
 
 AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
     var_pos = pos;
@@ -783,7 +803,7 @@ AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
         ast_variable_decl(pos, ident, expr)
     );
 
-    if (sem_process_stmt(var_decl, true)) // top_level is not relevant here
+    if (sem_process_stmt(var_decl, false)) // top_level is not relevant here
         return var_decl;
 
     ast_free_stmt(&var_decl);
@@ -791,6 +811,8 @@ AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
 }
 
 static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
+    var_pos = variable_decl->pos;
+
     if (variable_decl->sema_checked)
         return true;
 
@@ -812,6 +834,9 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
         }
 
         variable_decl->sema_checked = variable_decl->value->sema_checked;
+        // In case expression is notchecked yet - wait for top_level
+        if (!variable_decl->sema_checked)
+            return true;
 
         // Check if data type is given, or try determine it
         if (variable_decl->ident->var.data_type == DT_NONE) {
@@ -892,7 +917,7 @@ AstCondition *sem_expr_condition(AstExpr *expr) {
     AstCondition *expr_cond = ast_expr_condition(expr);
 
     if (sem_process_expr_condition(expr_cond->expr)) {
-        expr_cond->sema_checked = true;
+        expr_cond->sema_checked = expr_cond->expr->sema_checked;
         return expr_cond;
     }
 
@@ -930,7 +955,6 @@ static bool sem_process_expr_condition(AstExpr *expr) {
             ERR_INCOM_TYPE
         );
     }
-    expr->sema_checked = true;
 
     return true;
 }
@@ -939,7 +963,6 @@ static bool sem_process_expr_condition(AstExpr *expr) {
 
 AstCondition *sem_let_condition(FilePos pos, SymItem *ident) {
     AstCondition *let_cond = ast_let_condition(pos, ident);
-    var_pos = pos;
 
     if (sem_process_let_condition(let_cond->let)) {
         let_cond->sema_checked = true;
@@ -991,7 +1014,7 @@ AstStmt *sem_if(
         ast_if(pos, cond, true_block, false_block)
     );
 
-    if (sem_process_stmt(if_stmt, false)) // top_level is not relevant here
+    if (sem_process_stmt(if_stmt, sem_top_level))
         return if_stmt;
 
     ast_free_stmt(&if_stmt);
@@ -1012,15 +1035,17 @@ static bool sem_process_if(AstIf *if_v) {
         // Error already set in above func
         return false;
 
+    if_v->condition->sema_checked = if_v->condition->expr->sema_checked;
+
     // Process if (and) else body
-    bool if_body = sem_process_block(if_v->if_body->stmts, false);
+    bool if_body = sem_process_block(if_v->if_body->stmts, true);
     if (!if_body)
         // Error already set in sem_block()
         return false;
     set_block_checked(if_v->if_body, &(if_v->sema_checked));
 
     if (if_v->else_body) {
-        bool else_body = sem_process_block(if_v->else_body->stmts, false);
+        bool else_body = sem_process_block(if_v->else_body->stmts, true);
         if (!else_body)
             // Error already set in sem_block()
             return false;
@@ -1045,7 +1070,7 @@ AstStmt *sem_expr_stmt(AstExpr *expr) {
 AstStmt *sem_while(FilePos pos, AstCondition *cond, AstBlock *loop) {
     AstStmt *while_stmt = ast_while_stmt(pos, ast_while(pos, cond, loop));
 
-    if (sem_process_stmt(while_stmt, false)) // top_level is not relevant here
+    if (sem_process_stmt(while_stmt, sem_top_level))
         return while_stmt;
 
     ast_free_stmt(&while_stmt);
@@ -1069,7 +1094,7 @@ static bool sem_process_while(AstWhile *while_v) {
     if (!while_v->body)
         return sema_err(while_v->pos, "Missing while() body", ERR_SEMANTIC);
     // Process cycle body
-    bool while_body = sem_process_block(while_v->body->stmts, false);
+    bool while_body = sem_process_block(while_v->body->stmts, true);
     if (!while_body)
         // Error already set in sem_block()
         return false;
