@@ -621,7 +621,11 @@ static bool sem_process_block(Vec stmts, bool top_level) {
 }
 
 static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
-    if (stmt->sema_checked)
+    /*
+        Return stmt will be checked and marked as sema_checked. However at the end, if present
+        in main body, we have to check it for main body context.
+    */
+    if (stmt->sema_checked && stmt->type != AST_RETURN)
         return true;
 
     sem_top_level = top_level;
@@ -851,8 +855,7 @@ AstStmt *sem_return(FilePos pos, AstExpr *expr) {
 }
 
 static bool sem_process_return(AstReturn *return_v) {
-    // Mark as unchecked if not top_level and check it later in case of return stmt in main body
-    if (return_v->sema_checked || !sem_top_level)
+    if (return_v->sema_checked)
         return true;
 
     bool void_ret = !(return_v->expr);
