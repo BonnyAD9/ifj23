@@ -93,6 +93,7 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
 }
 
 static AstStmt *parse_statement(Parser *par) {
+    AstExpr *expr = NULL;
     switch (par->cur) {
     case T_IF:
         return parse_if(par);
@@ -105,7 +106,8 @@ static AstStmt *parse_statement(Parser *par) {
     case T_RETURN:
         return parse_return(par);
     default:
-        return sem_expr_stmt(parse_expression(par));
+        expr = parse_expression(par);
+        return expr ? sem_expr_stmt(expr) : NULL;
     }
 }
 
@@ -122,7 +124,7 @@ static AstStmt *parse_if(Parser *par) {
         return parse_error(par, ERR_SYNTAX, "Expected {");
     }
 
-    AstBlock *true_block = parse_block(par, '}');
+    AstBlock *true_block = parse_block(par, false);
     if (!true_block) {
         ast_free_condition(&cond);
         return NULL;
@@ -138,7 +140,7 @@ static AstStmt *parse_if(Parser *par) {
         return parse_error(par, ERR_SYNTAX, "Expected {");
     }
 
-    AstBlock *false_block = parse_block(par, '}');
+    AstBlock *false_block = parse_block(par, false);
     if (!false_block) {
         ast_free_condition(&cond);
         ast_free_block(&false_block);
@@ -261,7 +263,7 @@ static AstStmt *parse_while(Parser *par) {
         return parse_error(par, ERR_SYNTAX, "Expected '{'");
     }
 
-    AstBlock *loop = parse_block(par, '}');
+    AstBlock *loop = parse_block(par, false);
     if (!loop) {
         ast_free_condition(&cond);
         return NULL;
@@ -393,7 +395,7 @@ static AstStmt *parse_func(Parser *par) {
         }
     }
 
-    AstBlock *block = parse_block(par, '}');
+    AstBlock *block = parse_block(par, false);
     if (!block) {
         sym_scope_pop(par->table);
         vec_free_with(&params, (FreeFun)sym_free_func_param);
