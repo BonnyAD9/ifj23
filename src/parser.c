@@ -266,7 +266,7 @@ static AstStmt *parse_while(Parser *par) {
         return false;
     }
 
-    if (tok_next(par) != '{') {
+    if (par->cur != '{') {
         ast_free_condition(&cond);
         return parse_error(par, ERR_SYNTAX, "Expected '{'");
     }

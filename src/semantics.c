@@ -280,6 +280,7 @@ SymItem *calle_ident(AstExpr *expr) {
 
 AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
     SymItem* ident = calle_ident(calle);
+    ast_free_expr(&calle);
     if (!ident) {
         // Error already set in calle_ident()
         vec_free_with(&params, (FreeFun)ast_free_func_call_param);
