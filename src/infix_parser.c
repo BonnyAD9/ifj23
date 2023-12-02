@@ -124,8 +124,8 @@ AstExpr *parse_infix(Parser *par) {
                 if (!es_fold(&stack)) {
                     es_free(&stack);
                     return NULL;
-                    break;
                 }
+                break;
             }
             if (!es_shift(&stack, par)) {
                 es_free(&stack);
@@ -134,6 +134,7 @@ AstExpr *parse_infix(Parser *par) {
             break;
         case PA_CALL:
             if (!es_call(&stack, par)) {
+                es_free(&stack);
                 return NULL;
             }
             break;

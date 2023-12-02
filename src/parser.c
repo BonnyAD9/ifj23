@@ -88,6 +88,10 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
         VEC_PUSH(&stmts, AstStmt *, stmt);
     }
 
+    if (!top_level) {
+        tok_next(par); // skip the '}'
+    }
+
     sym_scope_pop(par->table);
     return sem_block(pos, stmts, top_level);
 }
