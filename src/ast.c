@@ -370,6 +370,9 @@ void ast_free_while(AstWhile **value) {
 void ast_free_literal(AstLiteral **value) {
     FREE_INIT(AstLiteral, value, v);
 
+    if (v->data_type == DT_STRING) {
+        str_free(&v->string_v);
+    }
     free(v);
 }
 
