@@ -67,8 +67,9 @@ static void _tree_free(TreeNode *node) {
     node = NULL;
 }
 
-void tree_free(Tree *tree) {
-    _tree_free(tree->root_node);
+void tree_free(Tree **tree) {
+    _tree_free((*tree)->root_node);
+    free(*tree);
 }
 
 static Vec *_tree_find(TreeNode *node, const String key) {
@@ -344,7 +345,6 @@ Symtable sym_new() {
 
 void sym_free(Symtable *symtable) {
     vec_free_with(&symtable->scopes, (FreeFun)tree_free);
-    vec_free(&symtable->scopes);
     vec_free(&symtable->scope_stack);
 }
 
@@ -353,13 +353,15 @@ void sym_data_free(Vec *data) {
 }
 
 void sym_scope_add(Symtable *symtable) {
-    Tree new = tree_new();
+    Tree *new = malloc(sizeof(Tree));
+    *new = tree_new();
+    // TODO: check
 
-    VEC_PUSH(&symtable->scopes, Tree, new);
+    VEC_PUSH(&symtable->scopes, Tree*, new);
     VEC_PUSH(
         &symtable->scope_stack,
         Tree*,
-        &VEC_LAST(&symtable->scopes, Tree)
+        VEC_LAST(&symtable->scopes, Tree*)
     );
 }
 
@@ -386,7 +388,7 @@ SymItem *sym_find(Symtable *symtable, String name) {
     }
 
     tree_insert(scope, name, new);
-    return &VEC_LAST(&new, SymItem);
+    return VEC_LAST(&new, SymItem *);
 }
 
 SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {

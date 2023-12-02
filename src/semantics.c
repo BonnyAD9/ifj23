@@ -441,9 +441,12 @@ static bool sem_process_literal(AstLiteral *literal) {
 
 AstExpr *sem_variable(FilePos pos, SymItem *ident) {
     AstExpr *var_expr = ast_variable_expr(
-        ident->file_pos,
+        pos,
         ast_variable(pos, ident)
     );
+    if (!var_expr) {
+        return NULL;
+    }
 
     if (process_expr(var_expr))
         return var_expr;
