@@ -6,8 +6,6 @@
 FilePos var_pos = (FilePos) {};
 // Global variable for telling function check whether on top level or not
 bool sem_top_level = false;
-// Global vector for function call statements
-Vec* func_calls_to_check = NULL;
 /////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////
@@ -128,6 +126,8 @@ static bool sem_process_expr_condition(AstExpr *expr);
 static bool sem_process_let_condition(SymItem *ident);
 static bool sem_process_if(AstIf *if_v);
 static bool sem_process_while(AstWhile *while_v);
+
+static void set_block_checked(AstBlock* block, bool* sema_to_check);
 /////////////////////////////////////////////////////////////////////////
 
 static bool sema_err(FilePos pos, const char *msg, const int err_type) {
@@ -149,30 +149,35 @@ AstExpr *sem_expr(AstExpr *expr) {
 static bool process_expr(AstExpr *expr) {
     if (expr->sema_checked)
         return true;
-    expr->sema_checked = true;
 
     bool ret_val;
+    var_pos = expr->pos;
+
     switch (expr->type) {
         case AST_BINARY_OP:
             ret_val = sem_process_binary(expr->binary_op);
             expr->data_type = expr->binary_op->data_type;
+            expr->sema_checked = expr->binary_op->sema_checked;
             return ret_val;
         case AST_UNARY_OP:
             ret_val = sem_process_unary(expr->unary_op);
             expr->data_type = expr->unary_op->data_type;
+            expr->sema_checked = expr->unary_op->sema_checked;
             return ret_val;
         case AST_FUNCTION_CALL:
             ret_val = sem_process_call(expr->function_call);
             expr->data_type = expr->function_call->data_type;
+            expr->sema_checked = expr->function_call->sema_checked;
             return ret_val;
         case AST_LITERAL:
             ret_val = sem_process_literal(expr->literal);
             expr->data_type = expr->literal->data_type;
+            expr->sema_checked = expr->literal->sema_checked;
             return ret_val;
         case AST_VARIABLE:
-            var_pos = expr->pos;
             ret_val = sem_process_variable(expr->variable->ident);
             expr->data_type = expr->variable->ident->var.data_type;
+            expr->sema_checked = expr->variable->sema_checked = true;
             return ret_val;
         default:
             return sema_err(expr->pos, "Uknown expression type", ERR_SEMANTIC);
@@ -254,7 +259,7 @@ static bool sem_process_unary(AstUnaryOp *unary_op) {
     if (unary_op->param->data_type & DT_NIL)
         // Clear nillable flag - XOR
         unary_op->data_type = unary_op->param->data_type ^ DT_NIL;
-    unary_op->sema_checked = true;
+    unary_op->sema_checked = unary_op->param->sema_checked;
 
     return true;
 }
@@ -290,13 +295,7 @@ AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
 
 static bool sem_process_call(AstFunctionCall *func_call) {
     if (!sem_top_level) {
-        // when sem_top_level is false, store this statement and check it when true
-        if (!func_calls_to_check) {
-            func_calls_to_check = malloc(sizeof(Vec));
-            *func_calls_to_check = VEC_NEW(AstFunctionCall*);
-        }
-        // Store this expression for future check
-        VEC_PUSH(func_calls_to_check, AstFunctionCall*, func_call);
+        func_call->sema_checked = false;
         return true;
     }
 
@@ -434,14 +433,7 @@ static bool sem_process_literal(AstLiteral *literal) {
     if (literal->sema_checked)
         return true;
 
-    // Implicit conversion to DOUBLE type for INT literal
-    if (literal->data_type == DT_INT || literal->data_type == DT_INT_NIL) {
-        // INT(2) -> DOUBLE(4) , INT_NIL(3) -> DOUBLE_NIL(5)
-        literal->data_type += 2;
-        literal->double_v = literal->int_v;
-    }
     literal->sema_checked = true;
-
     return true;
 }
 
@@ -512,23 +504,17 @@ static void check_in_array(unsigned int arr_sel, const char **err_msg, const cha
     if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
         *err_msg = "Unexpected type provided";
     else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)]) {
-        // Current check failed, if any of operands is LITERAL, try it again as these LITERALS are implicitly casted to DOUBLE
-        // Motivation: f.e. if (a[Int] == 5[Int]) -> after implicit casting -> if (a[Int] == 5[Double]) => ERROR even when correct at the beggining
-
-        if (left_expr_type == AST_LITERAL && (left_type == DT_DOUBLE || left_type == DT_DOUBLE_NIL)) {
-            // Left operand is LITERAL - change type from DOUBLE -> INT and check again
-            binary_op->left->data_type -= 2;
-            check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
-            // Switch as need to respect implicit to double conversion
+        // If an error occured, check for any literal involved and try it agin with to-DOUBLE casting
+        if (left_expr_type == AST_LITERAL && (left_type == DT_INT || left_type == DT_INT_NIL)) {
+            // Left operand is LITERAL - change type from INT -> DOUBLE and check again
             binary_op->left->data_type += 2;
+            check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
             return;
         }
-        if (right_expr_type == AST_LITERAL && (right_type == DT_DOUBLE || right_type == DT_DOUBLE_NIL)) {
-            // Right operand is LITERAL - change type from DOUBLE -> INT and check again
-            binary_op->right->data_type -= 2;
-            check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
-            // Switch as need to respect implicit to double conversion
+        if (right_expr_type == AST_LITERAL && (right_type == DT_INT || right_type == DT_INT_NIL)) {
+            // Right operand is LITERAL - change type from INT -> DOUBLE and check again
             binary_op->right->data_type += 2;
+            check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
             return;
         }
         // Set error message to non-NILL otherwise keep it NULL
@@ -593,39 +579,29 @@ static bool check_compatibility(AstBinaryOp *binary_op) {
     // If set, output error along with error message
     if (err_msg)
         return sema_err(binary_op->pos, err_msg, ERR_INCOM_TYPE);
-    binary_op->sema_checked = true;
+    binary_op->sema_checked = binary_op->left->sema_checked && binary_op->right->sema_checked;
 
     return true;
-}
-/////////////////////////////////////////////////////////////////////////
-
-static bool check_func_calls(AstFunctionDecl *func_decl) {
-    bool ret_val = true;
-
-    if (func_calls_to_check) {
-        VEC_FOR_EACH(func_calls_to_check, AstFunctionCall*, func_call) {
-            if (str_eq(func_decl->ident->name, (*func_call.v)->ident->name)) {
-                // We found function call for our just declared function - check it
-                if (!sem_process_call((*func_call.v)))
-                    // Error already set in sem_process_call()
-                    ret_val = false;
-            }
-        }
-    }
-
-    if (func_calls_to_check->items == 0) {
-        // We empty vector, free it
-        free(func_calls_to_check);
-        func_calls_to_check = NULL;
-    }
-    return ret_val;
 }
 /////////////////////////////////////////////////////////////////////////
 
 AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level) {
     AstBlock *block = ast_block(pos, stmts);
 
-    if (sem_process_block(stmts, top_level))
+    bool ret_val = sem_process_block(stmts, top_level);
+    // if top_level is true, after the cycle, everything should have sema_checked true, otherwise unexpected error
+    if (top_level) {
+        bool block_valid;
+        set_block_checked(block, &block_valid);
+        if (!block_valid) {
+            ret_val = sema_err(
+                pos,
+                "Unexpected sema_checked value after top_level true block",
+                ERR_SEMANTIC
+            );
+        }
+    }
+    if (ret_val)
         return block;
 
     ast_free_block(&block);
@@ -645,7 +621,6 @@ static bool sem_process_block(Vec stmts, bool top_level) {
 static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
     if (stmt->sema_checked)
         return true;
-    stmt->sema_checked = true;
 
     sem_top_level = top_level;
     bool ret_val;
@@ -654,6 +629,7 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
         case AST_EXPR:
             ret_val = process_expr(stmt->expr);
             stmt->data_type = stmt->expr->data_type;
+            stmt->sema_checked = stmt->expr->sema_checked;
             return ret_val;
         case AST_BLOCK:
             return sem_process_block(stmt->block->stmts, top_level);
@@ -666,10 +642,12 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
                 );
             }
             ret_val = sem_process_func_decl(stmt->function_decl);
-            ret_val = ret_val && check_func_calls(stmt->function_decl);
+            stmt->sema_checked = stmt->function_decl->sema_checked;
             return ret_val;
         case AST_VARIABLE_DECL:
-            return sem_process_var_decl(stmt->variable_decl);
+            ret_val = sem_process_var_decl(stmt->variable_decl);
+            stmt->sema_checked = stmt->variable_decl->sema_checked;
+            return ret_val;
         case AST_RETURN:
             if (top_level) {
                 return sema_err(
@@ -680,11 +658,16 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
             }
             ret_val = sem_process_return(stmt->return_v);
             stmt->data_type = stmt->return_v->data_type;
+            stmt->sema_checked = stmt->return_v->sema_checked;
             return ret_val;
         case AST_IF:
-            return sem_process_if(stmt->if_v);
+            ret_val = sem_process_if(stmt->if_v);
+            stmt->sema_checked = stmt->if_v->sema_checked;
+            return ret_val;
         case AST_WHILE:
-            return sem_process_while(stmt->while_v);
+            ret_val = sem_process_while(stmt->while_v);
+            stmt->sema_checked = stmt->while_v->sema_checked;
+            return ret_val;
         default:
             return sema_err(stmt->pos, "Uknown stament type", ERR_SEMANTIC);
     }
@@ -765,7 +748,7 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
             }
         }
     }
-    func_decl->sema_checked = true;
+    set_block_checked(func_decl->body, &(func_decl->sema_checked));
 
     return true;
 }
@@ -794,6 +777,10 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
     if (variable_decl->sema_checked)
         return true;
 
+    if (!sem_process_variable(variable_decl->ident))
+        // Error already set in sem_process_variable()
+        return false;
+
     // Check expression
     if (variable_decl->value) {
         bool check_expr = process_expr(variable_decl->value);
@@ -807,6 +794,8 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
             );
         }
 
+        variable_decl->sema_checked = variable_decl->value->sema_checked;
+
         // Check if data type is given, or try determine it
         if (variable_decl->ident->var.data_type == DT_NONE) {
             if (variable_decl->value->data_type == DT_ANY_NIL) {
@@ -819,17 +808,23 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
             variable_decl->ident->var.data_type = variable_decl->value->data_type;
         }
         else {
-            return check_compatibility(&((AstBinaryOp) {
+            AstBinaryOp temp_binary_op = (AstBinaryOp) {
                 .operator = '=',
                 .left = &((AstExpr) {
-                    .data_type = variable_decl->ident->var.data_type,
-                    .type      = AST_VARIABLE
+                    .data_type    = variable_decl->ident->var.data_type,
+                    .type         = AST_VARIABLE,
+                    .sema_checked = true
                 }),
                 .right = &((AstExpr) {
-                    .data_type = variable_decl->value->data_type,
-                    .type      = variable_decl->value->type
+                    .data_type    = variable_decl->value->data_type,
+                    .type         = variable_decl->value->type,
+                    .sema_checked = variable_decl->value->sema_checked
                 })
-            }));
+            };
+
+            bool ret_val = check_compatibility(&(temp_binary_op));
+            variable_decl->sema_checked = temp_binary_op.sema_checked;
+            return ret_val;
         }
     }
     else if (variable_decl->ident->var.data_type == DT_NONE) {
@@ -861,13 +856,15 @@ static bool sem_process_return(AstReturn *return_v) {
     if (return_v->sema_checked)
         return true;
 
-    bool ret_expr = process_expr(return_v->expr);
+    bool void_ret = !(return_v->expr);
+
+    bool ret_expr = ((void_ret) ? true : process_expr(return_v->expr));
     if (!ret_expr)
         // Error already set in process_expr()
         return false;
 
-    return_v->sema_checked = true;
-    return_v->data_type = return_v->expr->data_type;
+    return_v->sema_checked = ((void_ret) ? true : return_v->expr->sema_checked);
+    return_v->data_type = ((void_ret) ? DT_VOID : return_v->expr->data_type);
 
     return true;
 }
@@ -956,6 +953,15 @@ static bool sem_process_let_condition(SymItem *ident) {
 }
 
 /////////////////////////////////////////////////////////////////////////
+static void set_block_checked(AstBlock* block, bool* sema_to_check) {
+    *sema_to_check = true;
+
+    VEC_FOR_EACH(&(block->stmts), AstStmt*, stmt) {
+        if (!(*stmt.v)->sema_checked)
+            *sema_to_check = false;
+    }
+}
+/////////////////////////////////////////////////////////////////////////
 
 AstStmt *sem_if(
     FilePos pos,
@@ -994,13 +1000,17 @@ static bool sem_process_if(AstIf *if_v) {
     if (!if_body)
         // Error already set in sem_block()
         return false;
+    set_block_checked(if_v->if_body, &(if_v->sema_checked));
+
     if (if_v->else_body) {
         bool else_body = sem_process_block(if_v->else_body->stmts, false);
         if (!else_body)
             // Error already set in sem_block()
             return false;
+        // In case of ifbody not checked, avoid potencial override
+        if (if_v->sema_checked)
+            set_block_checked(if_v->else_body, &(if_v->sema_checked));
     }
-    if_v->sema_checked = true;
 
     return true;
 }
@@ -1046,7 +1056,7 @@ static bool sem_process_while(AstWhile *while_v) {
     if (!while_body)
         // Error already set in sem_block()
         return false;
-    while_v->sema_checked = true;
+    set_block_checked(while_v->body, &(while_v->sema_checked));
 
     return true;
 }

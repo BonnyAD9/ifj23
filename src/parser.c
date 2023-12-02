@@ -316,7 +316,7 @@ static bool parse_type(Parser *par, DataType *res) {
         return false;
     }
 
-    *res = par->lex->datatype;
+    *res = par->lex->subtype;
 
     tok_next(par);
     if (par->cur == '?') {

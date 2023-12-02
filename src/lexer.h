@@ -83,8 +83,6 @@ typedef struct {
     int i_num;
     /// More detailed type of the token
     int subtype;
-    /// (optional) DataType for token
-    DataType datatype;
 } Lexer;
 
 /// Crates new lexer
