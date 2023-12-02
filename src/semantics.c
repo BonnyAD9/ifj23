@@ -636,6 +636,9 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
         case AST_BLOCK:
             return sem_process_block(stmt->block->stmts, top_level);
         case AST_FUNCTION_DECL:
+            ret_val = sem_process_func_decl(stmt->function_decl);
+            stmt->sema_checked = stmt->function_decl->sema_checked;
+
             if (!top_level) {
                 return sema_err(
                     stmt->pos,
@@ -643,14 +646,16 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
                     ERR_SEMANTIC
                 );
             }
-            ret_val = sem_process_func_decl(stmt->function_decl);
-            stmt->sema_checked = stmt->function_decl->sema_checked;
             return ret_val;
         case AST_VARIABLE_DECL:
             ret_val = sem_process_var_decl(stmt->variable_decl);
             stmt->sema_checked = stmt->variable_decl->sema_checked;
             return ret_val;
         case AST_RETURN:
+            ret_val = sem_process_return(stmt->return_v);
+            stmt->data_type = stmt->return_v->data_type;
+            stmt->sema_checked = stmt->return_v->sema_checked;
+
             if (top_level) {
                 return sema_err(
                     stmt->pos,
@@ -658,9 +663,6 @@ static bool sem_process_stmt(AstStmt *stmt, bool top_level) {
                     ERR_SEMANTIC
                 );
             }
-            ret_val = sem_process_return(stmt->return_v);
-            stmt->data_type = stmt->return_v->data_type;
-            stmt->sema_checked = stmt->return_v->sema_checked;
             return ret_val;
         case AST_IF:
             ret_val = sem_process_if(stmt->if_v);
@@ -849,7 +851,8 @@ AstStmt *sem_return(FilePos pos, AstExpr *expr) {
 }
 
 static bool sem_process_return(AstReturn *return_v) {
-    if (return_v->sema_checked)
+    // Mark as unchecked if not top_level and check it later in case of return stmt in main body
+    if (return_v->sema_checked || !sem_top_level)
         return true;
 
     bool void_ret = !(return_v->expr);
