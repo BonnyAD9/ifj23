@@ -451,8 +451,5 @@ static AstStmt *parse_return(Parser *par) {
     tok_next(par);
 
     AstExpr *expr = parse_expression(par);
-    if (!expr) {
-        return NULL;
-    }
     return sem_return(pos, expr);
 }

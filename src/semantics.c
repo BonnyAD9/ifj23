@@ -698,7 +698,6 @@ AstStmt *sem_func_decl(
         return func_decl;
 
     ast_free_stmt(&func_decl);
-    vec_free_with(&params, (FreeFun)sym_free_func_param);
     return NULL;
 }
 
