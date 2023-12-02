@@ -63,6 +63,8 @@ static bool ic_gen_expr(
 );
 static bool ic_gen_stmt(Symtable *sym, AstStmt *stmt, Vec *code);
 
+static InstSymb symb_from_literal(AstLiteral *lit);
+
 bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
     todo_sym_gen_unique_names(sym);
     Vec funcs = ic_get_blocks(block);
@@ -382,4 +384,88 @@ static bool ic_gen_unary(
         },
     };
     return vec_push(code, &inst);
+}
+
+static bool ic_gen_literal(
+    Symtable *sym,
+    AstLiteral *lit,
+    InstOptIdent dst,
+    Vec *code
+) {
+    if (!dst.has_value) {
+        return true;
+    }
+
+    // MOVE dst, lit
+
+    Instruction inst = {
+        .type = IT_MOVE,
+        .move = {
+            .dst = dst.ident,
+            .src = symb_from_literal(lit),
+        },
+    };
+
+    return vec_push(code, &inst);
+}
+
+static bool ic_gen_call(
+    Symtable *sym,
+    AstFunctionCall *call,
+    InstOptIdent dst,
+    Vec *code
+) {
+    Vec args = VEC_NEW(InstSymb);
+
+    // MOVE dst, call->ident(call->arguments)
+
+    VEC_FOR_EACH(&call->arguments, AstFuncCallParam, param) {
+        InstSymb arg;
+        if (param.v->type == AST_VARIABLE) {
+            arg.type = IS_IDENT;
+            arg.ident = param.v->variable;
+        } else {
+            arg = symb_from_literal(&param.v->literal);
+        }
+        if (!vec_push(&args, &arg)) {
+            vec_free_with(&args, (FreeFun)ic_free_symb);
+            return false;
+        }
+    }
+
+    Instruction inst = {
+        .type = IT_CALL,
+        .call = {
+            .dst = dst,
+            .ident = call->ident,
+            .params = args,
+        },
+    };
+    if (!vec_push(code, &inst)) {
+        vec_free_with(&args, (FreeFun)ic_free_symb);
+        return false;
+    }
+    return true;
+}
+
+static InstSymb symb_from_literal(AstLiteral *lit) {
+    InstSymb res = { .type = IS_LITERAL };
+
+    switch (lit->data_type) {
+    case DT_INT:
+        res.literal.int_v = lit->int_v;
+        break;
+    case DT_DOUBLE:
+        res.literal.double_v = lit->double_v;
+        break;
+    case DT_STRING:
+        res.literal.str = lit->string_v;
+        // ensure that the string is not double-freed
+        lit->data_type = DT_INT;
+        break;
+    default:
+        assert(false);
+    }
+
+    return res;
 }

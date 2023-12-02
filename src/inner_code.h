@@ -103,7 +103,7 @@ typedef struct {
 
 // IT_CALL
 typedef struct {
-    SymItem *dst;
+    InstOptIdent dst;
     SymItem *ident;
     // type: InstSymb
     Vec params;
