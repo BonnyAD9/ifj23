@@ -348,11 +348,11 @@ static bool ic_gen_unary(
         return ic_gen_expr(sym, op->param, dst, code);
     }
 
+    assert(op == '-');
+
     // PUSH 0
     // PUSH eval(op->param)
     // SUB top1(stack), top(stack)
-
-    assert(op == '-');
 
     // PUSH 0
     InstLiteral zero = { .type = DT_INT, .int_v = 0 };
