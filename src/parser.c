@@ -282,41 +282,46 @@ static AstStmt *parse_while(Parser *par) {
 
 static AstStmt *parse_decl(Parser *par) {
     bool mutable = par->lex->subtype == TD_VAR;
-    FilePos pos = par->lex->token_start;
+    FilePos start_pos = par->lex->token_start;
 
     if (tok_next(par) != T_IDENT) {
         return NULL;
     }
 
-    SymItem *ident = sym_declare(par->table, par->lex->str, false);
-    if (!ident) {
-        return NULL;
-    }
+    String name = str_clone(par->lex->str);
+    FilePos id_pos = par->lex->token_start;
 
-    ident->file_pos = par->lex->token_start;
     tok_next(par);
 
     DataType type = DT_NONE;
     if (par->cur == ':') {
         tok_next(par);
         if (!parse_type(par, &type)) {
+            str_free(&name);
             return NULL;
         }
     }
 
-    sym_item_var(ident, sym_var_new(type, mutable));
-
-    if (par->cur != '=') {
-        return sem_var_decl(pos, ident, NULL);
+    AstExpr *init = NULL;
+    if (par->cur == '=') {
+        tok_next(par);
+        init = parse_expression(par);
+        if (!init) {
+            str_free(&name);
+            return NULL;
+        }
     }
 
-    tok_next(par);
-    AstExpr *init = parse_expression(par);
-    if (!init) {
+    SymItem *ident = sym_declare(par->table, name, false);
+    str_free(&name);
+    if (!ident) {
         return NULL;
     }
 
-    return sem_var_decl(pos, ident, init);
+    ident->file_pos = id_pos;
+    sym_item_var(ident, sym_var_new(type, mutable));
+
+    return sem_var_decl(start_pos, ident, init);
 }
 
 static bool parse_type(Parser *par, DataType *res) {

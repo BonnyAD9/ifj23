@@ -8,7 +8,7 @@
 #else // NDEBUG
 
 #ifndef DEBUG_FILE
-#define DEBUG_FILE "test/test5.swift"
+#define DEBUG_FILE "test/test6.swift"
 #endif // DEBUG_FILE
 
 #endif // NDEBUG
