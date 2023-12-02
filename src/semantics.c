@@ -338,22 +338,21 @@ static bool check_func_params(SymItem *ident, Vec args) {
             ERR_SEMANTIC
         );
     }
-    // i func decl jsou to vektory FuncParam u func call jsou to FuncCallParam, udelat of pro jednu a druhou verzi
     /*
         func decrement(of n: Int, by m: Int) -> Int { [params]
             return n - m
         }
         let decremented_n = decrement(of: n, by: 1)   [arguments]
     */
+    FuncParam param;
+    DataType param_data_type, arg_data_type;
     VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
-        FuncParam param = VEC_AT(params, FuncParam, arg.i);
-        DataType param_data_type, arg_data_type;
-
+        param = VEC_AT(params, FuncParam, arg.i);
+        var_pos = arg.v->pos;
         // Load also param data type
         if (!sem_process_variable(param.ident))
             return false;
         param_data_type = param.ident->var.data_type;
-
         if (arg.v->type == AST_VARIABLE) {
             // Check if variable is defined
             if (!sem_process_variable(arg.v->variable))
@@ -374,7 +373,6 @@ static bool check_func_params(SymItem *ident, Vec args) {
                 ERR_INVALID_FUN
             );
         }
-
         // Check for correct ident name
         if (str_eq(arg.v->name, param.label)) {
             return sema_err(
@@ -383,7 +381,6 @@ static bool check_func_params(SymItem *ident, Vec args) {
                 ERR_INVALID_FUN
             );
         }
-
         // Check if correct type
         if (param_data_type != arg_data_type) {
             // DT_INT_NIL, DT_DOUBLE_NIL, DT_STRING_NIL, DT_ANY_NIL (NIL)
@@ -703,10 +700,6 @@ AstStmt *sem_func_decl(
 bool sem_process_func_decl(AstFunctionDecl *func_decl) {
     if (func_decl->sema_checked)
         return true;
-
-    if (!check_func_params(func_decl->ident, func_decl->parameters))
-        // Error already set in check_func_params()
-        return false;
 
     // First check body is valid
     bool func_body = sem_process_block(func_decl->body->stmts, false);
