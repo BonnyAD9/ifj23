@@ -11,6 +11,9 @@ typedef enum {
     IT_ADD,    // adds
     IT_MUL,    // muls
     IT_DIV,    // divs, idivs
+    IT_LT,     // lts
+    IT_GT,     // gts
+    IT_EQ,     // eqs
 } InstType;
 
 typedef struct {
