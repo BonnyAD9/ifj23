@@ -95,7 +95,6 @@ AstExpr *parse_infix(Parser *par) {
                 es_free(&stack);
                 return NULL;
             }
-            es_push(&stack, par);
             break;
         case PA_FOLD:
             if (!es_fold(&stack)) {
@@ -193,7 +192,7 @@ AstExpr *parse_infix(Parser *par) {
 //  (  | !   <   <   <   <   <   <   <   <   <   <   <   !   <   =   <   !
 //  )  | =   >   >   >   >   >   >   >   >   >   >   >   !   c   >   .   .
 //  t  | >   >   >   >   >   >   >   >   >   >   >   >   >   c   >   .   .
-//  $  | <   <   <   <   <   <   <   <   <   <   <   <   <   !   !   <   .
+//  $  | <   <   <   <   <   <   <   <   <   <   <   <   <   <   !   <   .
 static enum PrecedenceAction prec_table(Token stack, Token input) {
     switch ((int)stack) {
     case '!':
@@ -303,7 +302,7 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         return PA_FOLD;
     }
     if (!is_infix_token(stack)) {
-        if (input == '(' || input == ')') {
+        if (input == ')') {
             return PA_ERR;
         }
         if (!is_infix_token(input)) {

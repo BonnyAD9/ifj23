@@ -156,7 +156,11 @@ static AstStmt *parse_if(Parser *par) {
 
 static AstCondition *parse_condition(Parser *par) {
     if (par->cur != T_DECL) {
-        return sem_expr_condition(parse_expression(par));
+        AstExpr *expr = parse_expression(par);
+        if (!expr) {
+            return NULL;
+        }
+        return sem_expr_condition(expr);
     }
 
     if (par->lex->subtype != TD_LET) {
