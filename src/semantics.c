@@ -128,6 +128,8 @@ static bool sem_process_if(AstIf *if_v);
 static bool sem_process_while(AstWhile *while_v);
 
 static void set_block_checked(AstBlock* block, bool* sema_to_check);
+
+static bool use_before_decl(FilePos decl, FilePos usage);
 /////////////////////////////////////////////////////////////////////////
 
 static bool sema_err(FilePos pos, const char *msg, const int err_type) {
@@ -279,6 +281,7 @@ SymItem *calle_ident(AstExpr *expr) {
 AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
     SymItem* ident = calle_ident(calle);
     if (!ident) {
+        // Error already set in calle_ident()
         vec_free_with(&params, (FreeFun)ast_free_func_call_param);
         return NULL;
     }
@@ -437,11 +440,19 @@ static bool sem_process_literal(AstLiteral *literal) {
 
 /////////////////////////////////////////////////////////////////////////
 
+static bool use_before_decl(FilePos decl, FilePos usage) {
+    if ((usage.column + usage.line) < (decl.column + decl.line))
+        return false;
+    return true;
+}
+
 AstExpr *sem_variable(FilePos pos, SymItem *ident) {
     AstExpr *var_expr = ast_variable_expr(
         pos,
         ast_variable(pos, ident)
     );
+
+    var_pos = pos;
 
     if (!var_expr) {
         return NULL;
@@ -455,6 +466,9 @@ AstExpr *sem_variable(FilePos pos, SymItem *ident) {
 }
 
 static bool sem_process_variable(SymItem *ident) {
+    // Keep declaration check for main body
+    if (!sem_top_level)
+        return true;
     if (!ident->declared) {
         return sema_err(
             var_pos,
@@ -504,7 +518,7 @@ static void check_in_array(unsigned int arr_sel, const char **err_msg, const cha
 
     // Check for unexpected type provided
     if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
-        *err_msg = "Unexpected type provided";
+        *err_msg = "Cant find data type";
     else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)]) {
         // If an error occured, check for any literal involved and try it agin with to-DOUBLE casting
         if (left_expr_type == AST_LITERAL && (left_type == DT_INT || left_type == DT_INT_NIL)) {
@@ -800,7 +814,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
 
         // Check if data type is given, or try determine it
         if (variable_decl->ident->var.data_type == DT_NONE) {
-            if (variable_decl->value->data_type == DT_ANY_NIL) {
+            if (variable_decl->value->data_type == DT_ANY_NIL || variable_decl->value->data_type == DT_NONE) {
                 return sema_err(
                     variable_decl->value->pos,
                     "Expression type can't be determined",
