@@ -686,6 +686,7 @@ AstStmt *sem_func_decl(
     DataType return_type,
     AstBlock *body
 ) {
+    sym_item_func(ident, sym_func_new(return_type, params));
     AstStmt *func_decl = ast_function_decl_stmt(
         pos,
         ast_function_decl(pos, ident, params, body)
@@ -776,7 +777,6 @@ AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
 }
 
 static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
-    printf("Entering sem_process_var_decl()");
     if (variable_decl->sema_checked)
         return true;
 
