@@ -269,6 +269,9 @@ void print_ast_variable(AstVariable *var) {
 }
 
 void print_ast_expr(AstExpr *expr, size_t depth) {
+    if (!expr)
+        return;
+
     printf("Expr{");
     switch (expr->type) {
     case AST_BINARY_OP:
@@ -323,4 +326,3 @@ void print_ast_stmt(AstStmt *stmt, size_t depth) {
     }
     printf("}");
 }
-

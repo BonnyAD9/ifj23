@@ -514,8 +514,8 @@ static bool sem_process_variable(SymItem *ident) {
             // Keep declaration check for main body
             return true;
     }
-
-    if (ident->type != SYM_VAR) {
+    // Change from "ident->type != SYM_VAR"
+    if (ident->type != SYM_VAR && ident->type != SYM_FUNC) {
         return sema_err(
             var_pos,
             "Invalid type of ident provided",
@@ -909,7 +909,7 @@ static bool sem_process_return(AstReturn *return_v) {
         return false;
 
     if (context.in_func) {
-        if (context.func_ret_type == DT_VOID && return_v->expr) {
+        if (context.func_ret_type == DT_VOID) {
             return sema_err(
                 return_v->pos,
                 "Unexpected return expression for void type function",
@@ -926,7 +926,7 @@ static bool sem_process_return(AstReturn *return_v) {
         }
 
         // Check for type compatibility (same as for '=')
-        if (!compat_array
+        if (!void_ret && !compat_array
             [4]
             [get_arr_index(context.func_ret_type)]
             [get_arr_index(return_v->expr->data_type)]
