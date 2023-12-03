@@ -156,7 +156,7 @@ void ic_free_instruction(Instruction *inst) {
 }
 
 void ic_free_symb(InstSymb *symb) {
-    if (symb->type == IS_LITERAL && symb->literal.type == DT_STRING) {
+    if (symb->type == IS_LITERAL && (symb->literal.type & DT_STRING)) {
         str_free(&symb->literal.str);
     }
 }
@@ -274,7 +274,7 @@ static bool ic_gen_binary(
             && ic_gen_expr(sym, op->right, INST_NONE_IDENT, code);
     }
 
-    if (op->operator == '+' && op->left->data_type == DT_STRING) {
+    if (op->operator == '+' && (op->left->data_type & DT_STRING)) {
         // DECL tmp1
         // DECL tmp2
         // MOVE tmp1, eval(op->left)
@@ -338,7 +338,7 @@ static bool ic_gen_binary(
         inst.type = IT_MUL;
         break;
     case '/':
-        inst.type = op->left->data_type == DT_INT ? IT_IDIV : IT_DIV;
+        inst.type = op->left->data_type & DT_INT ? IT_IDIV : IT_DIV;
         break;
     case '<':
         inst.type = IT_LT;
@@ -393,7 +393,7 @@ static bool ic_gen_unary(
 
     // PUSH 0
     InstLiteral zero = { .type = DT_INT, .int_v = 0 };
-    if (op->param->data_type == DT_DOUBLE) {
+    if (op->param->data_type & DT_DOUBLE) {
         zero = (InstLiteral) { .type = DT_DOUBLE, .double_v = 0 };
     }
     Instruction inst = {
@@ -718,18 +718,23 @@ static bool ic_gen_stmt(Symtable *sym, AstStmt *stmt, Vec *code) {
 static InstSymb symb_from_literal(AstLiteral *lit) {
     InstSymb res = { .type = IS_LITERAL };
 
-    switch (lit->data_type) {
+    switch (lit->data_type & DT_TYPE_M) {
     case DT_INT:
+        res.literal.type = DT_INT;
         res.literal.int_v = lit->int_v;
         break;
     case DT_DOUBLE:
+        res.literal.type = DT_DOUBLE;
         res.literal.double_v = lit->double_v;
         break;
     case DT_STRING:
+        res.literal.type = DT_STRING;
         res.literal.str = lit->string_v;
         // ensure that the string is not double-freed
-        lit->data_type = DT_INT;
+        lit->data_type = DT_NIL;
         break;
+    case DT_NIL:
+        res.literal.type = DT_NIL;
     default:
         assert(false);
     }
