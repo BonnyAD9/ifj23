@@ -7,6 +7,9 @@
 #include "string.h"
 #include "vec.h"
 #include "enums.h"
+#include "errors.h"
+#include "utils.h"
+#include "debug_tools.h"
 
 typedef enum {
     // Function

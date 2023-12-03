@@ -408,7 +408,6 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
         tree_insert(scope, name, new);
         return VEC_LAST(&new, SymItem *);
     }
-
     SymItem *item = VEC_LAST(data, SymItem *);
     if (!item->declared) {
         item->type = new_type;
@@ -417,8 +416,10 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
     }
 
     // Doesn't allow redeclaration in global scope
-    if (symtable->scope_stack.len == 1)
+    if (symtable->scope_stack.len == 1) {
+        EPRINTF(DEBUG_FILE ":%zu:%zu: error: Redefinition of %s \n", item->file_pos.line, item->file_pos.column, name.str);
         return NULL;
+    }
 
     if (!sym_item_insert_new(data, name, true, new_type)) {
         return NULL;

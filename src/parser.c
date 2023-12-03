@@ -396,7 +396,7 @@ static AstStmt *parse_func(Parser *par) {
 
     tok_next(par);
 
-    DataType type = DT_NONE;
+    DataType type = DT_VOID;
 
     if (par->cur == T_RETURNS) {
         tok_next(par);
