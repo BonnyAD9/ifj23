@@ -3,11 +3,11 @@
 #include "assert.h"
 
 // returns false if the expression is false
-#define CHECK(...) if (!(__VA_ARGS__)) return false;
+#define CHECK(...) if (!(__VA_ARGS__)) return false
 // declares variable and returns false if it is not true
 #define CHECKD(type, name, ...) \
     type name = (__VA_ARGS__); \
-    if (!name) return false;
+    if (!name) return false
 
 // these will be implemented by symtable
 
@@ -309,7 +309,7 @@ static bool ic_gen_binary(
             }
         };
 
-        CHECK(vec_push_span(code, SPAN_ARR(insts)))
+        CHECK(vec_push_span(code, SPAN_ARR(insts)));
 
         // MOVE tmp1, eval(op->left)
         CHECK(ic_gen_expr(sym, op->left, INST_IDENT(tmp1), code));
