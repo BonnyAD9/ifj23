@@ -31,9 +31,11 @@ typedef enum {
                // pushs
     IT_RETURN, // return, popframe, createframe, pushs
     IT_SUB,    // sub, subs
-    IT_ADD,    // add, adds, concat
+    IT_ADD,    // add, adds
+    IT_CONCAT, // concat
     IT_MUL,    // mul, muls
-    IT_DIV,    // div, idiv, divs, idivs
+    IT_DIV,    // div, divs
+    IT_IDIV,   // idiv, idivs
     IT_LT,     // lt, lts
     IT_GT,     // gt, gts
     IT_EQ,     // eq, eqs
@@ -45,6 +47,7 @@ typedef enum {
     IT_LABEL,  // label
     IT_JUMP,   // jump
     IT_JIF,    // jumpifeq, jumpifeqs
+    IT_JIFN,   // jumpifeq, jumpifeqs
     IT_JEQ,    // jumpifeq, jumpifeqs
     IT_JNEQ,   // jumpifneq, jumpifneqs
     IT_JLT,    // jumpifeq, jumpifeqs, lt, lts
@@ -111,11 +114,11 @@ typedef struct {
 
 // IT_RETURN
 typedef struct {
-    size_t pop_count;
     InstOptSymb value;
 } InstReturn;
 
-// IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ, IT_LTE, IT_GTE, IT_SUB, IT_NEQ
+// IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ, IT_LTE, IT_GTE, IT_SUB, IT_NEQ,
+// IT_IDIV, IT_CONCAT
 typedef struct {
     // NULL to push to stack
     SymItem *dst;
@@ -130,7 +133,7 @@ typedef struct {
     SymItem *src;
 } InstIfNil;
 
-// IT_LABEL, IT_JMP, IT_JIF
+// IT_LABEL, IT_JMP, IT_JIF, IT_JIFN
 typedef struct {
     SymItem *ident;
 } InstLabel;
@@ -161,9 +164,10 @@ typedef struct {
         InstCall call;       // IT_CALL
         InstReturn return_v; // IT_RETURN
         InstBinary binary;   // IT_ADD, IT_MUL, IT_DIV, IT_LT, IT_GT, IT_EQ
-                             // IT_LTE, IT_GTE, IT_SUB, IT_NEQ
+                             // IT_LTE, IT_GTE, IT_SUB, IT_NEQ, IT_IDIV,
+                             // IT_CONCAT
         InstIfNil if_nil;    // IT_ISNIL, IT_NOTNIL
-        InstLabel label;     // IT_LABEL, IT_JUMP, IT_JIF
+        InstLabel label;     // IT_LABEL, IT_JUMP, IT_JIF, IT_JIFN
         InstJmpBin jmp_bin;  // IT_JEQ, IT_JNEQ, IT_JGT, IT_JLT, IT_JLTE,
                              // IT_JGTE
         InstJmpNil jmp_nil;  // IT_JISNIL, IT_JNONIL
