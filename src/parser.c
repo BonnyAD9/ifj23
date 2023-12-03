@@ -226,6 +226,17 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
     String name = str_clone(par->lex->str);
 
     tok_next(par);
+    if (par->cur != ':') {
+        SymItem *ident = sym_find(par->table, name);
+        str_free(&name);
+        if (!ident) {
+            return false;
+        }
+        res->variable = ident;
+        return true;
+    }
+
+    tok_next(par);
     if (par->cur == T_LITERAL) {
         res->name = name;
         res->type = AST_LITERAL;
