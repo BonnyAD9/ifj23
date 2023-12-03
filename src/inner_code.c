@@ -96,6 +96,12 @@ bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
             .code = body,
             .ident = (*fun.v)->ident,
         };
+        if (!vec_push(&funcs, &func)) {
+            ast_free_block(&block);
+            vec_free_with(&res->functions, (FreeFun)ic_free_func_code);
+            vec_free_with(&funcs, (FreeFun)ast_free_function_decl);
+            return false;
+        }
     }
 
     res->code = VEC_NEW(Instruction);
@@ -156,7 +162,9 @@ void ic_free_instruction(Instruction *inst) {
 }
 
 void ic_free_symb(InstSymb *symb) {
-    if (symb->type == IS_LITERAL && (symb->literal.type & DT_STRING)) {
+    if (symb->type == IS_LITERAL
+        && ((symb->literal.type & DT_TYPE_M) == DT_STRING))
+    {
         str_free(&symb->literal.str);
     }
 }
@@ -186,8 +194,11 @@ static Vec ic_get_blocks(AstBlock *block) {
 
 static bool ic_gen_block(Symtable *sym, AstBlock *block, Vec *code) {
     VEC_FOR_EACH(&block->stmts, AstStmt *, stmt) {
-        ic_gen_stmt(sym, *stmt.v, code);
+        if (!ic_gen_stmt(sym, *stmt.v, code)) {
+            return false;
+        }
     }
+    return true;
 }
 
 static bool ic_gen_binary(
@@ -274,7 +285,10 @@ static bool ic_gen_binary(
             && ic_gen_expr(sym, op->right, INST_NONE_IDENT, code);
     }
 
-    if (op->operator == '+' && (op->left->data_type & DT_STRING)) {
+    if (op->operator == '+' && (
+        (op->left->data_type & DT_STRING)
+        || op->right->data_type & DT_STRING)
+    ) {
         // DECL tmp1
         // DECL tmp2
         // MOVE tmp1, eval(op->left)
@@ -322,8 +336,8 @@ static bool ic_gen_binary(
     inst = (Instruction) {
         .binary = {
             .dst = dst.ident,
-            .first = NULL,
-            .second = NULL,
+            .first = INST_SYMB_ID(NULL),
+            .second = INST_SYMB_ID(NULL),
         },
     };
 
@@ -338,7 +352,10 @@ static bool ic_gen_binary(
         inst.type = IT_MUL;
         break;
     case '/':
-        inst.type = op->left->data_type & DT_INT ? IT_IDIV : IT_DIV;
+        inst.type = (op->left->data_type & DT_INT)
+                || (op->right->data_type & DT_INT)
+            ? IT_IDIV
+            : IT_DIV;
         break;
     case '<':
         inst.type = IT_LT;
@@ -380,12 +397,12 @@ static bool ic_gen_unary(
     InstOptIdent dst,
     Vec *code
 ) {
-    if (op == '!' || op == '+' || !dst.has_value) {
+    if (op->operator == '!' || op->operator == '+' || !dst.has_value) {
         // MOVE dst, eval(op->param)
         return ic_gen_expr(sym, op->param, dst, code);
     }
 
-    assert(op == '-');
+    assert(op->operator == '-');
 
     // PUSH 0
     // PUSH eval(op->param)
@@ -400,7 +417,7 @@ static bool ic_gen_unary(
         .type = IT_MOVE,
         .move = { .dst = NULL, .src = INST_SYMB_LIT(zero) },
     };
-    CHECK(vec_push(sym, &inst));
+    CHECK(vec_push(code, &inst));
 
     // PUSH eval(op->param)
     CHECK(ic_gen_expr(sym, op->param, INST_STACK_IDENT, code));
@@ -659,7 +676,7 @@ static bool ic_gen_variable(
     // MOVE dst, var->ident
     Instruction inst = {
         .type = IT_MOVE,
-        .move = { .dst = dst.ident, .src = var->ident },
+        .move = { .dst = dst.ident, .src = INST_SYMB_ID(var->ident) },
     };
     return vec_push(code, &inst);
 }
@@ -733,8 +750,8 @@ static InstSymb symb_from_literal(AstLiteral *lit) {
         // ensure that the string is not double-freed
         lit->data_type = DT_NIL;
         break;
-    case DT_NIL:
-        res.literal.type = DT_NIL;
+    case DT_ANY: // NIL
+        res.literal.type = DT_ANY_NIL;
     default:
         assert(false);
     }
