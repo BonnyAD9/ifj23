@@ -23,7 +23,7 @@ Parser parser_new(Lexer *lex, Symtable *table) {
     };
 }
 
-static void *parse_error(Parser *par, int err_type, char *msg) {
+void *parse_error(Parser *par, int err_type, char *msg) {
     printf(
         DEBUG_FILE ":%zu:%zu: error: %s\n",
         par->lex->token_start.line,
@@ -201,7 +201,9 @@ bool parse_func_params(Parser *par, Vec *res) {
             parse_error(par, ERR_SYNTAX, "Expected ',' or ')'");
             return false;
         }
-        tok_next(par);
+        if (par->cur == ',') {
+            tok_next(par);
+        }
     }
     tok_next(par);
     return true;
@@ -209,6 +211,7 @@ bool parse_func_params(Parser *par, Vec *res) {
 
 static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
     if (par->cur != T_IDENT && par->cur != T_LITERAL) {
+        parse_error(par, ERR_SYNTAX, "Expected identifier or literal.");
         return false;
     }
 
@@ -245,6 +248,7 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
             return false;
         };
         tok_next(par);
+        return true;
     }
 
     if (par->cur == T_IDENT) {

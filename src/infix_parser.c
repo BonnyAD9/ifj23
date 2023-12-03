@@ -47,6 +47,8 @@ struct ExpansionStack {
     bool is_stop_term;
 };
 
+void *parse_error(Parser *par, int err_type, char *msg);
+
 static struct ExpansionStack es_new(void);
 /// <
 static bool es_shift(struct ExpansionStack *stack, Parser *lex);
@@ -104,6 +106,7 @@ AstExpr *parse_infix(Parser *par) {
             break;
         case PA_ERR:
             es_free(&stack);
+            parse_error(par, ERR_SYNTAX, "unexpected token");
             return NULL;
         case PA_TOP:
             if (stack.is_top_term) {
@@ -375,7 +378,7 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
     case T_IDENT: {
         SymItem *itm = sym_find(par->table, par->lex->str);
         if (!itm) {
-            return false;
+            return OTHER_ERR_FALSE;
         }
         item.term.ident = itm;
         break;
@@ -441,7 +444,11 @@ static bool es_fold(struct ExpansionStack *stack) {
         ).type == SI_TERM;
     }
 
-    return res == MATCH_OK;
+    if (res == MATCH_OK) {
+        return true;
+    }
+
+    return OTHER_ERR_FALSE;
 }
 
 static enum FoldResult es_fold_value(struct ExpansionStack *stack) {
@@ -458,7 +465,7 @@ static enum FoldResult es_fold_value(struct ExpansionStack *stack) {
     if (s0.type != SI_STOP || s1.type != SI_TERM
         || !is_value_token(s1.term.type)
     ) {
-        return false;
+        return NO_MATCH;
     }
 
     AstExpr *res = NULL;
@@ -678,7 +685,7 @@ static AstExpr *es_finish(struct ExpansionStack *stack) {
     }
     struct StackItem last = VEC_POP(&stack->stack, struct StackItem);
     if (last.type != SI_NTERM) {
-        return NULL;
+        return OTHER_ERR_NULL;
     }
     return last.nterm;
 }
