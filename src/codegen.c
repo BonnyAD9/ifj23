@@ -65,7 +65,12 @@ static bool cg_gen_jisnil(Symtable *sym, InstJmpNil jisnil, FILE *out);
 static bool cg_gen_jnonil(Symtable *sym, InstJmpNil jnonil, FILE *out);
 static bool cg_gen_exit(Symtable *sym, InstExit exit, FILE *out);
 
-static bool cg_call_read(Symtable *sym, const char *type, InstCall call, FILE *out);
+static bool cg_call_read(
+    Symtable *sym,
+    const char *type,
+    InstCall call,
+    FILE *out
+);
 static bool cg_call_write(Symtable *sym, InstCall call, FILE *out);
 static bool cg_call_int2double(Symtable *sym, InstCall call, FILE *out);
 static bool cg_call_double2int(Symtable *sym, InstCall call, FILE *out);
@@ -229,7 +234,8 @@ static bool cg_get_value(InstSymb src, SymItem *dst, FILE *out) {
     OPRINTLN("");
 }
 
-static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out) {
+static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out)
+{
     if (src.type != IS_IDENT || src.ident) {
         *dst = src;
         return true;
@@ -332,7 +338,12 @@ static bool cg_gen_jisnil(Symtable *sym, InstJmpNil jisnil, FILE *out);
 static bool cg_gen_jnonil(Symtable *sym, InstJmpNil jnonil, FILE *out);
 static bool cg_gen_exit(Symtable *sym, InstExit exit, FILE *out);
 
-static bool cg_call_read(Symtable *sym, const char *type, InstCall call, FILE *out);
+static bool cg_call_read(
+    Symtable *sym,
+    const char *type,
+    InstCall call,
+    FILE *out
+);
 static bool cg_call_write(Symtable *sym, InstCall call, FILE *out);
 static bool cg_call_int2double(Symtable *sym, InstCall call, FILE *out);
 static bool cg_call_double2int(Symtable *sym, InstCall call, FILE *out);
