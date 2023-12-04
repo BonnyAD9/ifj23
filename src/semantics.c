@@ -559,12 +559,16 @@ static void check_in_array(unsigned int arr_sel, const char **err_msg, const cha
         if (left_expr_type == AST_LITERAL && (left_type == DT_INT || left_type == DT_INT_NIL)) {
             // Left operand is LITERAL - change type from INT -> DOUBLE and check again
             binary_op->left->data_type += 2;
+            // Do the same for datatype stored in SymItem
+            //binary_op->left->literal->data_type +=2;
             check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
             return;
         }
         if (right_expr_type == AST_LITERAL && (right_type == DT_INT || right_type == DT_INT_NIL)) {
             // Right operand is LITERAL - change type from INT -> DOUBLE and check again
             binary_op->right->data_type += 2;
+            // Do the same for datatype stored in SymItem
+            //binary_op->right->literal->data_type +=2;
             check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
             return;
         }
@@ -641,7 +645,7 @@ static bool check_compatibility(AstBinaryOp *binary_op) {
 AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level) {
     AstBlock *block = ast_block(pos, stmts);
     sem_top_level = top_level;
-
+/*
     if (top_level && unchecked_exprs) {
         // Go thorugh all un-checked exprs and check them
         VEC_FOR_EACH(unchecked_exprs, AstExpr*, expr) {
@@ -654,7 +658,7 @@ AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level) {
             }
         }
     }
-
+*/
     bool ret_val = sem_process_block(stmts);
     // if top_level is true, after the cycle, everything should have sema_checked true, otherwise unexpected error
     if (top_level) {
@@ -799,7 +803,6 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
 }
 
 /////////////////////////////////////////////////////////////////////////
-// TODO Checking for duplicit ident names on the same scope
 
 AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
     var_pos = pos;
@@ -872,6 +875,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
 
             bool ret_val = check_compatibility(&(temp_binary_op));
             variable_decl->sema_checked = temp_binary_op.sema_checked;
+            //variable_decl->value->data_type = temp_binary_op.data_type;
             return ret_val;
         }
     }
@@ -937,8 +941,8 @@ static bool sem_process_return(AstReturn *return_v) {
                 ERR_INVALID_FUN
             );
         }
-        context.ret_stmt_found = true;
-        return_v->sema_checked = ((void_ret) ? true : return_v->expr->sema_checked);
+                context.ret_stmt_found = true;
+                return_v->sema_checked = ((void_ret) ? true : return_v->expr->sema_checked);
     }
     return_v->data_type = ((void_ret) ? DT_VOID : return_v->expr->data_type);
 
