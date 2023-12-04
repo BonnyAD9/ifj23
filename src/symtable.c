@@ -44,9 +44,10 @@ static int max(int a_val, int b_val) {
     return ((a_val < b_val) ? b_val : a_val);
 }
 
-Tree tree_new() {
+Tree tree_new(int id) {
     return (Tree) {
-        .root_node = NULL
+        .root_node = NULL,
+        .id = id
     };
 }
 
@@ -285,6 +286,18 @@ void tree_visualise(Tree *tree) {
 //                                 Symtable                                  //
 //===========================================================================//
 
+// Generates unique name based on original name, var id and scope ids
+String gen_unique_name(String name, int id, int sid) {
+    StringBuffer sb = sb_new();
+    sb_push_str(&sb, name.str);
+
+    char temp[30];
+    sprintf(temp, "?%d*%d", id, sid);
+    sb_push_str(&sb, temp);
+
+    return sb_get(&sb);
+}
+
 void sym_item_free(SymItem **item) {
     SymItem *i = *item;
     *item = NULL;
@@ -300,7 +313,13 @@ void sym_item_free(SymItem **item) {
     free(i);
 }
 
-bool sym_item_insert_new(Vec *data, String name, bool declared, Type type) {
+bool sym_item_insert_new(
+    Vec *data,
+    String name,
+    bool declared,
+    Type type,
+    int id
+) {
     name = str_clone(name);
     if (!name.str) {
         return false;
@@ -322,8 +341,10 @@ bool sym_item_insert_new(Vec *data, String name, bool declared, Type type) {
         item->func.params = VEC_NEW(FuncParam);
         break;
     case SYM_VAR:
+        item->var.uname = gen_unique_name(name, data->len, id);
         item->var.data_type = DT_NONE;
         item->var.mutable = false;
+        item->var.global = false;
         break;
     default:
         break;
@@ -352,10 +373,11 @@ void sym_data_free(Vec *data) {
     vec_free_with(data, (FreeFun)sym_item_free);
 }
 
-void sym_scope_add(Symtable *symtable) {
+bool sym_scope_add(Symtable *symtable) {
     Tree *new = malloc(sizeof(Tree));
-    *new = tree_new();
-    // TODO: check
+    *new = tree_new(symtable->scopes.len);
+    if (!new)
+        return false;
 
     VEC_PUSH(&symtable->scopes, Tree*, new);
     VEC_PUSH(
@@ -363,6 +385,8 @@ void sym_scope_add(Symtable *symtable) {
         Tree*,
         VEC_LAST(&symtable->scopes, Tree*)
     );
+
+    return true;
 }
 
 void sym_scope_pop(Symtable *symtable) {
@@ -383,7 +407,7 @@ SymItem *sym_find(Symtable *symtable, String name) {
         return NULL;
 
     Vec new = VEC_NEW(SymItem *);
-    if (!sym_item_insert_new(&new, name, false, SYM_NONE)) {
+    if (!sym_item_insert_new(&new, name, false, SYM_NONE, scope->id)) {
         return NULL;
     }
 
@@ -401,7 +425,7 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
 
     if (!data) {
         Vec new = VEC_NEW(SymItem *);
-        if (!sym_item_insert_new(&new, name, true, new_type)) {
+        if (!sym_item_insert_new(&new, name, true, new_type, scope->id)) {
             return NULL;
         }
 
@@ -421,7 +445,7 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
         return NULL;
     }
 
-    if (!sym_item_insert_new(data, name, true, new_type)) {
+    if (!sym_item_insert_new(data, name, true, new_type, scope->id)) {
         return NULL;
     }
     return VEC_LAST(data, SymItem *);

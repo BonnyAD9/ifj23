@@ -39,8 +39,10 @@ typedef struct {
 } FuncData;
 
 typedef struct {
+    String uname;
     DataType data_type;
     bool mutable;
+    bool global;
 } VarData;
 
 // Values saved in each tree node
@@ -69,6 +71,7 @@ typedef struct node {
 
 typedef struct {
     TreeNode *root_node;
+    int id;
 } Tree;
 
 typedef struct {
@@ -77,7 +80,7 @@ typedef struct {
 } Symtable;
 
 /// Creates new tree
-Tree tree_new();
+Tree tree_new(int id);
 
 /// Adds node into tree
 void tree_insert(Tree *tree, const String key, Vec data);
@@ -104,7 +107,7 @@ Symtable sym_new();
 void sym_free(Symtable *symtable);
 
 /// Adds scope to the symtable and scope stack
-void sym_scope_add(Symtable *symtable);
+bool sym_scope_add(Symtable *symtable);
 
 /// Pops scope from symtable scope stack
 void sym_scope_pop(Symtable *symtable);
