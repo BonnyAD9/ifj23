@@ -448,7 +448,10 @@ static bool es_fold(struct ExpansionStack *stack) {
         return true;
     }
 
-    return OTHER_ERR_FALSE;
+    if (res == NO_MATCH) {
+        return OTHER_ERR_FALSE;
+    }
+    return false;
 }
 
 static enum FoldResult es_fold_value(struct ExpansionStack *stack) {
