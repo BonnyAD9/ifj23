@@ -197,6 +197,9 @@ bool parse_func_params(Parser *par, Vec *res) {
         if (!parse_func_param(par, &param)) {
             return false;
         }
+        if (!vec_push(res, &param)) {
+            return OTHER_ERR_FALSE;
+        }
         if (par->cur != ',' && par->cur != ')') {
             parse_error(par, ERR_SYNTAX, "Expected ',' or ')'");
             return false;

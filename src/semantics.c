@@ -413,7 +413,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
             );
         }
         // Check for correct ident name
-        if (str_eq(arg.v->name, param.label)) {
+        if (!str_eq(arg.v->name, param.label)) {
             return sema_err(
                 arg.v->pos,
                 "Expected func argument differs in names",
@@ -1176,15 +1176,18 @@ bool sem_lex_literal(Lexer *lex, AstLiteral *res) {
     if (lex->cur != T_LITERAL)
         return false;
 
-    if (lex->subtype == DT_INT)
-        res = ast_int_literal(lex->token_start, lex->i_num);
-    else if (lex->subtype == DT_DOUBLE)
-        res = ast_double_literal(lex->token_start, lex->d_num);
-    else if (lex->subtype == DT_STRING)
-        res = ast_string_literal(lex->token_start, lex->str);
-    else // DT_NIL
-        res = ast_nil_literal(lex->token_start);
+    res->data_type = lex->subtype;
+    res->pos = lex->token_start;
     res->sema_checked = true;
+
+    if (lex->subtype == DT_INT) {
+        res->int_v = lex->i_num;
+    } else if (lex->subtype == DT_DOUBLE) {
+        res->double_v = lex->d_num;
+    }
+    else if (lex->subtype == DT_STRING) {
+        res->string_v = str_clone(lex->str);
+    }
 
     return true;
 }
