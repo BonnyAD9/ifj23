@@ -85,7 +85,16 @@ bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
 
     VEC_FOR_EACH(&funcs, AstFunctionDecl *, fun) {
         Vec body = VEC_NEW(Instruction);
-        if (!ic_gen_block(sym, (*fun.v)->body, &body)) {
+
+        // (*fun.v)->ident:
+        Instruction inst = {
+            .type = IT_LABEL,
+            .label = { .ident = (*fun.v)->ident },
+        };
+
+        if (!vec_push(&body, &inst)
+            || !ic_gen_block(sym, (*fun.v)->body, &body)
+        ) {
             ast_free_block(&block);
             vec_free_with(&res->functions, (FreeFun)ic_free_func_code);
             vec_free_with(&funcs, (FreeFun)ast_free_function_decl);
@@ -105,7 +114,21 @@ bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
     }
 
     res->code = VEC_NEW(Instruction);
-    if (!ic_gen_block(sym, block, &res->code)) {
+
+    // EXIT 0
+    Instruction inst = {
+        .type = IT_EXIT,
+        .exit = {
+            .value = {
+                .type = IS_LITERAL,
+                .literal = { .type = DT_INT, .int_v = 0 },
+            },
+        }
+    };
+
+    if (!ic_gen_block(sym, block, &res->code)
+        || !vec_push(&res->code, &inst)
+    ) {
         ast_free_block(&block);
         vec_free_with(&res->functions, (FreeFun)ic_free_func_code);
         vec_free_with(&funcs, (FreeFun)ast_free_function_decl);
