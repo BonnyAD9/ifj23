@@ -336,13 +336,13 @@ AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
 }
 
 static bool sem_process_call(AstFunctionCall *func_call) {
-    if (!sem_top_level)
-        return true;
-
     if (func_call->sema_checked)
         return true;
 
     if (!func_call->ident->declared) {
+        if (!sem_top_level)
+            return true;
+
         return sema_err(
             func_call->pos,
             "Undefined function",
@@ -510,7 +510,7 @@ static bool sem_process_variable(SymItem *ident) {
         );
     }
     if (!ident->declared) {
-        if (!context.in_func)
+        //if (!context.in_func)
             // Keep declaration check for main body
             return true;
     }
