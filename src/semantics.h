@@ -11,7 +11,6 @@
 typedef struct {
     bool in_func;
     bool ret_stmt_found;
-    bool in_var_decl;
     DataType func_ret_type;
 } Context;
 
