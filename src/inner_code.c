@@ -90,6 +90,7 @@ bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
         Instruction inst = {
             .type = IT_LABEL,
             .label = { .ident = (*fun.v)->ident },
+            .pos = (*fun.v)->ident->file_pos,
         };
 
         if (!vec_push(&body, &inst)
@@ -247,7 +248,8 @@ static bool ic_gen_binary(
 
         inst = (Instruction) {
             .type = IT_DECL,
-            .decl = { .var = tmp }
+            .decl = { .var = tmp },
+            .pos = op->pos,
         };
         CHECK(vec_push(code, &inst));
 
@@ -325,6 +327,7 @@ static bool ic_gen_binary(
             { // DECL tmp1
                 .type = IT_DECL,
                 .decl = { .var = tmp1 },
+                .pos = op->pos,
             },
             { // DECL tmp2
                 .type = IT_DECL,
@@ -362,6 +365,7 @@ static bool ic_gen_binary(
             .first = INST_SYMB_ID(NULL),
             .second = INST_SYMB_ID(NULL),
         },
+        .pos = op->pos,
     };
 
     switch ((int)op->operator) {
@@ -439,6 +443,7 @@ static bool ic_gen_unary(
     Instruction inst = {
         .type = IT_MOVE,
         .move = { .dst = NULL, .src = INST_SYMB_LIT(zero) },
+        .pos = op->pos,
     };
     CHECK(vec_push(code, &inst));
 
@@ -475,6 +480,7 @@ static bool ic_gen_literal(
             .dst = dst.ident,
             .src = symb_from_literal(lit),
         },
+        .pos = lit->pos,
     };
 
     return vec_push(code, &inst);
@@ -511,6 +517,7 @@ static bool ic_gen_call(
             .ident = call->ident,
             .params = args,
         },
+        .pos = call->pos,
     };
     if (!vec_push(code, &inst)) {
         vec_free_with(&args, (FreeFun)ic_free_symb);
@@ -545,6 +552,7 @@ static bool ic_gen_return(
                 .value = { .type = IS_IDENT, .ident = tmp.ident },
             },
         },
+        .pos = ret->pos,
     };
     return vec_push(code, &inst);
 }
@@ -557,6 +565,7 @@ static bool ic_gen_var_decl(Symtable *sym, AstVariableDecl *decl, Vec *code) {
     Instruction inst = {
         .type = IT_DECL,
         .decl = { .var = decl->ident },
+        .pos = decl->pos,
     };
     CHECK(vec_push(code, &inst));
 
@@ -579,6 +588,7 @@ static bool ic_gen_condition(
         Instruction inst = {
             .type = IT_JISNIL,
             .jmp_nil = { .src = cond->let, .label = label },
+            .pos = cond->pos,
         };
         return vec_push(code, &inst);
     }
@@ -593,6 +603,7 @@ static bool ic_gen_condition(
     Instruction inst = {
         .type = IT_JIFN,
         .label = { .ident = label },
+        .pos = cond->pos,
     };
     return vec_push(code, &inst);
 }
@@ -620,6 +631,7 @@ static bool ic_gen_if(Symtable *sym, AstIf *if_v, Vec *code) {
 
     if (!if_v->else_body) {
         // l_false:
+        inst.pos = if_v->pos;
         return vec_push(code, &inst);
     }
 
@@ -629,6 +641,7 @@ static bool ic_gen_if(Symtable *sym, AstIf *if_v, Vec *code) {
         { // JUMP l_end
             .type = IT_JUMP,
             .label = { .ident = l_end },
+            .pos = if_v->pos,
         },
         // l_false:
         inst,
@@ -661,6 +674,7 @@ static bool ic_gen_while(Symtable *sym, AstWhile *while_v, Vec *code) {
     Instruction inst = {
         .type = IT_LABEL,
         .label = { .ident = l_start },
+        .pos = while_v->pos,
     };
     CHECK(vec_push(code, &inst));
 
@@ -700,6 +714,7 @@ static bool ic_gen_variable(
     Instruction inst = {
         .type = IT_MOVE,
         .move = { .dst = dst.ident, .src = INST_SYMB_ID(var->ident) },
+        .pos = var->pos,
     };
     return vec_push(code, &inst);
 }

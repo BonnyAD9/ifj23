@@ -173,6 +173,8 @@ typedef struct {
         InstJmpNil jmp_nil;  // IT_JISNIL, IT_JNONIL
         InstExit exit;       // IT_EXIT
     };
+
+    FilePos pos;
 } Instruction;
 
 typedef struct {

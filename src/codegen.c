@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#include "debug_tools.h"
+
 // helper macro, expects that there is FILE named out
 #define OPRINTLN(fmt, ...) fprintf(out, fmt"\n", ##__VA_ARGS__)
 // helper macro, expects that there is FILE named out
@@ -146,6 +148,9 @@ static bool cg_generate_block(Symtable *sym, Vec code, FILE *out) {
 }
 
 static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out) {
+    if (inst.pos.line) {
+        OPRINTLN("# " DEBUG_FILE ":%zu:%zu:", inst.pos.line, inst.pos.column);
+    }
     switch (inst.type) {
     case IT_MOVE:
         return cg_gen_move(sym, inst.move, out);
