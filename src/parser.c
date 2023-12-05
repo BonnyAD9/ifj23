@@ -309,6 +309,7 @@ static AstStmt *parse_decl(Parser *par) {
     FilePos start_pos = par->lex->token_start;
 
     if (tok_next(par) != T_IDENT) {
+        parse_error(par, ERR_SYNTAX, "Missing ident");
         return NULL;
     }
 
