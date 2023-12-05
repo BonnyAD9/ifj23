@@ -458,7 +458,7 @@ static bool parse_func_decl_param(Parser *par, FuncParam *res) {
     }
 
     SymItem *ident = par->cur == '_'
-        ? sym_declare(par->table, STR("%%"), false)
+        ? sym_declare(par->table, STR("_"), false)
         : sym_declare(par->table, par->lex->str, false);
 
     if (tok_next(par) != ':') {
