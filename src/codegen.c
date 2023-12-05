@@ -747,12 +747,12 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     OPRINT(" ");
     CHECK(cg_write_symb(j, out));
     OPRINTLN("");
-    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->uname.str);
+    OPRINTLN("JUMPIFEQ %s TF@!bin bool@true", nil_l->uname.str);
 
     OPRINT("LT TF@!bin ");
     CHECK(cg_write_symb(i, out));
-    OPRINTLN(" 0");
-    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->uname.str);
+    OPRINTLN(" int@0");
+    OPRINTLN("JUMPIFEQ %s TF@!bin bool@true", nil_l->uname.str);
 
     OPRINT("STRLEN TF@!len ");
     CHECK(cg_write_symb(s, out));
@@ -761,7 +761,7 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     OPRINT("GT TF@!bin ");
     CHECK(cg_write_symb(j, out));
     OPRINTLN(" TF@!len");
-    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->uname.str);
+    OPRINTLN("JUMPIFEQ %s TF@!bin bool@true", nil_l->uname.str);
 
     OPRINTLN("DEFVAR TF@!res");
     OPRINTLN("DEFVAR TF@!chr");
@@ -772,9 +772,9 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     CHECK(cg_write_symb(i, out));
     OPRINTLN("");
 
-    OPRINT("JUMPIFEQ TF@!i ");
+    OPRINT("JUMPIFEQ %s TF@!i ", loop_end_l->uname.str);
     CHECK(cg_write_symb(j, out));
-    OPRINTLN(" %s", loop_end_l->uname.str);
+    OPRINTLN("");
 
     OPRINTLN("LABEL %s", loop_l->uname.str);
     OPRINT("GETCHAR TF@!chr ");
@@ -782,9 +782,9 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     OPRINTLN(" TF@!i");
     OPRINTLN("ADD TF@!i TF@!i int@1");
     OPRINTLN("CONCAT TF@!res TF@!res TF@!chr");
-    OPRINT("JUMPIFNEQ TF@!i ");
+    OPRINT("JUMPIFNEQ %s TF@!i ", loop_l->uname.str);
     CHECK(cg_write_symb(j, out));
-    OPRINTLN(" %s", loop_l->uname.str);
+    OPRINTLN("");
 
     OPRINTLN("LABEL %s", loop_end_l->uname.str);
     if (call.dst.ident) {
@@ -827,7 +827,7 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
     OPRINT("STRLEN TF@!len ");
     CHECK(cg_write_symb(c, out));
     OPRINTLN("");
-    OPRINTLN("JUMPIFEQ !len int@0 %s", empty_l->uname.str);
+    OPRINTLN("JUMPIFEQ %s !len int@0", empty_l->uname.str);
 
     if (call.dst.ident) {
         OPRINT("STR2INT ");
