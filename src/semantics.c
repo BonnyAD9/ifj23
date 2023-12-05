@@ -1174,9 +1174,6 @@ bool sem_func_param(String label, SymItem *ident, DataType type, FuncParam *res)
 /////////////////////////////////////////////////////////////////////////
 
 bool sem_lex_literal(Lexer *lex, AstLiteral *res) {
-    if (res->sema_checked)
-        return true;
-
     if (lex->cur != T_LITERAL)
         return false;
 
