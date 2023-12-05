@@ -22,6 +22,7 @@ enum PrecedenceAction {
     PA_TOP,   // x
     PA_STOP,  // o
     PA_CALL,  // c
+    PA_EMPTY, // e
 };
 
 enum FoldResult {
@@ -85,7 +86,11 @@ AstExpr *parse_infix(Parser *par) {
     // the first can be anything different than PA_NONE
     enum PrecedenceAction action;
     while ((action = prec_table(stack.last_term, par->cur)) != PA_END) {
+        if (action == PA_EMPTY && stack.stack.len != 1) {
+            break;
+        }
         switch (action) {
+        case PA_EMPTY:
         case PA_SHIFT:
             if (!es_shift(&stack, par)) {
                 es_free(&stack);
@@ -176,6 +181,7 @@ AstExpr *parse_infix(Parser *par) {
 // x PA_TOP   Shift if terminal is top, fold if non-terminal is top
 // o PA_STOP  Fold if terminal after stop, shift if non-terminal after stop
 // c PA_CALL  Parse function call
+// e PA_EMTY  Shift if the stack is emtpy, otherwise end
 //
 //     | p!  *   /   +   -   ==  !=  <   >   <=  >=  ??  =   (   )   t   $
 // ----+-------------------------------------------------------------------
@@ -195,7 +201,7 @@ AstExpr *parse_infix(Parser *par) {
 //  (  | !   <   <   <   <   <   <   <   <   <   <   <   !   <   =   <   !
 //  )  | =   >   >   >   >   >   >   >   >   >   >   >   !   c   >   .   .
 //  t  | >   >   >   >   >   >   >   >   >   >   >   >   >   c   >   .   .
-//  $  | <   <   <   <   <   <   <   <   <   <   <   <   <   <   !   <   .
+//  $  | <   <   <   <   <   <   <   <   <   <   <   <   <   e   !   e   .
 static enum PrecedenceAction prec_table(Token stack, Token input) {
     switch ((int)stack) {
     case '!':
@@ -305,8 +311,14 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         return PA_FOLD;
     }
     if (!is_infix_token(stack)) {
-        if (input == ')') {
+        switch ((int)input) {
+        case ')':
             return PA_ERR;
+        case '(':
+            return PA_EMPTY;
+        }
+        if (is_value_token(input)) {
+            return PA_EMPTY;
         }
         if (!is_infix_token(input)) {
             return PA_END;
