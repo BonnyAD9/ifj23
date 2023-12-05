@@ -451,13 +451,15 @@ static bool parse_func_decl_param(Parser *par, FuncParam *res) {
         label = str_clone(par->lex->str);
     }
 
-    if (tok_next(par) != T_IDENT) {
+    if (tok_next(par) != T_IDENT && par->cur != '_') {
         str_free(&label);
         parse_error(par, ERR_SYNTAX, "Expected parameter identifier");
         return false;
     }
 
-    SymItem *ident = sym_declare(par->table, par->lex->str, false);
+    SymItem *ident = par->cur == '_'
+        ? sym_declare(par->table, STR("%%"), false)
+        : sym_declare(par->table, par->lex->str, false);
 
     if (tok_next(par) != ':') {
         str_free(&label);
