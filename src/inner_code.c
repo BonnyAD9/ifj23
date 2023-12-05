@@ -9,16 +9,6 @@
     type name = (__VA_ARGS__); \
     if (!name) return false
 
-// these will be implemented by symtable
-
-// makes all name unique
-void todo_sym_gen_unique_names(Symtable *sym);
-// generates unique temprary variable with the given type
-SymItem *todo_sym_tmp_var(Symtable *sym, DataType type);
-// generates temorary function (same as `todo_sym_tmp_var` but desn't require
-// type, and sets the type to function)
-SymItem *todo_sym_label(Symtable *sym);
-
 // extracts functions from the top level block
 // vector of AstFunctionDecl *
 static Vec ic_get_blocks(AstBlock *block);
@@ -79,7 +69,6 @@ static bool ic_gen_stmt(Symtable *sym, AstStmt *stmt, Vec *code);
 static InstSymb symb_from_literal(AstLiteral *lit);
 
 bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
-    todo_sym_gen_unique_names(sym);
     Vec funcs = ic_get_blocks(block);
     res->functions = VEC_NEW(FunctionCode);
 
@@ -244,7 +233,7 @@ static bool ic_gen_binary(
         // l_end:
 
         // DECL tmp
-        CHECKD(SymItem *, tmp, todo_sym_tmp_var(sym, op->left->data_type));
+        CHECKD(SymItem *, tmp, sym_tmp_var(sym, op->left->data_type));
 
         inst = (Instruction) {
             .type = IT_DECL,
@@ -256,8 +245,8 @@ static bool ic_gen_binary(
         // MOVE tmp, eval(op->left)
         CHECK(ic_gen_expr(sym, op->left, INST_IDENT(tmp), code));
 
-        CHECKD(SymItem *, l_nil, todo_sym_label(sym));
-        CHECKD(SymItem *, l_end, todo_sym_label(sym));
+        CHECKD(SymItem *, l_nil, sym_label(sym));
+        CHECKD(SymItem *, l_end, sym_label(sym));
 
         Instruction insts[] = {
             { // JISNIL tmp, l_nil
@@ -320,8 +309,8 @@ static bool ic_gen_binary(
         // MOVE tmp2, eval(op->right)
         // CONCAT dst, tmp1, tmp2
 
-        CHECKD(SymItem *, tmp1, todo_sym_tmp_var(sym, DT_STRING));
-        CHECKD(SymItem *, tmp2, todo_sym_tmp_var(sym, DT_STRING));
+        CHECKD(SymItem *, tmp1, sym_tmp_var(sym, DT_STRING));
+        CHECKD(SymItem *, tmp2, sym_tmp_var(sym, DT_STRING));
 
         Instruction insts[] = {
             { // DECL tmp1
@@ -538,7 +527,7 @@ static bool ic_gen_return(
     InstOptIdent tmp = { .has_value = false };
     if (ret->expr) {
         tmp.has_value = true;
-        CHECKD(SymItem *, t, todo_sym_tmp_var(sym, ret->expr->data_type));
+        CHECKD(SymItem *, t, sym_tmp_var(sym, ret->expr->data_type));
         tmp.ident = t;
         CHECK(ic_gen_expr(sym, ret->expr, tmp, code));
     }
@@ -616,7 +605,7 @@ static bool ic_gen_if(Symtable *sym, AstIf *if_v, Vec *code) {
     //   eval(if_v->else_body)
     // l_end:
 
-    CHECKD(SymItem *, l_false, todo_sym_label(sym));
+    CHECKD(SymItem *, l_false, sym_label(sym));
 
     // CONDITION if_v->condition, l_false
     CHECK(ic_gen_condition(sym, if_v->condition, l_false, code));
@@ -635,7 +624,7 @@ static bool ic_gen_if(Symtable *sym, AstIf *if_v, Vec *code) {
         return vec_push(code, &inst);
     }
 
-    CHECKD(SymItem *, l_end, todo_sym_label(sym));
+    CHECKD(SymItem *, l_end, sym_label(sym));
 
     Instruction insts[] = {
         { // JUMP l_end
@@ -667,8 +656,8 @@ static bool ic_gen_while(Symtable *sym, AstWhile *while_v, Vec *code) {
     //   JUMP l_start
     // l_end:
 
-    CHECKD(SymItem *, l_start, todo_sym_label(sym));
-    CHECKD(SymItem *, l_end, todo_sym_label(sym));
+    CHECKD(SymItem *, l_start, sym_label(sym));
+    CHECKD(SymItem *, l_end, sym_label(sym));
 
     // l_start:
     Instruction inst = {

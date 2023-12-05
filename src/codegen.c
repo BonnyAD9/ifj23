@@ -19,15 +19,6 @@
     type name = (__VA_ARGS__); \
     if (!name) return false
 
-bool todo_symb_is_global(SymItem *item);
-// makes all name unique
-void todo_sym_gen_unique_names(Symtable *sym);
-// generates unique temprary variable with the given type
-SymItem *todo_sym_tmp_var(Symtable *sym, DataType type);
-// generates temorary function (same as `todo_sym_tmp_var` but desn't require
-// type, and sets the type to function)
-SymItem *todo_sym_label(Symtable *sym);
-
 static bool cg_generate_block(Symtable *sym, Vec code, FILE *out);
 static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out);
 static bool cg_write_symb(InstSymb symb, FILE *out);
@@ -261,7 +252,7 @@ static bool cg_write_tident(SymItem *ident, bool tf, FILE *out) {
         return true;
     }
 
-    if (todo_symb_is_global(ident)) {
+    if (ident->global) {
         OPRINT("GF@%s", ident->name.str);
         return true;
     }
@@ -308,7 +299,7 @@ static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out)
         return true;
     }
 
-    CHECKD(SymItem *, itm, todo_sym_tmp_var(sym, DT_NONE));
+    CHECKD(SymItem *, itm, sym_tmp_var(sym, DT_NONE));
 
     OPRINT("POPS ");
     CHECK(cg_write_ident(itm, out));
@@ -320,7 +311,7 @@ static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out)
 }
 
 static SymItem *cg_get_ident(Symtable *sym, SymItem *dst) {
-    return dst ? dst : todo_sym_tmp_var(sym, DT_NONE);
+    return dst ? dst : sym_tmp_var(sym, DT_NONE);
 }
 
 static bool cg_push(SymItem *cur, SymItem *target, FILE *out) {
@@ -720,10 +711,10 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
         .literal = { .type = DT_NIL },
     };
 
-    CHECKD(SymItem *, nil_l, todo_sym_label(sym));
-    CHECKD(SymItem *, end_l, todo_sym_label(sym));
-    CHECKD(SymItem *, loop_l, todo_sym_label(sym));
-    CHECKD(SymItem *, loop_end_l, todo_sym_label(sym));
+    CHECKD(SymItem *, nil_l, sym_label(sym));
+    CHECKD(SymItem *, end_l, sym_label(sym));
+    CHECKD(SymItem *, loop_l, sym_label(sym));
+    CHECKD(SymItem *, loop_end_l, sym_label(sym));
 
     OPRINTLN("# substring");
 
@@ -805,8 +796,8 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
         .literal = { .type = DT_INT, .int_v = 0 },
     };
 
-    CHECKD(SymItem *, end_l, todo_sym_label(sym));
-    CHECKD(SymItem *, empty_l, todo_sym_label(sym));
+    CHECKD(SymItem *, end_l, sym_label(sym));
+    CHECKD(SymItem *, empty_l, sym_label(sym));
 
     OPRINTLN("# ord");
 
