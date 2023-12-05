@@ -241,6 +241,7 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
 
     tok_next(par);
     if (par->cur != ':') {
+        res->type = AST_VARIABLE;
         SymItem *ident = sym_find(par->table, name);
         str_free(&name);
         if (!ident) {

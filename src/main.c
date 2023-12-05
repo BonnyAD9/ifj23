@@ -60,7 +60,7 @@ int main(void) {
     ic_free_code(&ic);
     sym_free(&table);
 
-    return get_first_err_code() ?: ERR_OTHER;
+    return get_first_err_code();
 }
 
 bool sym_generate_builtins(Symtable *sym) {
