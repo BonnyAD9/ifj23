@@ -674,6 +674,7 @@ static bool es_call(struct ExpansionStack *stack, Parser *par) {
     Vec params = VEC_NEW(AstFuncCallParam);
 
     if (!parse_func_params(par, &params)) {
+        vec_free_with(&params, (FreeFun)ast_free_func_call_param);
         return false;
     }
 

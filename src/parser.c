@@ -263,24 +263,21 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
         return true;
     }
 
-    if (par->cur == T_IDENT) {
-        res->name = name;
-        res->type = AST_VARIABLE;
-        SymItem *ident = sym_find(par->table, par->lex->str);
-        if (!ident) {
-            str_free(&res->name);
-            return false;
-        }
-        res->variable = ident;
-        return true;
+    if (par->cur != T_IDENT) {
+        str_free(&name);
+        parse_error(par, ERR_SYNTAX, "Expected variable or literal");
+        return false;
     }
 
-    SymItem *ident = sym_find(par->table, name);
-    str_free(&name);
+    res->name = name;
+    res->type = AST_VARIABLE;
+    SymItem *ident = sym_find(par->table, par->lex->str);
     if (!ident) {
+        str_free(&res->name);
         return false;
     }
     res->variable = ident;
+    tok_next(par);
     return true;
 }
 
@@ -342,6 +339,7 @@ static AstStmt *parse_decl(Parser *par) {
     SymItem *ident = sym_declare(par->table, name, false);
     str_free(&name);
     if (!ident) {
+        ast_free_expr(&init);
         return NULL;
     }
 

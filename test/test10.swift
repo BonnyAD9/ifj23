@@ -3,3 +3,5 @@ func second(_ _: String, _ a: String) -> String {
 }
 
 let a = second("first", "second")
+
+write(a, "\n")

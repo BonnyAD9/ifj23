@@ -5,3 +5,5 @@ func ahoj() -> Int {
 
 var tom = ahoj()
 tom = 11
+
+write(tom, "\n")
