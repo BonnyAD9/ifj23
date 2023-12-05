@@ -8,6 +8,14 @@
 #include "utils.h"
 #include "infix_parser.h"
 
+typedef struct {
+    bool in_func;
+    union {
+        DataType func_ret_type;
+        bool ret_stmt_found;
+    };
+} Context;
+
 /////////////////////////////////////////////////////////////////////////
 bool sem_func_param(
     String label,

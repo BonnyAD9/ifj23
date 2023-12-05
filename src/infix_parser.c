@@ -47,6 +47,8 @@ struct ExpansionStack {
     bool is_stop_term;
 };
 
+void *parse_error(Parser *par, int err_type, char *msg);
+
 static struct ExpansionStack es_new(void);
 /// <
 static bool es_shift(struct ExpansionStack *stack, Parser *lex);
@@ -95,7 +97,6 @@ AstExpr *parse_infix(Parser *par) {
                 es_free(&stack);
                 return NULL;
             }
-            es_push(&stack, par);
             break;
         case PA_FOLD:
             if (!es_fold(&stack)) {
@@ -105,6 +106,7 @@ AstExpr *parse_infix(Parser *par) {
             break;
         case PA_ERR:
             es_free(&stack);
+            parse_error(par, ERR_SYNTAX, "unexpected token");
             return NULL;
         case PA_TOP:
             if (stack.is_top_term) {
@@ -124,8 +126,8 @@ AstExpr *parse_infix(Parser *par) {
                 if (!es_fold(&stack)) {
                     es_free(&stack);
                     return NULL;
-                    break;
                 }
+                break;
             }
             if (!es_shift(&stack, par)) {
                 es_free(&stack);
@@ -134,6 +136,7 @@ AstExpr *parse_infix(Parser *par) {
             break;
         case PA_CALL:
             if (!es_call(&stack, par)) {
+                es_free(&stack);
                 return NULL;
             }
             break;
@@ -192,7 +195,7 @@ AstExpr *parse_infix(Parser *par) {
 //  (  | !   <   <   <   <   <   <   <   <   <   <   <   !   <   =   <   !
 //  )  | =   >   >   >   >   >   >   >   >   >   >   >   !   c   >   .   .
 //  t  | >   >   >   >   >   >   >   >   >   >   >   >   >   c   >   .   .
-//  $  | <   <   <   <   <   <   <   <   <   <   <   <   <   !   !   <   .
+//  $  | <   <   <   <   <   <   <   <   <   <   <   <   <   <   !   <   .
 static enum PrecedenceAction prec_table(Token stack, Token input) {
     switch ((int)stack) {
     case '!':
@@ -302,7 +305,7 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         return PA_FOLD;
     }
     if (!is_infix_token(stack)) {
-        if (input == '(' || input == ')') {
+        if (input == ')') {
             return PA_ERR;
         }
         if (!is_infix_token(input)) {
@@ -375,7 +378,7 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
     case T_IDENT: {
         SymItem *itm = sym_find(par->table, par->lex->str);
         if (!itm) {
-            return false;
+            return OTHER_ERR_FALSE;
         }
         item.term.ident = itm;
         break;
@@ -441,7 +444,14 @@ static bool es_fold(struct ExpansionStack *stack) {
         ).type == SI_TERM;
     }
 
-    return res == MATCH_OK;
+    if (res == MATCH_OK) {
+        return true;
+    }
+
+    if (res == NO_MATCH) {
+        return OTHER_ERR_FALSE;
+    }
+    return false;
 }
 
 static enum FoldResult es_fold_value(struct ExpansionStack *stack) {
@@ -458,7 +468,7 @@ static enum FoldResult es_fold_value(struct ExpansionStack *stack) {
     if (s0.type != SI_STOP || s1.type != SI_TERM
         || !is_value_token(s1.term.type)
     ) {
-        return false;
+        return NO_MATCH;
     }
 
     AstExpr *res = NULL;
@@ -646,7 +656,7 @@ static bool es_call(struct ExpansionStack *stack, Parser *par) {
     VEC_INSERT(
         &stack->stack,
         struct StackItem,
-        stack->stack.len - 2,
+        stack->stack.len - 1,
         ((struct StackItem) {
             .type = SI_STOP,
         })
@@ -658,10 +668,9 @@ static bool es_call(struct ExpansionStack *stack, Parser *par) {
         return false;
     }
 
-    VEC_INSERT(
+    VEC_PUSH(
         &stack->stack,
         struct StackItem,
-        stack->stack.len - 2,
         ((struct StackItem) {
             .type = SI_CALL_PARAMS,
             .call_params = params,
@@ -679,7 +688,7 @@ static AstExpr *es_finish(struct ExpansionStack *stack) {
     }
     struct StackItem last = VEC_POP(&stack->stack, struct StackItem);
     if (last.type != SI_NTERM) {
-        return NULL;
+        return OTHER_ERR_NULL;
     }
     return last.nterm;
 }

@@ -5,6 +5,7 @@
 
 #include "str.h" // String
 #include "stream.h"
+#include "enums.h"
 
 typedef enum {
     /// An error occured

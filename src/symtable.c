@@ -44,9 +44,10 @@ static int max(int a_val, int b_val) {
     return ((a_val < b_val) ? b_val : a_val);
 }
 
-Tree tree_new() {
+Tree tree_new(int id) {
     return (Tree) {
-        .root_node = NULL
+        .root_node = NULL,
+        .id = id
     };
 }
 
@@ -285,6 +286,28 @@ void tree_visualise(Tree *tree) {
 //                                 Symtable                                  //
 //===========================================================================//
 
+// Generates unique name based on original name, var id and scope ids
+String gen_unique_name(String name, int id, int sid) {
+    StringBuffer sb = sb_new();
+    sb_push_str(&sb, name.str);
+
+    char temp[30];
+    sprintf(temp, "?%d*%d", id, sid);
+    sb_push_str(&sb, temp);
+
+    return sb_get(&sb);
+}
+
+String gen_temp_name(int id, int sid) {
+    StringBuffer sb = sb_new();
+
+    char temp[30];
+    sprintf(temp, "$%d*%d", id, sid);
+    sb_push_str(&sb, temp);
+
+    return sb_get(&sb);
+}
+
 void sym_item_free(SymItem **item) {
     SymItem *i = *item;
     *item = NULL;
@@ -300,7 +323,14 @@ void sym_item_free(SymItem **item) {
     free(i);
 }
 
-bool sym_item_insert_new(Vec *data, String name, bool declared, Type type) {
+bool sym_item_insert_new(
+    Vec *data,
+    String name,
+    bool declared,
+    Type type,
+    int id,
+    bool temp
+) {
     name = str_clone(name);
     if (!name.str) {
         return false;
@@ -314,7 +344,15 @@ bool sym_item_insert_new(Vec *data, String name, bool declared, Type type) {
         .name = name,
         .type = type,
         .declared = declared,
+        .global = (id == 0)
     };
+
+    if (id == 0)
+        item->uname = str_clone(name);
+    else if (temp)
+        item->uname = gen_temp_name(data->len, id);
+    else
+        item->uname = gen_unique_name(name, data->len, id);
 
     switch (type) {
     case SYM_FUNC:
@@ -352,10 +390,11 @@ void sym_data_free(Vec *data) {
     vec_free_with(data, (FreeFun)sym_item_free);
 }
 
-void sym_scope_add(Symtable *symtable) {
+bool sym_scope_add(Symtable *symtable) {
     Tree *new = malloc(sizeof(Tree));
-    *new = tree_new();
-    // TODO: check
+    *new = tree_new(symtable->scopes.len);
+    if (!new)
+        return false;
 
     VEC_PUSH(&symtable->scopes, Tree*, new);
     VEC_PUSH(
@@ -363,6 +402,8 @@ void sym_scope_add(Symtable *symtable) {
         Tree*,
         VEC_LAST(&symtable->scopes, Tree*)
     );
+
+    return true;
 }
 
 void sym_scope_pop(Symtable *symtable) {
@@ -383,7 +424,7 @@ SymItem *sym_find(Symtable *symtable, String name) {
         return NULL;
 
     Vec new = VEC_NEW(SymItem *);
-    if (!sym_item_insert_new(&new, name, false, SYM_NONE)) {
+    if (!sym_item_insert_new(&new, name, false, SYM_NONE, scope->id, false)) {
         return NULL;
     }
 
@@ -401,14 +442,13 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
 
     if (!data) {
         Vec new = VEC_NEW(SymItem *);
-        if (!sym_item_insert_new(&new, name, true, new_type)) {
+        if (!sym_item_insert_new(&new, name, true, new_type, scope->id, false)) {
             return NULL;
         }
 
         tree_insert(scope, name, new);
         return VEC_LAST(&new, SymItem *);
     }
-
     SymItem *item = VEC_LAST(data, SymItem *);
     if (!item->declared) {
         item->type = new_type;
@@ -417,10 +457,12 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
     }
 
     // Doesn't allow redeclaration in global scope
-    if (symtable->scope_stack.len == 1)
+    if (symtable->scope_stack.len == 1) {
+        EPRINTF(DEBUG_FILE ":%zu:%zu: error: Redefinition of %s \n", item->file_pos.line, item->file_pos.column, name.str);
         return NULL;
+    }
 
-    if (!sym_item_insert_new(data, name, true, new_type)) {
+    if (!sym_item_insert_new(data, name, true, new_type, scope->id, false)) {
         return NULL;
     }
     return VEC_LAST(data, SymItem *);
@@ -460,7 +502,7 @@ FuncParam sym_func_param_new(SymItem *ident, String label) {
 VarData sym_var_new(DataType type, bool mutable) {
     return (VarData) {
         .data_type = type,
-        .mutable = mutable
+        .mutable = mutable,
     };
 }
 
@@ -473,4 +515,37 @@ FuncData sym_func_new(DataType ret, Vec params) {
 
 void sym_free_func_param(FuncParam *par) {
     str_free(&par->label);
+}
+
+SymItem *sym_create_temp(Symtable *symtable, Type type) {
+    Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
+    if (!scope)
+        return NULL;
+
+    StringBuffer sb = sb_new();
+    sb_push_str(&sb, "temp");
+    String name = sb_get(&sb);
+
+    Vec *data = tree_find(scope, name);
+
+    if (!data) {
+        Vec new = VEC_NEW(SymItem *);
+        tree_insert(scope, name, new);
+        data = tree_find(scope, name);
+    }
+
+    if (!sym_item_insert_new(data, name, false, type, scope->id, true))
+        return NULL;
+
+    return VEC_LAST(data, SymItem*);
+}
+
+SymItem *sym_tmp_var(Symtable *symtable, DataType type) {
+    SymItem *item = sym_create_temp(symtable, SYM_VAR);
+    item->var.data_type = type;
+    return item;
+}
+
+SymItem *sym_label(Symtable *symtable) {
+    return sym_create_temp(symtable, SYM_FUNC);
 }

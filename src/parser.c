@@ -23,7 +23,7 @@ Parser parser_new(Lexer *lex, Symtable *table) {
     };
 }
 
-static void *parse_error(Parser *par, int err_type, char *msg) {
+void *parse_error(Parser *par, int err_type, char *msg) {
     printf(
         DEBUG_FILE ":%zu:%zu: error: %s\n",
         par->lex->token_start.line,
@@ -88,11 +88,16 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
         VEC_PUSH(&stmts, AstStmt *, stmt);
     }
 
+    if (!top_level) {
+        tok_next(par); // skip the '}'
+    }
+
     sym_scope_pop(par->table);
     return sem_block(pos, stmts, top_level);
 }
 
 static AstStmt *parse_statement(Parser *par) {
+    AstExpr *expr = NULL;
     switch (par->cur) {
     case T_IF:
         return parse_if(par);
@@ -105,7 +110,8 @@ static AstStmt *parse_statement(Parser *par) {
     case T_RETURN:
         return parse_return(par);
     default:
-        return sem_expr_stmt(parse_expression(par));
+        expr = parse_expression(par);
+        return expr ? sem_expr_stmt(expr) : NULL;
     }
 }
 
@@ -122,7 +128,7 @@ static AstStmt *parse_if(Parser *par) {
         return parse_error(par, ERR_SYNTAX, "Expected {");
     }
 
-    AstBlock *true_block = parse_block(par, '}');
+    AstBlock *true_block = parse_block(par, false);
     if (!true_block) {
         ast_free_condition(&cond);
         return NULL;
@@ -138,7 +144,7 @@ static AstStmt *parse_if(Parser *par) {
         return parse_error(par, ERR_SYNTAX, "Expected {");
     }
 
-    AstBlock *false_block = parse_block(par, '}');
+    AstBlock *false_block = parse_block(par, false);
     if (!false_block) {
         ast_free_condition(&cond);
         ast_free_block(&false_block);
@@ -150,7 +156,11 @@ static AstStmt *parse_if(Parser *par) {
 
 static AstCondition *parse_condition(Parser *par) {
     if (par->cur != T_DECL) {
-        return sem_expr_condition(parse_expression(par));
+        AstExpr *expr = parse_expression(par);
+        if (!expr) {
+            return NULL;
+        }
+        return sem_expr_condition(expr);
     }
 
     if (par->lex->subtype != TD_LET) {
@@ -187,11 +197,16 @@ bool parse_func_params(Parser *par, Vec *res) {
         if (!parse_func_param(par, &param)) {
             return false;
         }
+        if (!vec_push(res, &param)) {
+            return OTHER_ERR_FALSE;
+        }
         if (par->cur != ',' && par->cur != ')') {
             parse_error(par, ERR_SYNTAX, "Expected ',' or ')'");
             return false;
         }
-        tok_next(par);
+        if (par->cur == ',') {
+            tok_next(par);
+        }
     }
     tok_next(par);
     return true;
@@ -199,6 +214,7 @@ bool parse_func_params(Parser *par, Vec *res) {
 
 static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
     if (par->cur != T_IDENT && par->cur != T_LITERAL) {
+        parse_error(par, ERR_SYNTAX, "Expected identifier or literal.");
         return false;
     }
 
@@ -216,6 +232,17 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
     String name = str_clone(par->lex->str);
 
     tok_next(par);
+    if (par->cur != ':') {
+        SymItem *ident = sym_find(par->table, name);
+        str_free(&name);
+        if (!ident) {
+            return false;
+        }
+        res->variable = ident;
+        return true;
+    }
+
+    tok_next(par);
     if (par->cur == T_LITERAL) {
         res->name = name;
         res->type = AST_LITERAL;
@@ -224,6 +251,7 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
             return false;
         };
         tok_next(par);
+        return true;
     }
 
     if (par->cur == T_IDENT) {
@@ -256,12 +284,12 @@ static AstStmt *parse_while(Parser *par) {
         return false;
     }
 
-    if (tok_next(par) != '{') {
+    if (par->cur != '{') {
         ast_free_condition(&cond);
         return parse_error(par, ERR_SYNTAX, "Expected '{'");
     }
 
-    AstBlock *loop = parse_block(par, '}');
+    AstBlock *loop = parse_block(par, false);
     if (!loop) {
         ast_free_condition(&cond);
         return NULL;
@@ -272,42 +300,46 @@ static AstStmt *parse_while(Parser *par) {
 
 static AstStmt *parse_decl(Parser *par) {
     bool mutable = par->lex->subtype == TD_VAR;
-    FilePos pos = par->lex->token_start;
+    FilePos start_pos = par->lex->token_start;
 
     if (tok_next(par) != T_IDENT) {
         return NULL;
     }
 
-    SymItem *ident = sym_declare(par->table, par->lex->str, false);
-    if (!ident) {
-        return NULL;
-    }
+    String name = str_clone(par->lex->str);
+    FilePos id_pos = par->lex->token_start;
 
-    ident->file_pos = par->lex->token_start;
     tok_next(par);
 
     DataType type = DT_NONE;
     if (par->cur == ':') {
         tok_next(par);
         if (!parse_type(par, &type)) {
+            str_free(&name);
             return NULL;
         }
+    }
+
+    AstExpr *init = NULL;
+    if (par->cur == '=') {
         tok_next(par);
+        init = parse_expression(par);
+        if (!init) {
+            str_free(&name);
+            return NULL;
+        }
     }
 
-    sym_item_var(ident, sym_var_new(type, mutable));
-
-    if (par->cur != '=') {
-        return sem_var_decl(pos, ident, NULL);
-    }
-
-    tok_next(par);
-    AstExpr *init = parse_expression(par);
-    if (!init) {
+    SymItem *ident = sym_declare(par->table, name, false);
+    str_free(&name);
+    if (!ident) {
         return NULL;
     }
 
-    return sem_var_decl(pos, ident, init);
+    ident->file_pos = id_pos;
+    sym_item_var(ident, sym_var_new(type, mutable));
+
+    return sem_var_decl(start_pos, ident, init);
 }
 
 static bool parse_type(Parser *par, DataType *res) {
@@ -382,7 +414,7 @@ static AstStmt *parse_func(Parser *par) {
 
     tok_next(par);
 
-    DataType type = DT_NONE;
+    DataType type = DT_VOID;
 
     if (par->cur == T_RETURNS) {
         tok_next(par);
@@ -393,7 +425,7 @@ static AstStmt *parse_func(Parser *par) {
         }
     }
 
-    AstBlock *block = parse_block(par, '}');
+    AstBlock *block = parse_block(par, false);
     if (!block) {
         sym_scope_pop(par->table);
         vec_free_with(&params, (FreeFun)sym_free_func_param);
@@ -445,8 +477,5 @@ static AstStmt *parse_return(Parser *par) {
     tok_next(par);
 
     AstExpr *expr = parse_expression(par);
-    if (!expr) {
-        return NULL;
-    }
     return sem_return(pos, expr);
 }

@@ -44,7 +44,7 @@ typedef struct {
 } AstUnaryOp;
 
 typedef struct {
-    DataType data_type; // Undefined value unless sema_checked is true!
+    DataType data_type; // Already defined from constructor
     union {
         int int_v;
         double double_v;
