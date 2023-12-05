@@ -298,6 +298,16 @@ String gen_unique_name(String name, int id, int sid) {
     return sb_get(&sb);
 }
 
+String gen_temp_name(int id, int sid) {
+    StringBuffer sb = sb_new();
+
+    char temp[30];
+    sprintf(temp, "$%d*%d", id, sid);
+    sb_push_str(&sb, temp);
+
+    return sb_get(&sb);
+}
+
 void sym_item_free(SymItem **item) {
     SymItem *i = *item;
     *item = NULL;
@@ -318,7 +328,8 @@ bool sym_item_insert_new(
     String name,
     bool declared,
     Type type,
-    int id
+    int id,
+    bool temp
 ) {
     name = str_clone(name);
     if (!name.str) {
@@ -333,7 +344,15 @@ bool sym_item_insert_new(
         .name = name,
         .type = type,
         .declared = declared,
+        .global = (id == 0)
     };
+
+    if (id == 0)
+        item->uname = str_clone(name);
+    else if (temp)
+        item->uname = gen_temp_name(data->len, id);
+    else
+        item->uname = gen_unique_name(name, data->len, id);
 
     switch (type) {
     case SYM_FUNC:
@@ -341,10 +360,8 @@ bool sym_item_insert_new(
         item->func.params = VEC_NEW(FuncParam);
         break;
     case SYM_VAR:
-        item->var.uname = gen_unique_name(name, data->len, id);
         item->var.data_type = DT_NONE;
         item->var.mutable = false;
-        item->var.global = false;
         break;
     default:
         break;
@@ -407,7 +424,7 @@ SymItem *sym_find(Symtable *symtable, String name) {
         return NULL;
 
     Vec new = VEC_NEW(SymItem *);
-    if (!sym_item_insert_new(&new, name, false, SYM_NONE, scope->id)) {
+    if (!sym_item_insert_new(&new, name, false, SYM_NONE, scope->id, false)) {
         return NULL;
     }
 
@@ -425,7 +442,7 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
 
     if (!data) {
         Vec new = VEC_NEW(SymItem *);
-        if (!sym_item_insert_new(&new, name, true, new_type, scope->id)) {
+        if (!sym_item_insert_new(&new, name, true, new_type, scope->id, false)) {
             return NULL;
         }
 
@@ -445,7 +462,7 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
         return NULL;
     }
 
-    if (!sym_item_insert_new(data, name, true, new_type, scope->id)) {
+    if (!sym_item_insert_new(data, name, true, new_type, scope->id, false)) {
         return NULL;
     }
     return VEC_LAST(data, SymItem *);
@@ -485,7 +502,7 @@ FuncParam sym_func_param_new(SymItem *ident, String label) {
 VarData sym_var_new(DataType type, bool mutable) {
     return (VarData) {
         .data_type = type,
-        .mutable = mutable
+        .mutable = mutable,
     };
 }
 
@@ -498,4 +515,37 @@ FuncData sym_func_new(DataType ret, Vec params) {
 
 void sym_free_func_param(FuncParam *par) {
     str_free(&par->label);
+}
+
+SymItem *sym_create_temp(Symtable *symtable, Type type) {
+    Tree *scope = VEC_LAST(&symtable->scope_stack, Tree*);
+    if (!scope)
+        return NULL;
+
+    StringBuffer sb = sb_new();
+    sb_push_str(&sb, "temp");
+    String name = sb_get(&sb);
+
+    Vec *data = tree_find(scope, name);
+
+    if (!data) {
+        Vec new = VEC_NEW(SymItem *);
+        tree_insert(scope, name, new);
+        data = tree_find(scope, name);
+    }
+
+    if (!sym_item_insert_new(data, name, false, type, scope->id, true))
+        return NULL;
+
+    return VEC_LAST(data, SymItem*);
+}
+
+SymItem *sym_tmp_var(Symtable *symtable, DataType type) {
+    SymItem *item = sym_create_temp(symtable, SYM_VAR);
+    item->var.data_type = type;
+    return item;
+}
+
+SymItem *sym_label(Symtable *symtable) {
+    return sym_create_temp(symtable, SYM_FUNC);
 }

@@ -39,16 +39,16 @@ typedef struct {
 } FuncData;
 
 typedef struct {
-    String uname;
     DataType data_type;
     bool mutable;
-    bool global;
 } VarData;
 
 // Values saved in each tree node
 struct SymItem {
     String name;
+    String uname;
     Type type;
+    bool global;
     union {
         FuncData func;
         VarData var;
@@ -141,5 +141,12 @@ FuncData sym_func_new(DataType ret, Vec params);
 
 /// Frees func param
 void sym_free_func_param(FuncParam *par);
+
+// Generates unique temporary variable with the given type
+SymItem *sym_tmp_var(Symtable *symtable, DataType type);
+
+// Generates temporary function (same as `sym_tmp_var` but doesn't require
+// type, and sets the type to function)
+SymItem *sym_label(Symtable *symtable);
 
 #endif // SYMTABLE_H_INCLUDED
