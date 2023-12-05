@@ -385,22 +385,17 @@ static bool handle_write_func(SymItem *ident, Vec args) {
         }
 
         if (arg.v->type == AST_VARIABLE) {
+            var_pos = arg.v->variable->file_pos;
             // Check if variable is defined
             if (!sem_process_variable(arg.v->variable))
                 // Error already set by sem_process_variable()
                 return false;
         }
         else if (arg.v->type == AST_LITERAL) {
+            var_pos = arg.v->literal.pos;
             if (!sem_process_literal(&(arg.v->literal)))
                 // Error already set by sem_process_literal()
                 return false;
-        }
-        else {
-            return sema_err(
-                arg.v->pos,
-                "Unexpected argument type",
-                ERR_INVALID_FUN
-            );
         }
     }
     return true;
@@ -435,12 +430,13 @@ static bool check_func_params(SymItem *ident, Vec args) {
     */
     FuncParam param;
     DataType param_data_type, arg_data_type;
-    var_pos = ident->file_pos;
+
     VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
         param = VEC_AT(params, FuncParam, arg.i);
 
         param_data_type = param.ident->var.data_type;
         if (arg.v->type == AST_VARIABLE) {
+            var_pos = arg.v->variable->file_pos;
             // Check if variable is defined
             if (!sem_process_variable(arg.v->variable))
                 // Error already set by sem_process_variable()
@@ -448,6 +444,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
             arg_data_type = arg.v->variable->var.data_type;
         }
         else if (arg.v->type == AST_LITERAL) {
+            var_pos = arg.v->literal.pos;
             if (!sem_process_literal(&(arg.v->literal)))
                 // Error already set by sem_process_literal()
                 return false;
@@ -455,22 +452,16 @@ static bool check_func_params(SymItem *ident, Vec args) {
         }
         else {
             return sema_err(
-                arg.v->pos,
+                ident->file_pos,
                 "Unexpected argument type",
                 ERR_INVALID_FUN
             );
         }
 
         // Check for correct ident name
-        /* For case when "_" is present, have something to tell me if check it or not
-            let str = concat("ahoj ")
-            func concat(_ x : String) {
-                ...
-            }
-        */
         if (!str_eq(arg.v->name, param.label)) {
             return sema_err(
-                arg.v->pos,
+                var_pos,
                 "Expected func argument differs in names",
                 ERR_INVALID_FUN
             );
@@ -480,7 +471,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
             // DT_INT_NIL, DT_DOUBLE_NIL, DT_STRING_NIL, DT_ANY_NIL (NIL)
             if ((param_data_type & DT_NIL) && arg_data_type != DT_ANY_NIL) {
                 return sema_err(
-                    arg.v->pos,
+                    var_pos,
                     "Uncompatible argument and parameter type",
                     ERR_INVALID_FUN
                 );
@@ -488,7 +479,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
             // DT_INT, DT_DOUBLE, DT_STRING, DT_NIL (NIL!)
             if (!(param_data_type & DT_NIL) && arg_data_type != DT_ANY) {
                 return sema_err(
-                    arg.v->pos,
+                    var_pos,
                     "Uncompatible argument and parameter type",
                     ERR_INVALID_FUN
                 );
