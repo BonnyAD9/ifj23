@@ -1,5 +1,8 @@
-func concat(_ x : String, with y : Int) {
-    var x = "Ahoj Kubo"
+func concat(_ x : String, with y : String) -> String {
+    var x = x + y
+    return x
 }
 
-let str = concat("ahoj ", with: 10)
+let str = concat("ahoj ", with: "ifj")
+
+write(str, "\n")

@@ -783,10 +783,8 @@ static InstSymb symb_from_literal(AstLiteral *lit) {
         // ensure that the string is not double-freed
         lit->data_type = DT_NIL;
         break;
-    case DT_ANY: // NIL
+    default: // NIL
         res.literal.type = DT_ANY_NIL;
-    default:
-        assert(false);
     }
 
     return res;
