@@ -438,7 +438,7 @@ static bool cg_gen_move(Symtable *sym, InstMove move, FILE *out) {
 }
 
 static bool cg_gen_decl(Symtable *sym, InstDecl decl, FILE *out) {
-    OPRINT("DECL ");
+    OPRINT("DEFVAR ");
     CHECK(cg_write_ident(decl.var, out));
     OPRINTLN("");
     return true;
@@ -720,8 +720,8 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     OPRINTLN("# substring");
 
     OPRINTLN("CREATEFRAME");
-    OPRINTLN("DECL TF@!len");
-    OPRINTLN("DECL TF@!bin");
+    OPRINTLN("DEFVAR TF@!len");
+    OPRINTLN("DEFVAR TF@!bin");
 
     OPRINT("GT TF@!bin ");
     CHECK(cg_write_symb(i, out));
@@ -744,9 +744,9 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     OPRINTLN(" TF@!len");
     OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->name.str);
 
-    OPRINTLN("DECL TF@!res");
-    OPRINTLN("DECL TF@!chr");
-    OPRINTLN("DECL TF@!i");
+    OPRINTLN("DEFVAR TF@!res");
+    OPRINTLN("DEFVAR TF@!chr");
+    OPRINTLN("DEFVAR TF@!i");
 
     OPRINTLN("MOVE TF@!res string@");
     OPRINT("MOVE TF@!i ");
@@ -803,7 +803,7 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
     OPRINTLN("# ord");
 
     OPRINTLN("CREATEFRAME");
-    OPRINTLN("DECL TF@!len");
+    OPRINTLN("DEFVAR TF@!len");
 
     OPRINT("STRLEN TF@!len ");
     CHECK(cg_write_symb(c, out));
@@ -817,7 +817,7 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
         CHECK(cg_write_symb(c, out));
         OPRINTLN(" int@0");
     } else {
-        OPRINTLN("DECL TF@!chr");
+        OPRINTLN("DEFVAR TF@!chr");
         OPRINT("STR2INT TF@!chr ");
         CHECK(cg_write_symb(c, out));
         OPRINTLN(" int@0");
@@ -852,7 +852,7 @@ static bool cg_call(Symtable *sym, InstCall call, FILE *out) {
             return true;
         }
         OPRINTLN("CREATEFRAME");
-        OPRINTLN("DECL TF@!null");
+        OPRINTLN("DEFVAR TF@!null");
         OPRINTLN("POPS TF@!null");
         return true;
     }
