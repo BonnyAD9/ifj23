@@ -33,7 +33,7 @@ static bool cg_write_ident(SymItem *ident, FILE *out);
 static bool cg_get_value(InstSymb src, SymItem *dst, FILE *out);
 static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out);
 static SymItem *cg_get_ident(Symtable *sym, SymItem *dst);
-static bool cg_push(SymItem *dst, FILE *out);
+static bool cg_push(SymItem *cur, SymItem *target, FILE *out);
 static bool cg_gen_inst3(
     const char *isnt,
     SymItem *dst,
@@ -96,6 +96,13 @@ static bool cg_gen_jgte(Symtable *sym, InstJmpBin jgte, FILE *out);
 static bool cg_gen_jisnil(Symtable *sym, InstJmpNil jisnil, FILE *out);
 static bool cg_gen_jnonil(Symtable *sym, InstJmpNil jnonil, FILE *out);
 static bool cg_gen_exit(Symtable *sym, InstExit exit, FILE *out);
+
+static bool cg_single_arg(
+    Symtable *sym,
+    const char *inst,
+    InstCall call,
+    FILE *out
+);
 
 static bool cg_call_read(
     Symtable *sym,
@@ -256,7 +263,7 @@ static bool cg_get_value(InstSymb src, SymItem *dst, FILE *out) {
         // move to variable
         OPRINT("MOVE ");
         CHECK(cg_write_ident(dst, out));
-        OPRINT(", ");
+        OPRINT(" ");
     } else {
         // move to stack
         OPRINT("PUSHS ");
@@ -286,13 +293,13 @@ static SymItem *cg_get_ident(Symtable *sym, SymItem *dst) {
     return dst ? dst : todo_sym_tmp_var(sym, DT_NONE);
 }
 
-static bool cg_push(SymItem *dst, FILE *out) {
-    if (dst) {
+static bool cg_push(SymItem *cur, SymItem *target, FILE *out) {
+    if (target) {
         return true;
     }
 
     OPRINT("PUSHS ");
-    CHECK(cg_write_ident(dst, out));
+    CHECK(cg_write_ident(cur, out));
     OPRINTLN("");
     return true;
 }
@@ -306,9 +313,9 @@ static bool cg_gen_inst3(
 ) {
     OPRINT("%s ", inst);
     CHECK(cg_write_ident(dst, out));
-    OPRINT(", ");
+    OPRINT(" ");
     CHECK(cg_write_symb(first, out));
-    OPRINT(", ");
+    OPRINT(" ");
     CHECK(cg_write_symb(second, out));
     OPRINTLN("");
     return true;
@@ -353,7 +360,7 @@ static bool cg_gen_binary(
     CHECKD(SymItem *, dst, cg_get_ident(sym, bin.dst));
     CHECK(cg_gen_inst3(inst, dst, first, second, out));
 
-    return cg_push(bin.dst, out);
+    return cg_push(dst, bin.dst, out);
 }
 
 static bool cg_gen_ifn(Symtable *sym, InstSymb src, SymItem *dst, FILE *out) {
@@ -367,11 +374,11 @@ static bool cg_gen_ifn(Symtable *sym, InstSymb src, SymItem *dst, FILE *out) {
 
     OPRINT("EQ ");
     CHECK(cg_write_ident(tdst, out));
-    OPRINT(", ");
+    OPRINT(" ");
     CHECK(cg_write_symb(src, out));
-    OPRINTLN(", bool@false");
+    OPRINTLN(" bool@false");
 
-    return cg_push(dst, out);
+    return cg_push(tdst, dst, out);
 }
 
 static bool cg_gen_cmp_jmp(
@@ -514,13 +521,13 @@ static bool cg_gen_concat(Symtable *sym, InstBinary concat, FILE *out) {
     CHECKD(SymItem *, dst, cg_get_ident(sym, concat.dst));
 
     CHECK(cg_gen_inst3("CONCAT", dst, first, second, out));
-    return cg_push(concat.dst, out);
+    return cg_push(dst, concat.dst, out);
 }
 
 static bool cg_gen_isnil(Symtable *sym, InstIfNil isnil, FILE *out) {
     CHECK(cg_get_value(INST_SYMB_ID(isnil.src), NULL, out));
     OPRINTLN("PUSHS nil@nil");
-    OPRINTLN("EQS");
+    OPRINTLN("EQS ");
     return cg_get_value(STACK_SYMB, isnil.dst, out);
 }
 
@@ -598,17 +605,160 @@ static bool cg_gen_exit(Symtable *sym, InstExit exit, FILE *out) {
     return true;
 }
 
+static bool cg_single_arg(
+    Symtable *sym,
+    const char *inst,
+    InstCall call,
+    FILE *out
+) {
+    if (!call.dst.has_value) {
+        return true;
+    }
+
+    InstSymb *args = &VEC_AT(&call.params, InstSymb, 0);
+
+    if (call.dst.ident) {
+        OPRINT("%s ", inst);
+        CHECK(cg_write_ident(call.dst.ident, out));
+        OPRINT(" ");
+        CHECK(cg_write_symb(*args, out));
+        OPRINTLN("");
+        return true;
+    }
+
+    OPRINT("PUSHS ");
+    CHECK(cg_write_symb(*args, out));
+    OPRINTLN("");
+
+    OPRINTLN("%sS", inst);
+}
+
 static bool cg_call_read(
     Symtable *sym,
     const char *type,
     InstCall call,
     FILE *out
-);
-static bool cg_call_write(Symtable *sym, InstCall call, FILE *out);
-static bool cg_call_int2double(Symtable *sym, InstCall call, FILE *out);
-static bool cg_call_double2int(Symtable *sym, InstCall call, FILE *out);
-static bool cg_call_length(Symtable *sym, InstCall call, FILE *out);
-static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out);
+) {
+    SymItem *dst = call.dst.has_value ? call.dst.ident : NULL;
+    CHECK(dst = cg_get_ident(sym, dst));
+
+    OPRINT("READ ");
+    CHECK(g_write_ident(dst, out));
+    OPRINTLN(" %s", type);
+
+    return call.dst.has_value ? cg_push(dst, call.dst.ident, out) : true;
+}
+
+static bool cg_call_write(Symtable *sym, InstCall call, FILE *out) {
+    VEC_FOR_EACH(&call.params, InstSymb, arg) {
+        OPRINT("WRITE ");
+        CHECK(cg_write_symb(*arg.v, out));
+        OPRINTLN("");
+    }
+}
+
+static bool cg_call_int2double(Symtable *sym, InstCall call, FILE *out) {
+    OPRINTLN("# int2double");
+    return cg_single_arg(sym, "INT2FLOAT", call, out);
+}
+
+static bool cg_call_double2int(Symtable *sym, InstCall call, FILE *out) {
+    OPRINTLN("# double2int");
+    return cg_single_arg(sym, "FLOAT2INT", call, out);
+}
+
+static bool cg_call_length(Symtable *sym, InstCall call, FILE *out) {
+    OPRINTLN("# strlen");
+    return cg_single_arg(sym, "STRLEN", call, out);
+}
+
+static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
+    if (!call.dst.has_value) {
+        return true;
+    }
+
+    InstSymb s = VEC_AT(&call.params, InstSymb, 0);
+    InstSymb i = VEC_AT(&call.params, InstSymb, 1);
+    InstSymb j = VEC_AT(&call.params, InstSymb, 2);
+
+    InstSymb nil = {
+        .type = IS_LITERAL,
+        .literal = { .type = DT_NIL },
+    };
+
+    CHECKD(SymItem *, nil_l, todo_sym_label(sym));
+    CHECKD(SymItem *, end_l, todo_sym_label(sym));
+    CHECKD(SymItem *, loop_l, todo_sym_label(sym));
+    CHECKD(SymItem *, loop_end_l, todo_sym_label(sym));
+
+    OPRINTLN("# substring");
+
+    OPRINTLN("CREATEFRAME");
+    OPRINTLN("DECL TF@!len");
+    OPRINTLN("DECL TF@!bin");
+
+    OPRINT("GT TF@!bin ");
+    CHECK(cg_write_symb(i, out));
+    OPRINT(" ");
+    CHECK(cg_write_symb(j, out));
+    OPRINTLN("");
+    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->name.str);
+
+    OPRINT("LT TF@!bin ");
+    CHECK(cg_write_symb(i, out));
+    OPRINTLN(" 0");
+    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->name.str);
+
+    OPRINT("STRLEN TF@!len ");
+    CHECK(cg_write_symb(s, out));
+    OPRINTLN("");
+
+    OPRINT("GT TF@!bin ");
+    CHECK(cg_write_symb(j, out));
+    OPRINTLN(" TF@!len");
+    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->name.str);
+
+    OPRINTLN("DECL TF@!res");
+    OPRINTLN("DECL TF@!chr");
+    OPRINTLN("DECL TF@!i");
+
+    OPRINTLN("MOVE TF@!res string@");
+    OPRINT("MOVE TF@!i ");
+    CHECK(cg_write_symb(i, out));
+    OPRINTLN("");
+
+    OPRINT("JUMPIFEQ TF@!i ");
+    CHECK(cg_write_symb(j, out));
+    OPRINTLN(" %s", loop_end_l->name.str);
+
+    OPRINTLN("LABEL %s", loop_l->name.str);
+    OPRINT("GETCHAR TF@!chr ");
+    CHECK(cg_write_symb(s, out));
+    OPRINTLN(" TF@!i");
+    OPRINTLN("ADD TF@!i TF@!i int@1");
+    OPRINTLN("CONCAT TF@!res TF@!res TF@!chr");
+    OPRINT("JUMPIFNEQ TF@!i ");
+    CHECK(cg_write_symb(j, out));
+    OPRINTLN(" %s", loop_l->name.str);
+
+    OPRINTLN("LABEL %s", loop_end_l->name.str);
+    if (call.dst.ident) {
+        OPRINT("MOVE ");
+        cg_write_ident(call.dst.ident, out);
+        OPRINTLN(" TF@!res");
+    } else {
+        OPRINTLN("PUSHS TF@!res");
+    }
+    OPRINTLN("JUMP %s", end_l->name.str);
+
+    OPRINTLN("LABEL %s", nil_l->name.str);
+    CHECK(cg_get_value(nil, call.dst.ident, out));
+
+    OPRINTLN("LABEL %s", end_l->name.str);
+
+    return true;
+}
+
 static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out);
 static bool cg_call_chr(Symtable *sym, InstCall call, FILE *out);
 static bool cg_call(Symtable *sym, InstCall call, FILE *out);
