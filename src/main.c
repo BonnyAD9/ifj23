@@ -23,6 +23,7 @@ int main(void) {
     // Init mock lexer, let him read input and output parsed tokens
     Lexer lexer = lex_new(in);
     Symtable table = sym_new();
+    sym_generate_builtins(&table);
     Parser parser = parser_new(&lexer, &table);
     AstBlock *block = parser_parse(&parser);
     parser_free(&parser);
