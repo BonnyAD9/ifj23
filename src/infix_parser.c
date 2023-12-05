@@ -186,19 +186,19 @@ AstExpr *parse_infix(Parser *par) {
 //     | p!  *   /   +   -   ==  !=  <   >   <=  >=  ??  =   (   )   t   $
 // ----+-------------------------------------------------------------------
 //  p! | >   >   >   >   >   >   >   >   >   >   >   >   !   c   >   .   .
-//  *  | !   >   >   x   x   >   >   >   >   >   >   >   !   <   >   <   .
-//  /  | !   >   >   x   x   >   >   >   >   >   >   >   !   <   >   <   .
-//  +  | !   o   o   >   >   >   >   >   >   >   >   >   !   <   >   <   .
-//  -  | !   o   o   >   >   >   >   >   >   >   >   >   !   <   >   <   .
-//  == | !   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  != | !   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  <  | !   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  >  | !   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  <= | !   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  >= | !   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  ?? | !   <   <   <   <   <   <   <   <   <   <   <   !   <   >   <   .
-//  =  | !   <   <   <   <   <   <   <   <   <   <   <   !   <   !   <   .
-//  (  | !   <   <   <   <   <   <   <   <   <   <   <   !   <   =   <   !
+//  *  | <   >   >   x   x   >   >   >   >   >   >   >   !   <   >   <   .
+//  /  | <   >   >   x   x   >   >   >   >   >   >   >   !   <   >   <   .
+//  +  | <   o   o   >   >   >   >   >   >   >   >   >   !   <   >   <   .
+//  -  | <   o   o   >   >   >   >   >   >   >   >   >   !   <   >   <   .
+//  == | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
+//  != | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
+//  <  | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
+//  >  | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
+//  <= | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
+//  >= | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
+//  ?? | <   <   <   <   <   <   <   <   <   <   <   <   !   <   >   <   .
+//  =  | <   <   <   <   <   <   <   <   <   <   <   <   !   <   !   <   .
+//  (  | <   <   <   <   <   <   <   <   <   <   <   <   !   <   =   <   !
 //  )  | =   >   >   >   >   >   >   >   >   >   >   >   !   c   >   .   .
 //  t  | >   >   >   >   >   >   >   >   >   >   >   >   >   c   >   .   .
 //  $  | <   <   <   <   <   <   <   <   <   <   <   <   <   e   !   e   .
@@ -218,12 +218,12 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
     case '*':
     case '/':
         switch ((int)input) {
-        case '!':
         case '=':
             return PA_ERR;
         case '+':
         case '-':
             return PA_TOP;
+        case '!':
         case '(':
             return PA_SHIFT;
         }
@@ -237,12 +237,12 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
     case '+':
     case '-':
         switch ((int)input) {
-        case '!':
         case '=':
             return PA_ERR;
         case '*':
         case '/':
             return PA_STOP;
+        case '!':
         case '(':
             return PA_SHIFT;
         }
@@ -255,7 +255,6 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         return PA_FOLD;
     case T_DOUBLE_QUES:
         switch ((int)input) {
-        case '!':
         case '=':
             return PA_ERR;
         case ')':
@@ -267,7 +266,6 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         return PA_SHIFT;
     case '=':
         switch ((int)input) {
-        case '!':
         case '=':
         case ')':
             return PA_ERR;
@@ -278,7 +276,6 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         return PA_SHIFT;
     case '(':
         switch ((int)input) {
-        case '!':
         case '=':
             return PA_ERR;
         case ')':
@@ -326,7 +323,6 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         return PA_SHIFT;
     }
     switch ((int)input) {
-    case '!':
     case '=':
         return PA_ERR;
     case '*':
@@ -334,6 +330,7 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
     case '+':
     case '-':
     case '(':
+    case '!':
         return PA_SHIFT;
     }
     if (is_value_token(input)) {
