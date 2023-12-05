@@ -29,8 +29,11 @@ SymItem *todo_sym_label(Symtable *sym);
 static bool cg_generate_block(Symtable *sym, Vec code, FILE *out);
 static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out);
 static bool cg_write_symb(InstSymb symb, FILE *out);
+static bool cg_write_tsymb(InstSymb symb, bool tf, FILE *out);
 static bool cg_write_ident(SymItem *ident, FILE *out);
+static bool cg_write_tident(SymItem *ident, bool tf, FILE *out);
 static bool cg_get_value(InstSymb src, SymItem *dst, FILE *out);
+static bool cg_get_tvalue(InstSymb src, SymItem *dst, bool tf, FILE *out);
 static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out);
 static SymItem *cg_get_ident(Symtable *sym, SymItem *dst);
 static bool cg_push(SymItem *cur, SymItem *target, FILE *out);
@@ -209,8 +212,12 @@ static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out) {
 }
 
 static bool cg_write_symb(InstSymb symb, FILE *out) {
+    return cg_write_tsymb(symb, false, out);
+}
+
+static bool cg_write_tsymb(InstSymb symb, bool tf, FILE *out) {
     if (symb.type == IS_IDENT) {
-        return cg_write_ident(symb.ident, out);
+        return cg_write_tident(symb.ident, tf, out);
     }
 
     switch (symb.type & DT_TYPE_M) {
@@ -231,23 +238,34 @@ static bool cg_write_symb(InstSymb symb, FILE *out) {
 
     return true;
 }
-
 static bool cg_write_ident(SymItem *ident, FILE *out) {
+    return cg_write_tident(ident, false, out);
+}
+
+static bool cg_write_tident(SymItem *ident, bool tf, FILE *out) {
     if (!ident) {
         assert(false);
         return false;
     }
 
-    if (todo_symb_is_global(ident)) {
-        OPRINT("GF@%s", ident->name);
+    if (tf) {
+        OPRINT("TF@%s", ident->name.str);
         return true;
     }
 
-    OPRINT("LF@%s", ident->name);
+    if (todo_symb_is_global(ident)) {
+        OPRINT("GF@%s", ident->name.str);
+        return true;
+    }
+
+    OPRINT("LF@%s", ident->name.str);
     return true;
 }
 
 static bool cg_get_value(InstSymb src, SymItem *dst, FILE *out) {
+    return cg_get_tvalue(src, dst, false, out);
+}
+static bool cg_get_tvalue(InstSymb src, SymItem *dst, bool tf, FILE *out) {
     // pop from stack
     if (cg_is_stack(src)) {
         // move from top of the stack to the top of the stack is noop
@@ -255,14 +273,14 @@ static bool cg_get_value(InstSymb src, SymItem *dst, FILE *out) {
             return true;
         }
         OPRINT("POPS ");
-        CHECK(cg_write_ident(dst, out));
+        CHECK(cg_write_tident(dst, tf, out));
         OPRINTLN("");
     }
 
     if (dst) {
         // move to variable
         OPRINT("MOVE ");
-        CHECK(cg_write_ident(dst, out));
+        CHECK(cg_write_tident(dst, tf, out));
         OPRINT(" ");
     } else {
         // move to stack
@@ -759,6 +777,77 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     return true;
 }
 
-static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out);
-static bool cg_call_chr(Symtable *sym, InstCall call, FILE *out);
-static bool cg_call(Symtable *sym, InstCall call, FILE *out);
+static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
+    if (call.dst.has_value) {
+        return true;
+    }
+
+    InstSymb c = VEC_AT(&call.params, InstSymb, 0);
+
+    InstSymb zero = {
+        .type = IS_LITERAL,
+        .literal = { .type = DT_INT, .int_v = 0 },
+    };
+
+    CHECKD(SymItem *, end_l, todo_sym_label(sym));
+    CHECKD(SymItem *, empty_l, todo_sym_label(sym));
+
+    OPRINTLN("# ord");
+
+    OPRINTLN("CREATEFRAME");
+    OPRINTLN("DECL TF@!len");
+
+    OPRINT("STRLEN TF@!len ");
+    CHECK(cg_write_symb(c, out));
+    OPRINTLN("");
+    OPRINTLN("JUMPIFEQ !len int@0 %s", empty_l->name.str);
+
+    if (call.dst.ident) {
+        OPRINT("STR2INT ");
+        CHECK(cg_write_ident(call.dst.ident, out));
+        OPRINT(" ");
+        CHECK(cg_write_symb(c, out));
+        OPRINTLN(" int@0");
+    } else {
+        OPRINTLN("DECL TF@!chr");
+        OPRINT("STR2INT TF@!chr ");
+        CHECK(cg_write_symb(c, out));
+        OPRINTLN(" int@0");
+    }
+
+    OPRINTLN("JUMP %s", end_l->name.str);
+
+    OPRINTLN("LABEL %s", empty_l->name.str);
+    CHECK(cg_get_value(zero, call.dst.ident, out));
+    OPRINTLN("LABEL %s", end_l->name.str);
+
+    return true;
+}
+
+static bool cg_call_chr(Symtable *sym, InstCall call, FILE *out) {
+    cg_single_arg(sym, "INT2CHAR", call, out);
+}
+
+static bool cg_call(Symtable *sym, InstCall call, FILE *out) {
+    OPRINTLN("# call");
+    OPRINTLN("CREATEFRAME");
+    VEC_FOR_EACH(&call.params, InstSymb, a) {
+        InstSymb carg = *a.v;
+        SymItem *darg = VEC_AT(&call.ident->func.params, FuncParam, a.i).ident;
+        CHECK(cg_get_tvalue(carg, darg, true, out));
+    }
+    OPRINTLN("PUSHFRAME");
+    OPRINTLN("CALL %s", call.ident->name.str);
+
+    if (!call.dst.has_value) {
+        if (call.ident->func.return_type & DT_VOID) {
+            return true;
+        }
+        OPRINTLN("CREATEFRAME");
+        OPRINTLN("DECL TF@!null");
+        OPRINTLN("POPS TF@!null");
+        return true;
+    }
+
+    return cg_get_value(STACK_SYMB, call.dst.ident, out);
+}
