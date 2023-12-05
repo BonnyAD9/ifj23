@@ -523,9 +523,7 @@ SymItem *sym_create_temp(Symtable *symtable, Type type) {
     if (!scope)
         return NULL;
 
-    StringBuffer sb = sb_new();
-    sb_push_str(&sb, "temp");
-    String name = sb_get(&sb);
+    String name = STR("temp");
 
     Vec *data = tree_find(scope, name);
 

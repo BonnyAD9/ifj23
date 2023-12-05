@@ -84,7 +84,9 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
         }
         AstStmt *stmt = parse_statement(par);
         if (!stmt) {
-            sym_scope_pop(par->table);
+            if (!top_level) {
+                sym_scope_pop(par->table);
+            }
             vec_free_with(&stmts, (FreeFun)ast_free_stmt);
             return NULL;
         }
@@ -94,9 +96,9 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
 
     if (!top_level) {
         tok_next(par); // skip the '}'
+        sym_scope_pop(par->table);
     }
 
-    sym_scope_pop(par->table);
     return sem_block(pos, stmts, top_level);
 }
 

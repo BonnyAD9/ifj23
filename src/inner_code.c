@@ -69,6 +69,7 @@ static bool ic_gen_stmt(Symtable *sym, AstStmt *stmt, Vec *code);
 static InstSymb symb_from_literal(AstLiteral *lit);
 
 bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
+    CHECK(sym_scope_add(sym));
     Vec funcs = ic_get_blocks(block);
     res->functions = VEC_NEW(FunctionCode);
 
@@ -95,7 +96,7 @@ bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
             .code = body,
             .ident = (*fun.v)->ident,
         };
-        if (!vec_push(&funcs, &func)) {
+        if (!vec_push(&res->functions, &func)) {
             ast_free_block(&block);
             vec_free_with(&res->functions, (FreeFun)ic_free_func_code);
             vec_free_with(&funcs, (FreeFun)ast_free_function_decl);
@@ -202,7 +203,8 @@ static Vec ic_get_blocks(AstBlock *block) {
             continue;
         }
 
-        vec_push(&funcs, stmt.v);
+        vec_push(&funcs, &(*stmt.v)->function_decl);
+        free(*stmt.v);
         vec_remove(&block->stmts, stmt.i);
         --stmt.i;
     }
