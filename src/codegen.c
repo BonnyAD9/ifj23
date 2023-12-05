@@ -274,6 +274,7 @@ static bool cg_get_tvalue(InstSymb src, SymItem *dst, bool tf, FILE *out) {
         OPRINT("POPS ");
         CHECK(cg_write_tident(dst, tf, out));
         OPRINTLN("");
+        return true;
     }
 
     if (dst) {

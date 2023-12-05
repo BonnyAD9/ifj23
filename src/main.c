@@ -56,7 +56,6 @@ int main(void) {
         return ERR_OTHER;
     }
 
-    ast_free_block(&block);
     ic_free_code(&ic);
     sym_free(&table);
 

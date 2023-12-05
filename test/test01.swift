@@ -1,1 +1,1 @@
-write("Hello World");
+let i = 5 + 5
