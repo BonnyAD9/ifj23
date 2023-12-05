@@ -248,16 +248,16 @@ static bool cg_write_tident(SymItem *ident, bool tf, FILE *out) {
     }
 
     if (tf) {
-        OPRINT("TF@%s", ident->name.str);
+        OPRINT("TF@%s", ident->uname.str);
         return true;
     }
 
     if (ident->global) {
-        OPRINT("GF@%s", ident->name.str);
+        OPRINT("GF@%s", ident->uname.str);
         return true;
     }
 
-    OPRINT("LF@%s", ident->name.str);
+    OPRINT("LF@%s", ident->uname.str);
     return true;
 }
 
@@ -461,7 +461,7 @@ static bool cg_gen_decl(Symtable *sym, InstDecl decl, FILE *out) {
 }
 
 static bool cg_gen_call(Symtable *sym, InstCall call, FILE *out) {
-    String name = call.ident->name;
+    String name = call.ident->uname;
 
     if (str_eq(name, STR("readString"))) {
         return cg_call_read(sym, "string", call, out);
@@ -577,24 +577,24 @@ static bool cg_gen_notnil(Symtable *sym, InstIfNil notnil, FILE *out) {
 }
 
 static bool cg_gen_label(Symtable *sym, InstLabel label, FILE *out) {
-    OPRINT("LABEL %s", label.ident->name.str);
+    OPRINT("LABEL %s", label.ident->uname.str);
     return true;
 }
 
 static bool cg_gen_jump(Symtable *sym, InstLabel jump, FILE *out) {
-    OPRINT("JUMP %s", jump.ident->name.str);
+    OPRINT("JUMP %s", jump.ident->uname.str);
     return true;
 }
 
 static bool cg_gen_jif(Symtable *sym, InstLabel jif, FILE *out) {
-    OPRINTLN("PUSH bool@true");
-    OPRINTLN("JUMPIFEQ %s", jif.ident->name.str);
+    OPRINTLN("PUSHS bool@true");
+    OPRINTLN("JUMPIFEQS %s", jif.ident->uname.str);
     return true;
 }
 
 static bool cg_gen_jifn(Symtable *sym, InstLabel jifn, FILE *out) {
-    OPRINTLN("PUSH bool@true");
-    OPRINTLN("JUMPIFNEQ %s", jifn.ident->name.str);
+    OPRINTLN("PUSHS bool@true");
+    OPRINTLN("JUMPIFNEQS %s", jifn.ident->uname.str);
     return true;
 }
 
@@ -625,14 +625,14 @@ static bool cg_gen_jgte(Symtable *sym, InstJmpBin jgte, FILE *out) {
 static bool cg_gen_jisnil(Symtable *sym, InstJmpNil jisnil, FILE *out) {
     CHECK(cg_get_value(INST_SYMB_ID(jisnil.src), NULL, out));
     OPRINTLN("PUSHS nil@nil");
-    OPRINTLN("JUMPIFEQS %s", jisnil.label->name.str);
+    OPRINTLN("JUMPIFEQS %s", jisnil.label->uname.str);
     return true;
 }
 
 static bool cg_gen_jnonil(Symtable *sym, InstJmpNil jnonil, FILE *out) {
     CHECK(cg_get_value(INST_SYMB_ID(jnonil.src), NULL, out));
     OPRINTLN("PUSHS nil@nil");
-    OPRINTLN("JUMPIFNEQS %s", jnonil.label->name.str);
+    OPRINTLN("JUMPIFNEQS %s", jnonil.label->uname.str);
     return true;
 }
 
@@ -744,12 +744,12 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     OPRINT(" ");
     CHECK(cg_write_symb(j, out));
     OPRINTLN("");
-    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->name.str);
+    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->uname.str);
 
     OPRINT("LT TF@!bin ");
     CHECK(cg_write_symb(i, out));
     OPRINTLN(" 0");
-    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->name.str);
+    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->uname.str);
 
     OPRINT("STRLEN TF@!len ");
     CHECK(cg_write_symb(s, out));
@@ -758,7 +758,7 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     OPRINT("GT TF@!bin ");
     CHECK(cg_write_symb(j, out));
     OPRINTLN(" TF@!len");
-    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->name.str);
+    OPRINTLN("JUMPIFEQ TF@!bin bool@true %s", nil_l->uname.str);
 
     OPRINTLN("DEFVAR TF@!res");
     OPRINTLN("DEFVAR TF@!chr");
@@ -771,9 +771,9 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
 
     OPRINT("JUMPIFEQ TF@!i ");
     CHECK(cg_write_symb(j, out));
-    OPRINTLN(" %s", loop_end_l->name.str);
+    OPRINTLN(" %s", loop_end_l->uname.str);
 
-    OPRINTLN("LABEL %s", loop_l->name.str);
+    OPRINTLN("LABEL %s", loop_l->uname.str);
     OPRINT("GETCHAR TF@!chr ");
     CHECK(cg_write_symb(s, out));
     OPRINTLN(" TF@!i");
@@ -781,9 +781,9 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     OPRINTLN("CONCAT TF@!res TF@!res TF@!chr");
     OPRINT("JUMPIFNEQ TF@!i ");
     CHECK(cg_write_symb(j, out));
-    OPRINTLN(" %s", loop_l->name.str);
+    OPRINTLN(" %s", loop_l->uname.str);
 
-    OPRINTLN("LABEL %s", loop_end_l->name.str);
+    OPRINTLN("LABEL %s", loop_end_l->uname.str);
     if (call.dst.ident) {
         OPRINT("MOVE ");
         cg_write_ident(call.dst.ident, out);
@@ -791,12 +791,12 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
     } else {
         OPRINTLN("PUSHS TF@!res");
     }
-    OPRINTLN("JUMP %s", end_l->name.str);
+    OPRINTLN("JUMP %s", end_l->uname.str);
 
-    OPRINTLN("LABEL %s", nil_l->name.str);
+    OPRINTLN("LABEL %s", nil_l->uname.str);
     CHECK(cg_get_value(nil, call.dst.ident, out));
 
-    OPRINTLN("LABEL %s", end_l->name.str);
+    OPRINTLN("LABEL %s", end_l->uname.str);
 
     return true;
 }
@@ -824,7 +824,7 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
     OPRINT("STRLEN TF@!len ");
     CHECK(cg_write_symb(c, out));
     OPRINTLN("");
-    OPRINTLN("JUMPIFEQ !len int@0 %s", empty_l->name.str);
+    OPRINTLN("JUMPIFEQ !len int@0 %s", empty_l->uname.str);
 
     if (call.dst.ident) {
         OPRINT("STR2INT ");
@@ -839,11 +839,11 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
         OPRINTLN(" int@0");
     }
 
-    OPRINTLN("JUMP %s", end_l->name.str);
+    OPRINTLN("JUMP %s", end_l->uname.str);
 
-    OPRINTLN("LABEL %s", empty_l->name.str);
+    OPRINTLN("LABEL %s", empty_l->uname.str);
     CHECK(cg_get_value(zero, call.dst.ident, out));
-    OPRINTLN("LABEL %s", end_l->name.str);
+    OPRINTLN("LABEL %s", end_l->uname.str);
 
     return true;
 }
@@ -864,7 +864,7 @@ static bool cg_call(Symtable *sym, InstCall call, FILE *out) {
         CHECK(cg_get_tvalue(carg, darg, true, out));
     }
     OPRINTLN("PUSHFRAME");
-    OPRINTLN("CALL %s", call.ident->name.str);
+    OPRINTLN("CALL %s", call.ident->uname.str);
 
     if (!call.dst.has_value) {
         if (call.ident->func.return_type & DT_VOID) {

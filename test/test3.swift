@@ -3,3 +3,5 @@ func foo() -> String {
 }
 
 let i = foo()
+
+write(i, "\n")

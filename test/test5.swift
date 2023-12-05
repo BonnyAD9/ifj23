@@ -5,3 +5,5 @@ if (pom <= 5) {
 else {
     pom = 1
 }
+
+write(pom, "\n")

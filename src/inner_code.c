@@ -592,7 +592,7 @@ static bool ic_gen_condition(
     // JIFN top(stack), label
 
     // PUSH eval(cond->expr)
-    CHECK(ic_gen_expr(sym, cond->expr, INST_NONE_IDENT, code));
+    CHECK(ic_gen_expr(sym, cond->expr, INST_IDENT(NULL), code));
 
     // JIFN top(stack), label
     Instruction inst = {
