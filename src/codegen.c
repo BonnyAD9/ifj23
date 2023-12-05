@@ -219,7 +219,7 @@ static bool cg_write_tsymb(InstSymb symb, bool tf, FILE *out) {
         return cg_write_tident(symb.ident, tf, out);
     }
 
-    switch (symb.type & DT_TYPE_M) {
+    switch (symb.literal.type & DT_TYPE_M) {
     case DT_INT:
         OPRINT("int@%d", symb.literal.int_v);
         break;
