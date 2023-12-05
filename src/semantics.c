@@ -998,6 +998,7 @@ static bool sem_process_expr_condition(AstExpr *expr) {
 
 AstCondition *sem_let_condition(FilePos pos, SymItem *ident) {
     AstCondition *let_cond = ast_let_condition(pos, ident);
+    var_pos = pos;
 
     if (sem_process_let_condition(let_cond->let)) {
         let_cond->sema_checked = true;
@@ -1009,6 +1010,13 @@ AstCondition *sem_let_condition(FilePos pos, SymItem *ident) {
 }
 
 static bool sem_process_let_condition(SymItem *ident) {
+    if (!ident->declared) {
+        return sema_err(
+            var_pos,
+            "Undeclared variable",
+            ERR_UNDEF_FUNCTION
+        );
+    }
     if (ident->type != SYM_VAR) {
         return sema_err(
             var_pos,
