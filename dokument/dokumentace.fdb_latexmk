@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1701806525 "c:/Users/milan/Desktop/dokument/dokumentace.tex" "dokumentace.pdf" "dokumentace" 1701806529 0
+["pdflatex"] 1701806870 "c:/Users/milan/Desktop/dokument/dokumentace.tex" "dokumentace.pdf" "dokumentace" 1701806875 0
   "C:/Users/milan/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1701805646 82507 a9eef8696c92627b87e9975edea03b2a ""
   "C:/Users/milan/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1701036504 24141909 39b20e4ae575cbc29cc118cc13aef195 ""
   "C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8a.enc" 1458473887 2629 bcda5bfab59f89e6404a7eda6ba1cf4b ""
@@ -116,13 +116,13 @@
   "C:/Users/milan/AppData/Local/Programs/MiKTeX/tex/latex/tools/tabularx.sty" 1686255640 7147 d80d8cf72d313443d08c13c1af59c90f ""
   "C:/Users/milan/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/milan/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1656236890 56148 51a9a8571c07b9921892ae11063ae853 ""
-  "c:/Users/milan/Desktop/dokument/dokumentace.tex" 1701806527 32738 3f514fba3984c4adfb94341e36ed8f19 ""
-  "dokumentace.aux" 1701806529 4037 a3bbefba35da8592c3c79e21bcdec971 "pdflatex"
-  "dokumentace.out" 1701806529 2351 084016e4a20cf774d8b0cdb3100c69c4 "pdflatex"
-  "dokumentace.tex" 1701806527 32738 3f514fba3984c4adfb94341e36ed8f19 ""
-  "dokumentace.toc" 1701806529 1371 dc8c38c6fd8457462a16b569bf62fdca "pdflatex"
+  "c:/Users/milan/Desktop/dokument/dokumentace.tex" 1701806869 32738 3f514fba3984c4adfb94341e36ed8f19 ""
+  "dokumentace.aux" 1701806874 4037 a3bbefba35da8592c3c79e21bcdec971 "pdflatex"
+  "dokumentace.out" 1701806874 2351 084016e4a20cf774d8b0cdb3100c69c4 "pdflatex"
+  "dokumentace.tex" 1701806869 32738 3f514fba3984c4adfb94341e36ed8f19 ""
+  "dokumentace.toc" 1701806874 1371 dc8c38c6fd8457462a16b569bf62fdca "pdflatex"
   "pictures/FIT_logo.png" 1695997834 54163 e30a8b411c74fa82a21c17d21fbeaddd ""
-  "pictures/KO.png" 1701806524 2675138 4b5953bb2017ba0ec42c56f5488ac575 ""
+  "pictures/KO.png" 1701806830 2673181 f5a6ae86185a587aaa5f40e1ac37866d ""
   "pictures/LL_tabulka.png" 1701788577 35957 57097f99c519d80108587c6990b91568 ""
   (generated)
   "dokumentace.aux"

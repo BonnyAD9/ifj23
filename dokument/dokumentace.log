@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10) (preloaded format=pdflatex 2023.11.26)  5 DEC 2023 21:02
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10) (preloaded format=pdflatex 2023.11.26)  5 DEC 2023 21:07
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -431,11 +431,11 @@ pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has b
                    \relax 
 l.128             \newpage
                            [1{C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}]
-<pictures/KO.png, id=107, 5947.21875pt x 6840.55624pt>
+<pictures/KO.png, id=107, 5947.21875pt x 6835.5375pt>
 File: pictures/KO.png Graphic file (type png)
 <use pictures/KO.png>
 Package pdftex.def Info: pictures/KO.png  used on input line 132.
-(pdftex.def)             Requested size: 5947.20433pt x 6840.53966pt.
+(pdftex.def)             Requested size: 5947.20433pt x 6835.52094pt.
  [2
 pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
@@ -529,7 +529,7 @@ Here is how much of TeX's memory you used:
  1141 hyphenation exceptions out of 8191
  75i,13n,79p,699b,601s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmib10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on dokumentace.pdf (9 pages, 1454811 bytes).
+Output written on dokumentace.pdf (9 pages, 1452934 bytes).
 PDF statistics:
  245 PDF objects out of 1000 (max. 8388607)
  71 named destinations out of 1000 (max. 500000)
