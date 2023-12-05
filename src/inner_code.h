@@ -191,6 +191,7 @@ typedef struct {
 } InnerCode;
 
 bool ic_inner_code(Symtable *table, AstBlock *block, InnerCode *res);
+void ic_free_code(InnerCode *code);
 void ic_free_func_code(FunctionCode *code);
 void ic_free_instruction(Instruction *inst);
 void ic_free_symb(InstSymb *symb);

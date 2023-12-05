@@ -131,6 +131,11 @@ bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
     return true;
 }
 
+void ic_free_code(InnerCode *code) {
+    vec_free_with(&code->code, (FreeFun)ic_free_instruction);
+    vec_free_with(&code->functions, (FreeFun)ic_free_func_code);
+}
+
 void ic_free_func_code(FunctionCode *code) {
     vec_free_with(&code->code, (FreeFun)ic_free_instruction);
 }

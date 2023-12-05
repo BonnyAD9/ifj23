@@ -10,6 +10,8 @@
 #include "parser.h"
 #include "printer.h"
 #include "debug_tools.h"
+#include "inner_code.h"
+#include "codegen.h"
 
 int main(void) {
     FILE* file = fopen(DEBUG_FILE, "r");
@@ -22,14 +24,36 @@ int main(void) {
     Lexer lexer = lex_new(in);
     Symtable table = sym_new();
     Parser parser = parser_new(&lexer, &table);
-    AstBlock *res = parser_parse(&parser);
+    AstBlock *block = parser_parse(&parser);
     parser_free(&parser);
     fclose(file);
     lex_free(&lexer);
-    if (res) {
-        print_ast_block(res, 1);
+    if (!block) {
+        ast_free_block(&block);
+        sym_free(&table);
+        return get_first_err_code();
     }
-    ast_free_block(&res);
-    lex_free(&lexer);
+
+    InnerCode ic;
+    if (!ic_inner_code(&table, block, &ic)) {
+        EPRINTF("Error generating inner code\n");
+        ast_free_block(&block);
+        sym_free(&table);
+        return get_first_err_code();
+    }
+
+    FILE *res = fopen("res/res.ifjcode", "w");
+    if (!cg_generate(&table, &ic, res)) {
+        EPRINTF("Error generating target code\n");
+        ast_free_block(&block);
+        ic_free_code(&ic);
+        sym_free(&table);
+        return ERR_OTHER;
+    }
+
+    ast_free_block(&block);
+    ic_free_code(&ic);
     sym_free(&table);
+
+    return get_first_err_code();
 }
