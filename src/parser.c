@@ -183,6 +183,8 @@ static AstCondition *parse_condition(Parser *par) {
 
     SymItem *ident = sym_find(par->table, par->lex->str);
 
+    tok_next(par);
+
     return sem_let_condition(pos, ident);
 }
 
