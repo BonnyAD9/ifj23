@@ -33,8 +33,6 @@ AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr);
 AstStmt *sem_func_decl(
     FilePos pos,
     SymItem *ident,
-    Vec params,
-    DataType return_type,
     AstBlock *body
 );
 AstStmt *sem_if(
