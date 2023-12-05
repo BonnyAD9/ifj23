@@ -127,6 +127,9 @@ Vec vec_clone(Vec *vec);
 /// Inserts item at the given position
 bool vec_insert(Vec *vec, size_t index, void *item);
 
+/// Removes value at the given index
+void vec_remove(Vec *vec, size_t index);
+
 /// creates new span
 Span span_new(void *data, size_t item_size, size_t len);
 

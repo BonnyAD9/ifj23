@@ -46,7 +46,9 @@ typedef struct {
 // Values saved in each tree node
 struct SymItem {
     String name;
+    String uname;
     Type type;
+    bool global;
     union {
         FuncData func;
         VarData var;
@@ -69,6 +71,7 @@ typedef struct node {
 
 typedef struct {
     TreeNode *root_node;
+    int id;
 } Tree;
 
 typedef struct {
@@ -77,7 +80,7 @@ typedef struct {
 } Symtable;
 
 /// Creates new tree
-Tree tree_new();
+Tree tree_new(int id);
 
 /// Adds node into tree
 void tree_insert(Tree *tree, const String key, Vec data);
@@ -104,7 +107,7 @@ Symtable sym_new();
 void sym_free(Symtable *symtable);
 
 /// Adds scope to the symtable and scope stack
-void sym_scope_add(Symtable *symtable);
+bool sym_scope_add(Symtable *symtable);
 
 /// Pops scope from symtable scope stack
 void sym_scope_pop(Symtable *symtable);
@@ -138,5 +141,12 @@ FuncData sym_func_new(DataType ret, Vec params);
 
 /// Frees func param
 void sym_free_func_param(FuncParam *par);
+
+// Generates unique temporary variable with the given type
+SymItem *sym_tmp_var(Symtable *symtable, DataType type);
+
+// Generates temporary function (same as `sym_tmp_var` but doesn't require
+// type, and sets the type to function)
+SymItem *sym_label(Symtable *symtable);
 
 #endif // SYMTABLE_H_INCLUDED
