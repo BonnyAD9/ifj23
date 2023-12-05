@@ -117,6 +117,9 @@ static bool cg_call(Symtable *sym, InstCall call, FILE *out);
 
 bool cg_generate(Symtable *sym, InnerCode *code, FILE *out) {
     OPRINTLN(".IFJcode23");
+    OPRINTLN("");
+    OPRINTLN("CREATEFRAME");
+    OPRINTLN("PUSHFRAME");
 
     CHECK(cg_generate_block(sym, code->code, out));
 
