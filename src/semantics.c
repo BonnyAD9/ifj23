@@ -9,7 +9,6 @@ bool sem_top_level = false;
 Context context = {
     .in_func = false,
     .ret_stmt_found = false,
-    .in_var_decl = false,
     .func_ret_type = DT_NONE
 };
 /////////////////////////////////////////////////////////////////////////
@@ -133,6 +132,8 @@ static bool sem_process_let_condition(SymItem *ident);
 static bool sem_process_if(AstIf *if_v);
 static bool sem_process_while(AstWhile *while_v);
 
+static bool handle_write_func(SymItem *ident, Vec args);
+
 // HELP FUNCS
 static void set_block_checked(AstBlock* block, bool* sema_to_check);
 static bool use_before_decl(FilePos decl, FilePos usage);
@@ -188,7 +189,7 @@ static bool process_expr(AstExpr *expr) {
             return ret_val;
         case AST_VARIABLE:
             ret_val = sem_process_variable(expr->variable->ident);
-            expr->data_type = expr->variable->ident->var.data_type;
+            expr->data_type = expr->variable->data_type = expr->variable->ident->var.data_type;
             expr->sema_checked = expr->variable->sema_checked = expr->variable->ident->declared;
             return ret_val;
         default:
@@ -227,6 +228,18 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
         );
     }
 
+    if ((binary_op->left->data_type == DT_NONE || binary_op->right->data_type == DT_NONE) && !sem_top_level)
+        return true;
+
+    // Trying to work with function like with variable
+    if (binary_op->right->type == AST_VARIABLE && binary_op->right->variable->ident->type == SYM_FUNC) {
+        return sema_err(
+            binary_op->left->pos,
+            "Cant handle function as variable",
+            ERR_SEMANTIC
+        );
+    }
+
     if (binary_op->operator == '=') {
         // Trying to assign something to let variable outside of its own declaration
         if (binary_op->left->type == AST_VARIABLE && !binary_op->left->variable->ident->var.mutable && binary_op->left->variable->ident->declared) {
@@ -240,6 +253,9 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
 
     bool left_side = process_expr(binary_op->left);
     bool right_side = process_expr(binary_op->right);
+
+    if (sem_top_level && binary_op->left->type == AST_VARIABLE && binary_op->left->data_type == DT_NONE)
+        binary_op->left->data_type = binary_op->left->variable->ident->var.data_type;
 
     if (!left_side || !right_side)
         // Error is already set by lower instancies
@@ -357,7 +373,44 @@ static bool sem_process_call(AstFunctionCall *func_call) {
     return false;
 }
 
+static bool handle_write_func(SymItem *ident, Vec args) {
+    VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
+        // write() function cant have param's name, f.e. write(paramname : "ahoj", ...)
+        if (arg.v->name.str != NULL && arg.v->name.len) {
+            return sema_err(
+                ident->file_pos,
+                "Param's names arent allowed for write() function",
+                ERR_INVALID_FUN
+            );
+        }
+
+        if (arg.v->type == AST_VARIABLE) {
+            // Check if variable is defined
+            if (!sem_process_variable(arg.v->variable))
+                // Error already set by sem_process_variable()
+                return false;
+        }
+        else if (arg.v->type == AST_LITERAL) {
+            if (!sem_process_literal(&(arg.v->literal)))
+                // Error already set by sem_process_literal()
+                return false;
+        }
+        else {
+            return sema_err(
+                arg.v->pos,
+                "Unexpected argument type",
+                ERR_INVALID_FUN
+            );
+        }
+    }
+    return true;
+}
+
 static bool check_func_params(SymItem *ident, Vec args) {
+    // Special case for write() function
+    if (!strcmp(ident->name.str, "write"))
+        return handle_write_func(ident, args);
+
     Vec *params = sym_func_get_params(ident, ident->name);
     if (!params) {
         return sema_err(
@@ -701,10 +754,8 @@ static bool sem_process_stmt(AstStmt *stmt) {
 
             return ret_val;
         case AST_VARIABLE_DECL:
-            context.in_var_decl = true;
             ret_val = sem_process_var_decl(stmt->variable_decl);
             stmt->sema_checked = stmt->variable_decl->sema_checked;
-            context.in_var_decl = false;
 
             return ret_val;
         case AST_RETURN:
@@ -835,6 +886,18 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
                 variable_decl->value->pos,
                 "Invalid expression",
                 ERR_UNKNOWN_TYPE
+            );
+        }
+
+        if (variable_decl->value->data_type == DT_NONE && !sem_top_level)
+            return true;
+
+        // Trying to work with function like with variable
+        if (variable_decl->value->type == AST_VARIABLE && variable_decl->value->variable->ident->type == SYM_FUNC) {
+            return sema_err(
+                variable_decl->value->pos,
+                "Cant handle function as variable",
+                ERR_SEMANTIC
             );
         }
 
@@ -977,6 +1040,9 @@ static bool sem_process_expr_condition(AstExpr *expr) {
             ERR_INCOM_TYPE
         );
     }
+
+    // Check for using undefined variables in condition
+
     // Check for relational operators usage (f.e. operator '+' doesnt make sense and cant be evaluated as true/false)
     Token oper = expr->binary_op->operator;
     // T_EQUALS, T_DIFFERS, T_LESS_OR_EQUAL, T_GREATER_OR_EQUAL, '>', '<'
