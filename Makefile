@@ -15,7 +15,6 @@ DOBJTEST:=$(patsubst src/%.c,obj/debug/%.o,$(filter-out src/main.c,$(SRC)))
 
 .PHONY: debug release clean rel deb test
 
-
 debug:
 	mkdir -p obj/debug
 	$(CC) -MM $(SRC) | sed -r 's/^.*:.*$$/obj\/debug\/\0/' > dep.d
@@ -25,6 +24,11 @@ release:
 	mkdir -p obj/release
 	$(CC) -MM $(SRC) | sed -r 's/^.*:.*$$/obj\/release\/\0/' > dep.d
 	$(MAKE) rel
+
+run:
+	$(MAKE)
+	./ifj23
+	$(IFJ_EXEC) res/res.ifjcode
 
 deb: $(DOBJ)
 	$(CC) $(CFLAGS) $^ -o $(TARGET) $(LDFLAGS)

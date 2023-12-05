@@ -34,17 +34,18 @@ int main(void) {
     if (!block) {
         ast_free_block(&block);
         sym_free(&table);
-        return get_first_err_code();
+        return get_first_err_code() ?: ERR_OTHER;
     }
 
     print_ast_block(block, 1);
+    printf("\n");
 
     InnerCode ic;
     if (!ic_inner_code(&table, block, &ic)) {
         EPRINTF("Error generating inner code\n");
         ast_free_block(&block);
         sym_free(&table);
-        return get_first_err_code();
+        return get_first_err_code() ?: ERR_OTHER;
     }
 
     FILE *res = fopen("res/res.ifjcode", "w");
@@ -59,7 +60,7 @@ int main(void) {
     ic_free_code(&ic);
     sym_free(&table);
 
-    return get_first_err_code();
+    return get_first_err_code() ?: ERR_OTHER;
 }
 
 bool sym_generate_builtins(Symtable *sym) {
