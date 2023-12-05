@@ -21,6 +21,8 @@
     \usepackage{array} % lepší tabulky
     \usepackage[table]{xcolor} % barvy tabulek
     \usepackage{float}
+    \usepackage{csquotes}
+
     
  
 
@@ -114,7 +116,7 @@
             identifikaci a zpracování tokenů ve vstupním kódu. Tento přístup umožňuje systematicky 
             analyzovat postupně načtené znaky a identifikovat je jako jednotlivé tokeny na základě 
             definovaných pravidel a přechodů mezi stavy automatu. Tímto způsobem je struktura 
-            zdrojového kódu efektivně analyzována a převedena do podoby tokenů pro další zpracování. 
+            vstupního kódu efektivně analyzována a převedena do podoby tokenů pro další zpracování. 
 
             Funkce \textit{lex\_next()} zajišťuje většinu vnitřní logiky scanneru tím, že načte 
             token a uloží ho do struktury \textit{Lexer}, která obsahuje důležité informace o každém 
@@ -147,56 +149,56 @@
                 je složen z \hyperref[llgramatika]{\textbf{LL--gramatiky}} a 
                 \hyperref[lltabulka]{\textbf{LL--tabulky}}. Parser si za svůj vstup bere jednotlivé 
                 tokeny z lexikální analýzy a následně nalpní tabulku symbolů v podobě výškově 
-                vyváženého binárního vyhledávacího stromu (vv-BVS). Pro každý neterminál z 
-                LL-gramatiky, je sestavena funkce, která následně volá další funkce na základě 
+                vyváženého binárního vyhledávacího stromu (vv-BVS). Pro většinu neterminálů z 
+                LL-gramatiky je sestavena funkce, která následně volá další funkce na základě 
                 předcházejícího tokenu. Tyto tokeny se získávají pomocí funkce \textit{lex\_next()}.
             %%%%%%%%%%%%%%%%%%%%%%% LL-gramatika %%%%%%%%%%%%%%%%%%%%%%%
             {\fontsize{10.1}{13.4}\selectfont
             \subsubsection*{LL--gramatika}\label{llgramatika}
             \begin{enumerate}[noitemsep]
-                \item \texttt{MAIN -> \orange{''EOF''}}
+                \item \texttt{MAIN -> \orange{"EOF"}}
                 \item \texttt{MAIN -> STATEMENT MAIN}
-                \item \texttt{{MAIN -> \orange{''func''~ident~''(''} PARAMS \orange{'')''}
-                RETVAL \orange{''\{''}} STATEMENT \orange{''\}''} MAIN }
+                \item \texttt{{MAIN -> \orange{"func"'~ident~"("} PARAMS \orange{")"}
+                RETVAL \orange{"\{"}} STATEMENT \orange{"\}"} MAIN }
                 \item \texttt{STATEMENT -> \blue{$\epsilon$}}
                 \item \texttt{PARAMS -> \blue{$\epsilon$}}
-                \item \texttt{PARAMS -> \orange{name~ident~'':''} TYPE PARAMS\_NEXT}
-                \item \texttt{TYPE -> \orange{''Int''} Q\_MARK}
-                \item \texttt{TYPE -> \orange{''Double''} Q\_MARK}
-                \item \texttt{TYPE -> \orange{''String''} Q\_MARK}
+                \item \texttt{PARAMS -> \orange{name~ident~":"} TYPE PARAMS\_NEXT}
+                \item \texttt{TYPE -> \orange{"Int"} Q\_MARK}
+                \item \texttt{TYPE -> \orange{"Double"} Q\_MARK}
+                \item \texttt{TYPE -> \orange{"String"} Q\_MARK}
                 \item \texttt{Q\_MARK -> \blue{$\epsilon$}}
-                \item \texttt{Q\_MARK -> \orange{''?''}}
+                \item \texttt{Q\_MARK -> \orange{"?"}}
                 \item \texttt{PARAMS\_NEXT -> \blue{$\epsilon$}}
-                \item \texttt{PARAMS\_NEXT -> \orange{'',''} PARAMS}
+                \item \texttt{PARAMS\_NEXT -> \orange{","} PARAMS}
                 \item \texttt{RETVAL -> \blue{$\epsilon$}}
-                \item \texttt{RETVAL -> \orange{''->''} TYPE}
+                \item \texttt{RETVAL -> \orange{"->"} TYPE}
                 \item \texttt{STATEMENT -> VAR RIGHTSIDE STATEMENT}
-                \item \texttt{VAR -> \orange{''let''~ident~'':''} TYPE}
-                \item \texttt{VAR -> \orange{''var''~ident~'':''} TYPE}
+                \item \texttt{VAR -> \orange{"let"~ident~":"} TYPE}
+                \item \texttt{VAR -> \orange{"var"~ident~":"} TYPE}
                 \item \texttt{RIGHTSIDE -> \blue{$\epsilon$}}
-                \item \texttt{RIGHTSIDE -> \orange{''=''} EXPR}
-                \item \texttt{EXPR -> \orange{''Do~it~using~precedence~table''}}
-                \item \texttt{STATEMENT -> \orange{ident~''=''} EXPR STATEMENT}
-                \item \texttt{{STATEMENT -> \orange{''if''} COND \orange{''\{''}} 
-                STATEMENT \orange{''\}''} ELSESTAT}
+                \item \texttt{RIGHTSIDE -> \orange{"$=$"} EXPR}
+                \item \texttt{EXPR -> \orange{"Do~it~using~precedence~table"}}
+                \item \texttt{STATEMENT -> \orange{ident~"$=$"} EXPR STATEMENT}
+                \item \texttt{{STATEMENT -> \orange{"$=$"} COND \orange{"\{"}} 
+                STATEMENT \orange{"\}"} ELSESTAT}
                 \item \texttt{COND -> EXPR}
-                \item \texttt{COND -> \orange{''(''~''let''~ident~'')''}}
-                \item \texttt{COND -> \orange{''let''~ident}}
+                \item \texttt{COND -> \orange{"("~"let"~ident~")"}}
+                \item \texttt{COND -> \orange{"let"~ident}}
                 \item \texttt{ELSESTAT -> STATEMENT}
-                \item \texttt{{ELSESTAT -> \orange{''else''~''\{''}} STATEMENT 
-                \orange{''\}''}STATEMENT}
-                \item \texttt{{WHILESTAT -> \orange{''while''} COND \orange{''\{''}} 
-                STATEMENT \orange{''\}''} STATEMENT}
-                \item \texttt{FUNCCALL -> LEFTSIDE \orange{ident~''(''} FUNCPARAMS 
-                \orange{'')''} STATEMENT}
+                \item \texttt{{ELSESTAT -> \orange{"else"~"\{"}} STATEMENT 
+                \orange{"\}"}STATEMENT}
+                \item \texttt{{WHILESTAT -> \orange{"while"} COND \orange{"\{"}} 
+                STATEMENT \orange{"\}"} STATEMENT}
+                \item \texttt{FUNCCALL -> LEFTSIDE \orange{ident~"("} FUNCPARAMS 
+                \orange{")"} STATEMENT}
                 \item \texttt{LEFTSIDE -> \blue{$\epsilon$}}
-                \item \texttt{LEFTSIDE -> VAR \orange{''=''}}
+                \item \texttt{LEFTSIDE -> VAR \orange{"$=$"}}
                 \item \texttt{FUNCPARAMS -> \blue{$\epsilon$}}
-                \item \texttt{FUNCPARAMS -> \orange{ident~'':''~name} FUNCPARAMS\_NEXT}
+                \item \texttt{FUNCPARAMS -> \orange{ident~":"~name} FUNCPARAMS\_NEXT}
                 \item \texttt{FUNCPARAMS -> \orange{name} FUNCPARAMS\_NEXT}
                 \item \texttt{FUNCPARAMS\_NEXT -> \blue{$\epsilon$}}
-                \item \texttt{FUNCPARAMS\_NEXT -> \orange{'',''} FUNCPARAMS}
-                \item \texttt{STATEMENT -> \orange{''return''} VALUE STATEMENT}
+                \item \texttt{FUNCPARAMS\_NEXT -> \orange{","} FUNCPARAMS}
+                \item \texttt{STATEMENT -> \orange{"return"} VALUE STATEMENT}
                 \item \texttt{VALUE -> EXPR}
             \end{enumerate}}
             %%%%%%%%%%%%%%%%%%%%%%% LL-gramatika %%%%%%%%%%%%%%%%%%%%%%%
@@ -222,9 +224,9 @@
                 zdola-nahoru pomocí \hyperref[prectabulka]{\textbf{precedenční tabulky}}. Na základě
                 žádosti PSA pošle lexikální analyzátor token, který se poté zpracuje s nejvyšším tokenem
                 na zásobníku a funkce \textit{prec\_table} na základě níže uvedených pravidel vrací to,
-                které se má na daný výraz aplikovat. Precedenční syntaktická analýza, kdy přijde prázdné
-                pravidlo a zároveň je zásobník (\textit{stack}) prázdný. Následně skončí úspěšně a vrací
-                poslední načtený znak. V opačném případě končí neúspěšně.
+                které se má na daný výraz aplikovat. Precedenční syntaktická analýza končí v moment, kdy 
+                přijde prázdné pravidlo a zároveň je zásobník (\textit{stack}) prázdný. Následně skončí 
+                úspěšně a vrací poslední načtený znak. V opačném případě končí neúspěšně.
             \begin{table}[ht]
                     \centering 
                     \small
@@ -316,13 +318,14 @@
 
 
             \subsubsection{Tabulka symbolů}
-                Tabulky symbolů jsou implementovány jako \textbf{výškově vyvážené binární vyhledávací stromy}
+                Tabulky symbolů jsou implementovány jako \textbf{výškově vyvážené binární vyhledávací 
+                stromy}
                 v modulu \textit{symtable.c}. Každý uzel obsahuje identifikátor (klíč, díky kterému 
                 vyhledáváme uzly), data a 2 ukazatele na jeho podstromy.
                 
                 Tabulky jsou uloženy ve vektoru a dělí na lokální a globální. Lokální pro lokální 
-                proměnné a globální pro funkce. Tabulky symbolů jsou implementovány jako 
-                náhodně rozptýlené tabulky.
+                proměnné a globální pro funkce. Tabulky symbolů jsou implementovány jako rozptýlené 
+                tabulky.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Syntaktická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Codegen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -351,7 +354,7 @@
             základě schopností a dovedností jednotlivých členů týmu. Na dílčích částech
             projektu pracovali především jednotlivci s pomocí tzv.\ \textit{Pull request}, 
             díky kterému jsme měli možnost poskytovat zpětnou vazbu na konkrétní části kódu 
-            a který nám umožnil náš verzovaný systém \textbf{Git}, přičemž jako úložistě 
+            a který nám umožnil verzovaný systém \textbf{Git}, přičemž jako úložistě 
             našeho repozitáře jsme využili platformu \textbf{GitHub}. Právě Git nám umožnil
             pracovat na více úkolech projektu v tzv.\ větvích, které jsme po otestování a 
             schválení začlenili do hlavní vývojové větve.

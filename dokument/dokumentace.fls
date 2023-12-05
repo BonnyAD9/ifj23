@@ -145,6 +145,14 @@ INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\graphics\mathcolor.
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\graphics\mathcolor.ltx
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\float\float.sty
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\float\float.sty
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\csquotes\csquotes.sty
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\csquotes\csquotes.sty
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\csquotes\csquotes.def
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\csquotes\csquotes.def
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\csquotes\csquotes.def
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\csquotes\csquotes.cfg
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\csquotes\csquotes.cfg
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\tex\latex\csquotes\csquotes.cfg
 INPUT .\dokumentace.aux
 INPUT .\dokumentace.aux
 INPUT dokumentace.aux
@@ -269,6 +277,8 @@ INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\c
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmmi10.pfb
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmmib10.pfb
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmmib10.pfb
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr10.pfb
+INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmr10.pfb
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmsy10.pfb
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\public\amsfonts\cm\cmsy10.pfb
 INPUT C:\Users\milan\AppData\Local\Programs\MiKTeX\fonts\type1\urw\courier\ucrr8a.pfb
