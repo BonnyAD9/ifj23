@@ -534,8 +534,7 @@ static bool ic_gen_return(
     InstOptIdent tmp = { .has_value = false };
     if (ret->expr) {
         tmp.has_value = true;
-        CHECKD(SymItem *, t, sym_tmp_var(sym, ret->expr->data_type));
-        tmp.ident = t;
+        tmp.ident = NULL;
         CHECK(ic_gen_expr(sym, ret->expr, tmp, code));
     }
 

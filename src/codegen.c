@@ -28,7 +28,7 @@ static bool cg_write_tident(SymItem *ident, bool tf, FILE *out);
 static bool cg_get_value(InstSymb src, SymItem *dst, FILE *out);
 static bool cg_get_tvalue(InstSymb src, SymItem *dst, bool tf, FILE *out);
 static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out);
-static SymItem *cg_get_ident(Symtable *sym, SymItem *dst);
+static SymItem *cg_get_ident(Symtable *sym, SymItem *dst, FILE *out);
 static bool cg_push(SymItem *cur, SymItem *target, FILE *out);
 static bool cg_gen_inst3(
     const char *isnt,
@@ -301,6 +301,9 @@ static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out)
     }
 
     CHECKD(SymItem *, itm, sym_tmp_var(sym, DT_NONE));
+    OPRINT("DEFVAR ");
+    CHECK(cg_write_ident(itm, out));
+    OPRINTLN("");
 
     OPRINT("POPS ");
     CHECK(cg_write_ident(itm, out));
@@ -311,8 +314,21 @@ static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out)
     return true;
 }
 
-static SymItem *cg_get_ident(Symtable *sym, SymItem *dst) {
-    return dst ? dst : sym_tmp_var(sym, DT_NONE);
+static SymItem *cg_get_ident(Symtable *sym, SymItem *dst, FILE *out) {
+    if (dst) {
+        return dst;
+    }
+    dst = sym_tmp_var(sym, DT_NONE);
+    if (!dst) {
+        return NULL;
+    }
+
+    OPRINT("DEFVAR ");
+    if (cg_write_ident(dst, out)) {
+        return NULL;
+    }
+    OPRINTLN("");
+    return dst;
 }
 
 static bool cg_push(SymItem *cur, SymItem *target, FILE *out) {
@@ -379,7 +395,7 @@ static bool cg_gen_binary(
     CHECK(cg_get_symb(sym, bin.first, &first, out));
     CHECK(cg_get_symb(sym, bin.second, &second, out));
 
-    CHECKD(SymItem *, dst, cg_get_ident(sym, bin.dst));
+    CHECKD(SymItem *, dst, cg_get_ident(sym, bin.dst, out));
     CHECK(cg_gen_inst3(inst, dst, first, second, out));
 
     return cg_push(dst, bin.dst, out);
@@ -392,7 +408,7 @@ static bool cg_gen_ifn(Symtable *sym, InstSymb src, SymItem *dst, FILE *out) {
         return cg_get_value(STACK_SYMB, dst, out);
     }
 
-    CHECKD(SymItem *, tdst, cg_get_ident(sym, dst));
+    CHECKD(SymItem *, tdst, cg_get_ident(sym, dst, out));
 
     OPRINT("EQ ");
     CHECK(cg_write_ident(tdst, out));
@@ -540,7 +556,7 @@ static bool cg_gen_concat(Symtable *sym, InstBinary concat, FILE *out) {
     InstSymb first;
     CHECK(cg_get_symb(sym, concat.second, &second, out));
     CHECK(cg_get_symb(sym, concat.first, &first, out));
-    CHECKD(SymItem *, dst, cg_get_ident(sym, concat.dst));
+    CHECKD(SymItem *, dst, cg_get_ident(sym, concat.dst, out));
 
     CHECK(cg_gen_inst3("CONCAT", dst, first, second, out));
     return cg_push(dst, concat.dst, out);
@@ -664,7 +680,7 @@ static bool cg_call_read(
     FILE *out
 ) {
     SymItem *dst = call.dst.has_value ? call.dst.ident : NULL;
-    CHECK(dst = cg_get_ident(sym, dst));
+    CHECK(dst = cg_get_ident(sym, dst, out));
 
     OPRINT("READ ");
     CHECK(cg_write_ident(dst, out));
@@ -842,6 +858,9 @@ static bool cg_call(Symtable *sym, InstCall call, FILE *out) {
     VEC_FOR_EACH(&call.params, InstSymb, a) {
         InstSymb carg = *a.v;
         SymItem *darg = VEC_AT(&call.ident->func.params, FuncParam, a.i).ident;
+        OPRINT("DEFVAR ");
+        cg_write_tident(darg, true, out);
+        OPRINTLN("");
         CHECK(cg_get_tvalue(carg, darg, true, out));
     }
     OPRINTLN("PUSHFRAME");
