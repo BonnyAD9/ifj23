@@ -316,6 +316,7 @@ void sym_item_free(SymItem **item) {
     }
 
     str_free(&i->name);
+    str_free(&i->uname);
     if (i->type == SYM_FUNC) {
         vec_free_with(&i->func.params, (FreeFun)sym_free_func_param);
         vec_free(&i->func.params);
@@ -376,7 +377,7 @@ bool sym_item_insert_new(
 
 Symtable sym_new() {
     return (Symtable) {
-        .scopes = VEC_NEW(Tree),
+        .scopes = VEC_NEW(Tree*),
         .scope_stack = VEC_NEW(Tree*)
     };
 }
