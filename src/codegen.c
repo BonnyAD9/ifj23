@@ -10,7 +10,7 @@
 #define STACK_SYMB INST_SYMB_ID(NULL)
 
 // simple error propagation: returns false if the expression is false
-#define CHECK(...) if (!(__VA_ARGS__)) return
+#define CHECK(...) if (!(__VA_ARGS__)) return false
 // simle error propagation: declares variable and returns false if it is not
 // true
 #define CHECKD(type, name, ...) \
@@ -142,6 +142,7 @@ static bool cg_generate_block(Symtable *sym, Vec code, FILE *out) {
         OPRINTLN("");
         CHECK(cg_generate_inst(sym, *inst.v, out));
     }
+    return true;
 }
 
 static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out) {
@@ -209,6 +210,8 @@ static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out) {
     case IT_EXIT:
         return cg_gen_exit(sym, inst.exit, out);
     }
+    assert(false);
+    return false;
 }
 
 static bool cg_write_symb(InstSymb symb, FILE *out) {
@@ -289,6 +292,8 @@ static bool cg_get_tvalue(InstSymb src, SymItem *dst, bool tf, FILE *out) {
 
     CHECK(cg_write_symb(src, out));
     OPRINTLN("");
+
+    return true;
 }
 
 static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out)
@@ -300,11 +305,13 @@ static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out)
 
     CHECKD(SymItem *, itm, todo_sym_tmp_var(sym, DT_NONE));
 
-    OPTINT("POPS ");
+    OPRINT("POPS ");
     CHECK(cg_write_ident(itm, out));
     OPRINTLN("");
 
     *dst = INST_SYMB_ID(itm);
+
+    return true;
 }
 
 static SymItem *cg_get_ident(Symtable *sym, SymItem *dst) {
@@ -649,6 +656,8 @@ static bool cg_single_arg(
     OPRINTLN("");
 
     OPRINTLN("%sS", inst);
+
+    return true;
 }
 
 static bool cg_call_read(
@@ -661,7 +670,7 @@ static bool cg_call_read(
     CHECK(dst = cg_get_ident(sym, dst));
 
     OPRINT("READ ");
-    CHECK(g_write_ident(dst, out));
+    CHECK(cg_write_ident(dst, out));
     OPRINTLN(" %s", type);
 
     return call.dst.has_value ? cg_push(dst, call.dst.ident, out) : true;
@@ -673,6 +682,8 @@ static bool cg_call_write(Symtable *sym, InstCall call, FILE *out) {
         CHECK(cg_write_symb(*arg.v, out));
         OPRINTLN("");
     }
+
+    return true;
 }
 
 static bool cg_call_int2double(Symtable *sym, InstCall call, FILE *out) {
@@ -825,7 +836,7 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
 }
 
 static bool cg_call_chr(Symtable *sym, InstCall call, FILE *out) {
-    cg_single_arg(sym, "INT2CHAR", call, out);
+    return cg_single_arg(sym, "INT2CHAR", call, out);
 }
 
 static bool cg_call(Symtable *sym, InstCall call, FILE *out) {
