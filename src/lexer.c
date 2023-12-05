@@ -9,8 +9,8 @@
 #include "enums.h" // DataType::*
 
 // Avoid double usage of these chars for number parsing
-bool plus_minus_used = false,
-     exponent_used = false,
+bool plus_minus_used   = false,
+     exponent_used     = false,
      decimal_sign_used = false;
 
 /// Reads identifier, keyword or the '_' token
@@ -51,6 +51,7 @@ void lex_free(Lexer *lex) {
 
 // Lexer error
 Token lex_error(Lexer *lex, char *msg) {
+    set_err_code(ERR_LEX);
     EPRINTF(
         "%s:%zu:%zu: error: %s\n",
         get_filename(&lex->in),
@@ -148,8 +149,6 @@ static Token read_ident(Lexer *lex) {
         lex->subtype = DT_STRING;
         return T_TYPE;
     }
-    else if (str_eq(lex->str, STR("var")))
-        return T_DECL;
     else if (str_eq(lex->str, STR("while")))
         return T_WHILE;
     else if (str_eq(lex->str, STR("_")))

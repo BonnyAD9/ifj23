@@ -9,9 +9,9 @@ bool sem_top_level = false;
 Context context = {
     .in_func = false,
     .ret_stmt_found = false,
+    .in_var_decl = false,
     .func_ret_type = DT_NONE
 };
-Vec *unchecked_exprs = NULL;
 /////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////
@@ -133,28 +133,19 @@ static bool sem_process_let_condition(SymItem *ident);
 static bool sem_process_if(AstIf *if_v);
 static bool sem_process_while(AstWhile *while_v);
 
+// HELP FUNCS
 static void set_block_checked(AstBlock* block, bool* sema_to_check);
-
 static bool use_before_decl(FilePos decl, FilePos usage);
-
 static bool not_another_func_decl(Vec stmts);
+static void check_adapt_to_conversion(AstExpr *expr, DataType new_data_type);
 /////////////////////////////////////////////////////////////////////////
 
 static bool sema_err(FilePos pos, const char *msg, const int err_type) {
-    set_err_code(err_type);
-    EPRINTF(DEBUG_FILE ":%zu:%zu: error: %s\n", pos.line, pos.column, msg);
+    //if (!err_code_set()) {
+        set_err_code(err_type);
+        EPRINTF(DEBUG_FILE ":%zu:%zu: error: %s\n", pos.line, pos.column, msg);
+    //}
     return false;
-}
-
-/////////////////////////////////////////////////////////////////////////
-
-static void push_to_vec(AstExpr *expr) {
-    if (!unchecked_exprs) {
-        unchecked_exprs = malloc(sizeof(Vec));
-        *unchecked_exprs = VEC_NEW(AstExpr*);
-
-    }
-    VEC_PUSH(unchecked_exprs, AstExpr*, expr);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -213,10 +204,8 @@ AstExpr *sem_binary(FilePos pos, AstExpr *left, Token op, AstExpr *right) {
         ast_binary_op(pos, op, left, right)
     );
 
-    if (process_expr(binary_expr)) {
-        push_to_vec(binary_expr);
+    if (process_expr(binary_expr))
         return binary_expr;
-    }
 
     ast_free_expr(&binary_expr);
     return NULL;
@@ -238,6 +227,17 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
         );
     }
 
+    if (binary_op->operator == '=') {
+        // Trying to assign something to let variable outside of its own declaration
+        if (binary_op->left->type == AST_VARIABLE && !binary_op->left->variable->ident->var.mutable && binary_op->left->variable->ident->declared) {
+            return sema_err(
+                binary_op->left->pos,
+                "Cant change non-mutable variable's value",
+                ERR_SEMANTIC
+            );
+        }
+    }
+
     bool left_side = process_expr(binary_op->left);
     bool right_side = process_expr(binary_op->right);
 
@@ -245,12 +245,14 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
         // Error is already set by lower instancies
         return false;
 
-    // In case of right expression being func_call before func_decl, leave this unchecked for main body
+    // In case of any part of binary expr being unchecked, wait for top_level true to check
     if (!binary_op->left->sema_checked || !binary_op->right->sema_checked)
         return true;
 
-    if (check_compatibility(binary_op))
+    if (check_compatibility(binary_op)) {
+        check_adapt_to_conversion(binary_op->right, binary_op->data_type);
         return true;
+    }
     return false;
 }
 
@@ -262,10 +264,8 @@ AstExpr *sem_unary(FilePos pos, AstExpr *expr, Token op) {
         ast_unary_op(pos, op, expr)
     );
 
-    if (process_expr(unary_expr)) {
-        push_to_vec(unary_expr);
+    if (process_expr(unary_expr))
         return unary_expr;
-    }
 
     ast_free_expr(&unary_expr);
     return NULL;
@@ -326,10 +326,8 @@ AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
         ast_function_call(pos, ident, params)
     );
 
-    if (process_expr(func_call_expr)) {
-        push_to_vec(func_call_expr);
+    if (process_expr(func_call_expr))
         return func_call_expr;
-    }
 
     ast_free_expr(&func_call_expr);
     return NULL;
@@ -384,13 +382,10 @@ static bool check_func_params(SymItem *ident, Vec args) {
     */
     FuncParam param;
     DataType param_data_type, arg_data_type;
+    var_pos = ident->file_pos;
     VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
         param = VEC_AT(params, FuncParam, arg.i);
-        var_pos = arg.v->pos;
 
-        // Load also param data type
-        if (!sem_process_variable(param.ident))
-            return false;
         param_data_type = param.ident->var.data_type;
         if (arg.v->type == AST_VARIABLE) {
             // Check if variable is defined
@@ -412,7 +407,14 @@ static bool check_func_params(SymItem *ident, Vec args) {
                 ERR_INVALID_FUN
             );
         }
+
         // Check for correct ident name
+        /* For case when "_" is present, have something to tell me if check it or not
+            let str = concat("ahoj ")
+            func concat(_ x : String) {
+                ...
+            }
+        */
         if (!str_eq(arg.v->name, param.label)) {
             return sema_err(
                 arg.v->pos,
@@ -492,10 +494,8 @@ AstExpr *sem_variable(FilePos pos, SymItem *ident) {
         return NULL;
     }
 
-    if (process_expr(var_expr)) {
-        push_to_vec(var_expr);
+    if (process_expr(var_expr))
         return var_expr;
-    }
 
     ast_free_expr(&var_expr);
     return NULL;
@@ -645,33 +645,14 @@ static bool check_compatibility(AstBinaryOp *binary_op) {
 AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level) {
     AstBlock *block = ast_block(pos, stmts);
     sem_top_level = top_level;
-/*
-    if (top_level && unchecked_exprs) {
-        // Go thorugh all un-checked exprs and check them
-        VEC_FOR_EACH(unchecked_exprs, AstExpr*, expr) {
-            bool exp_valid = process_expr((*expr.v));
-            if (!exp_valid) {
-                free(unchecked_exprs);
-                // Error already set in process_expr()
-                ast_free_block(&block);
-                return NULL;
-            }
-        }
-    }
-*/
+
     bool ret_val = sem_process_block(stmts);
     // if top_level is true, after the cycle, everything should have sema_checked true, otherwise unexpected error
     if (top_level) {
         bool block_valid;
         set_block_checked(block, &block_valid);
-        if (!block_valid) {
+        if (!block_valid)
             WPRINTF("Unexpected sema_checked value after top_level true block");
-            /*ret_val = sema_err(
-                pos,
-                "Unexpected sema_checked value after top_level true block",
-                ERR_SEMANTIC
-            );*/
-        }
     }
     if (ret_val)
         return block;
@@ -720,8 +701,10 @@ static bool sem_process_stmt(AstStmt *stmt) {
 
             return ret_val;
         case AST_VARIABLE_DECL:
+            context.in_var_decl = true;
             ret_val = sem_process_var_decl(stmt->variable_decl);
             stmt->sema_checked = stmt->variable_decl->sema_checked;
+            context.in_var_decl = false;
 
             return ret_val;
         case AST_RETURN:
@@ -804,6 +787,19 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
 
 /////////////////////////////////////////////////////////////////////////
 
+static void check_adapt_to_conversion(AstExpr *expr, DataType new_data_type) {
+    if (expr->type == AST_LITERAL &&
+        expr->literal->data_type != new_data_type &&
+       (expr->literal->data_type == DT_INT || expr->literal->data_type == DT_INT_NIL)
+    ) {
+        // Check if implicit conversion happened and if so update literal's datatype and value
+        expr->literal->data_type = new_data_type;
+        expr->literal->double_v = expr->literal->int_v;
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////
+
 AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
     var_pos = pos;
 
@@ -849,7 +845,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
 
         // Check if data type is given, or try determine it
         if (variable_decl->ident->var.data_type == DT_NONE) {
-            if (variable_decl->value->data_type == DT_ANY_NIL || variable_decl->value->data_type == DT_NONE) {
+            if (variable_decl->value->data_type == DT_ANY_NIL || variable_decl->value->data_type == DT_NONE || variable_decl->value->data_type == DT_VOID) {
                 return sema_err(
                     variable_decl->value->pos,
                     "Expression type can't be determined",
@@ -875,7 +871,8 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
 
             bool ret_val = check_compatibility(&(temp_binary_op));
             variable_decl->sema_checked = temp_binary_op.sema_checked;
-            //variable_decl->value->data_type = temp_binary_op.data_type;
+            check_adapt_to_conversion(variable_decl->value, temp_binary_op.data_type);
+
             return ret_val;
         }
     }
@@ -1031,6 +1028,7 @@ static bool sem_process_let_condition(SymItem *ident) {
 }
 
 /////////////////////////////////////////////////////////////////////////
+
 static void set_block_checked(AstBlock* block, bool* sema_to_check) {
     *sema_to_check = true;
 
@@ -1039,7 +1037,9 @@ static void set_block_checked(AstBlock* block, bool* sema_to_check) {
             *sema_to_check = false;
     }
 }
+
 /////////////////////////////////////////////////////////////////////////
+
 static bool not_another_func_decl(Vec stmts) {
     // Check for func_decl in this if's body
     VEC_FOR_EACH(&stmts, AstStmt*, stmt) {
@@ -1053,6 +1053,7 @@ static bool not_another_func_decl(Vec stmts) {
     }
     return true;
 }
+
 /////////////////////////////////////////////////////////////////////////
 
 AstStmt *sem_if(

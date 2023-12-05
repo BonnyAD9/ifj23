@@ -10,10 +10,9 @@
 
 typedef struct {
     bool in_func;
-    union {
-        DataType func_ret_type;
-        bool ret_stmt_found;
-    };
+    bool ret_stmt_found;
+    bool in_var_decl;
+    DataType func_ret_type;
 } Context;
 
 /////////////////////////////////////////////////////////////////////////
