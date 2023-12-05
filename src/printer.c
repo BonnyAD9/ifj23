@@ -97,15 +97,6 @@ void print_token(Token token) {
     case T_TYPE:
         printf("TYPE");
         break;
-    case T_UNARY_MINUS:
-        printf("UNARY_MINUS");
-        break;
-    case T_UNARY_PLUS:
-        printf("UNARY_PLUS");
-        break;
-    case T_EXPR_PAREN:
-        printf("EXPR_PAREN");
-        break;
     default:
         printf("%c", (char)token);
         break;
