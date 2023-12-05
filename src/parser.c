@@ -62,7 +62,9 @@ Token tok_next(Parser *par) {
 }
 
 static AstBlock *parse_block(Parser *par, bool top_level) {
-    sym_scope_add(par->table);
+    if (!top_level) {
+        sym_scope_add(par->table);
+    }
 
     FilePos pos = par->lex->token_start;
     tok_next(par); // skip '{'
