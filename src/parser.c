@@ -48,6 +48,8 @@ static AstStmt *parse_func(Parser *par);
 static bool parse_func_decl_param(Parser *par, FuncParam *res);
 static AstStmt *parse_return(Parser *par);
 
+static bool is_expr_token(Token t);
+
 AstBlock *parser_parse(Parser *par) {
     return parse_block(par, true);
 }
@@ -182,6 +184,8 @@ static AstCondition *parse_condition(Parser *par) {
     }
 
     SymItem *ident = sym_find(par->table, par->lex->str);
+
+    tok_next(par);
 
     return sem_let_condition(pos, ident);
 }
@@ -476,6 +480,18 @@ static AstStmt *parse_return(Parser *par) {
     FilePos pos = par->lex->token_start;
     tok_next(par);
 
-    AstExpr *expr = parse_expression(par);
+    AstExpr *expr = NULL;
+
+    if (is_expr_token(par->cur)) {
+        expr = parse_expression(par);
+        if (!expr) {
+            return NULL;
+        }
+    }
+
     return sem_return(pos, expr);
+}
+
+static bool is_expr_token(Token t) {
+    return t == T_LITERAL || t == T_IDENT || t == '+' || t == '(' || t == '-';
 }

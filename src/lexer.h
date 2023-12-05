@@ -47,15 +47,6 @@ typedef enum {
 
     /// Any of the types (Int, String, Double)
     T_TYPE,
-
-    // the following are never returned by lexer, but they are used in parser
-
-    // e.g. in 'a = -a'
-    T_UNARY_MINUS,
-    // e.g. in 'a = +a'
-    T_UNARY_PLUS,
-    // '(' as expression, e.g. 'a = a * (a + b)' and not e.g. 'a = foo(a)'
-    T_EXPR_PAREN,
 } Token;
 
 typedef enum {

@@ -318,6 +318,9 @@ void ast_free_unary_op(AstUnaryOp **value) {
 
 void ast_free_func_call_param(AstFuncCallParam *value) {
     str_free(&value->name);
+    if (value->type == AST_LITERAL && value->literal.data_type == DT_STRING) {
+        str_free(&value->literal.string_v);
+    }
 }
 
 void ast_free_function_call(AstFunctionCall **value) {
