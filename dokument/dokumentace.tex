@@ -20,6 +20,8 @@
     \usepackage{tabularx} % lepší tabulky
     \usepackage{array} % lepší tabulky
     \usepackage[table]{xcolor} % barvy tabulek
+    \usepackage{float}
+    
  
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Makra a přizpůsobení dokumentu %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -123,7 +125,16 @@
 
             \newpage
             \subsubsection{Diagram konečného automatu} \label{kodiagram}
+                \begin{figure}[H]
+                    \centering
+                    \scalebox{0.081}{\includegraphics{pictures/KO.png}}
+                    \caption{Diagram zobrazující konečný automat}
+                \end{figure}
 
+                \rule{5cm}{0.4pt} \\
+                {\footnotesize Poznámka: pokud automat nemá možnost přejít do dalšího stavu z 
+                nekoncového stavu, je to automaticky bráno jako chyba. (pro zjednodušení návrhu
+                automatu)}
             \newpage
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Lexikální analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
@@ -140,7 +151,7 @@
                 LL-gramatiky, je sestavena funkce, která následně volá další funkce na základě 
                 předcházejícího tokenu. Tyto tokeny se získávají pomocí funkce \textit{lex\_next()}.
             %%%%%%%%%%%%%%%%%%%%%%% LL-gramatika %%%%%%%%%%%%%%%%%%%%%%%
-            {\fontsize{11.3}{13.3}\selectfont
+            {\fontsize{10.1}{13.4}\selectfont
             \subsubsection*{LL--gramatika}\label{llgramatika}
             \begin{enumerate}[noitemsep]
                 \item \texttt{MAIN -> \orange{''EOF''}}
@@ -316,10 +327,9 @@
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Codegen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         \subsection{Generování kódu} \label{codegen}
-            Generovaní cílového códu IFJcode23 je poslední částí tohoto překladače, který lze najít 
-            v modulu \textit{code...gen...c} \\
-            ================================ TODO ==================================
-
+            Generovaní cílového kódu IFJcode23 je poslední částí tohoto překladače, který lze najít 
+            v modulu \textit{codegen.c}. Pro tvorbu finálního kódu se využívá abstraktně syntaktický strom
+            na základě, kterého se tento výsledný kód vytváří. 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Codegen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Rozšíření %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -353,9 +363,9 @@
                     \hline
                     \textbf{Jméno člena týmu} & \textbf{Přidělená práce} \\
                     \hline
-                    Tomáš Daniel            &  vedení týmu, lexikální analýza, vv-BVS, sémantická analýza\\
-                    Martin Slezák           &  \\
-                    Jakub Antonín Štigler   &  generování cílového kódu \\
+                    Tomáš Daniel            &  vedení týmu, lexikální analýza, vv-BVS, sémantická analýza ...\\
+                    Martin Slezák           &  ...\\
+                    Jakub Antonín Štigler   &  generování cílového kódu ...\\
                     Milan Vrbas             & testování, dokumentace, prezentace \\
                     \hline
                 \end{tabular}
