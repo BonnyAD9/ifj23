@@ -31,7 +31,8 @@ int main(void) {
     if (!block) {
         ast_free_block(&block);
         sym_free(&table);
-        return get_first_err_code() ? get_first_err_code() : ERR_OTHER;
+        int err_code = get_first_err_code();
+        return err_code ? err_code : ERR_OTHER;
     }
 
     // print_ast_block(block, 1);
@@ -42,7 +43,8 @@ int main(void) {
         EPRINTF("Error generating inner code\n");
         ast_free_block(&block);
         sym_free(&table);
-        return get_first_err_code() ? get_first_err_code() : ERR_OTHER;
+        int err_code = get_first_err_code();
+        return err_code ? err_code : ERR_OTHER;
     }
 
     if (!cg_generate(&table, &ic, stdout)) {
