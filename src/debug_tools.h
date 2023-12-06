@@ -3,7 +3,7 @@
 
 #ifdef NDEBUG
 
-#define DEBUG_FILE
+#define DEBUG_FILE ""
 
 #else // NDEBUG
 

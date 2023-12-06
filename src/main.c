@@ -16,11 +16,7 @@
 bool sym_generate_builtins(Symtable *sym);
 
 int main(void) {
-    FILE* file = fopen(DEBUG_FILE, "r");
-    if (!file)
-        EPRINTF("Error opening input file\n");
-
-    Stream in = stream_from_file(file, DEBUG_FILE);
+    Stream in = stream_from_file(stdin, DEBUG_FILE);
 
     // Init mock lexer, let him read input and output parsed tokens
     Lexer lexer = lex_new(in);
@@ -28,28 +24,30 @@ int main(void) {
     sym_generate_builtins(&table);
     Parser parser = parser_new(&lexer, &table);
     AstBlock *block = parser_parse(&parser);
+
     parser_free(&parser);
-    fclose(file);
     lex_free(&lexer);
+
     if (!block) {
         ast_free_block(&block);
         sym_free(&table);
-        return get_first_err_code() ?: ERR_OTHER;
+        int err_code = get_first_err_code();
+        return err_code ? err_code : ERR_OTHER;
     }
 
-    print_ast_block(block, 1);
-    printf("\n");
+    // print_ast_block(block, 1);
+    // printf("\n");
 
     InnerCode ic;
     if (!ic_inner_code(&table, block, &ic)) {
         EPRINTF("Error generating inner code\n");
         ast_free_block(&block);
         sym_free(&table);
-        return get_first_err_code() ?: ERR_OTHER;
+        int err_code = get_first_err_code();
+        return err_code ? err_code : ERR_OTHER;
     }
 
-    FILE *res = fopen("res/res.ifjcode", "w");
-    if (!cg_generate(&table, &ic, res)) {
+    if (!cg_generate(&table, &ic, stdout)) {
         EPRINTF("Error generating target code\n");
         ast_free_block(&block);
         ic_free_code(&ic);
