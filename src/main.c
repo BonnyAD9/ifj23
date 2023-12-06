@@ -85,27 +85,36 @@ bool sym_generate_builtins(Symtable *sym) {
     SymItem *term = sym_declare(sym, STR("term"), false);
     sym_item_var(term, sym_var_new(DT_INT, false));
     sym_scope_pop(sym);
-    sym_item_func(func, sym_func_new(DT_DOUBLE, span_to_vec(SPAN_ARR(((FuncParam[]) {
-        { .ident = term },
-    })))));
+    sym_item_func(func, sym_func_new(
+        DT_DOUBLE,
+        span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = term },
+        })))
+    ));
 
     func = sym_declare(sym, STR("Double2Int"), true);
     sym_scope_add(sym);
     term = sym_declare(sym, STR("term"), false);
     sym_item_var(term, sym_var_new(DT_DOUBLE, false));
     sym_scope_pop(sym);
-    sym_item_func(func, sym_func_new(DT_INT, span_to_vec(SPAN_ARR(((FuncParam[]) {
-        { .ident = term },
-    })))));
+    sym_item_func(func, sym_func_new(
+        DT_INT,
+        span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = term },
+        })))
+    ));
 
     func = sym_declare(sym, STR("length"), true);
     sym_scope_add(sym);
     SymItem *s = sym_declare(sym, STR("s"), false);
     sym_item_var(s, sym_var_new(DT_STRING, false));
     sym_scope_pop(sym);
-    sym_item_func(func, sym_func_new(DT_INT, span_to_vec(SPAN_ARR(((FuncParam[]) {
-        { .ident = s },
-    })))));
+    sym_item_func(func, sym_func_new(
+        DT_INT,
+        span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = s },
+        })))
+    ));
 
     func = sym_declare(sym, STR("substring"), true);
     sym_scope_add(sym);
@@ -116,29 +125,36 @@ bool sym_generate_builtins(Symtable *sym) {
     SymItem *j = sym_declare(sym, STR("j"), false);
     sym_item_var(j, sym_var_new(DT_INT, false));
     sym_scope_pop(sym);
-    sym_item_func(func, sym_func_new(DT_STRING_NIL, span_to_vec(SPAN_ARR(((FuncParam[]) {
-        { .label = str_clone(STR("of")), .ident = s },
-        { .label = str_clone(STR("startingAt")), .ident = i },
-        { .label = str_clone(STR("endingBefore")), .ident = j },
-    })))));
+    sym_item_func(func, sym_func_new(
+        DT_STRING_NIL,
+        span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .label = str_clone(STR("of")), .ident = s },
+            { .label = str_clone(STR("startingAt")), .ident = i },
+            { .label = str_clone(STR("endingBefore")), .ident = j },
+        })))
+    ));
 
     func = sym_declare(sym, STR("ord"), true);
     sym_scope_add(sym);
     SymItem *c = sym_declare(sym, STR("c"), false);
     sym_item_var(c, sym_var_new(DT_STRING, false));
     sym_scope_pop(sym);
-    sym_item_func(func, sym_func_new(DT_INT, span_to_vec(SPAN_ARR(((FuncParam[]) {
-        { .ident = c },
-    })))));
+    sym_item_func(func, sym_func_new(
+        DT_INT, span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = c },
+        })))
+    ));
 
     func = sym_declare(sym, STR("chr"), true);
     sym_scope_add(sym);
     i = sym_declare(sym, STR("i"), false);
     sym_item_var(i, sym_var_new(DT_INT, false));
     sym_scope_pop(sym);
-    sym_item_func(func, sym_func_new(DT_STRING, span_to_vec(SPAN_ARR(((FuncParam[]) {
-        { .ident = i },
-    })))));
+    sym_item_func(func, sym_func_new(
+        DT_STRING, span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = i },
+        })))
+    ));
 
     return true;
 }
