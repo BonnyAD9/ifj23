@@ -1,4 +1,5 @@
 #include "vec.h" // Vec, bool, size_t, NULL, true, false, Span, FreeFun
+#include "errors.h"
 
 #include <stdlib.h> // free, realloc, malloc
 #include <string.h> // memcpy
@@ -72,7 +73,7 @@ bool vec_reserve(Vec *vec, size_t len) {
 
     char *new_data = realloc(vec->items, vec->item_size * new_size);
     if (!new_data) {
-        return false;
+        return OTHER_ERR_FALSE;
     }
 
     vec->allocated = new_size;
@@ -171,6 +172,7 @@ Vec span_to_vec(Span span) {
     };
 
     if (!res.items) {
+        (void)OTHER_ERR_FALSE;
         return vec_new(span.item_size);
     }
 
