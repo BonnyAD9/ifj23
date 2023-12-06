@@ -1,3 +1,11 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xstigl00 Jakub Antonín Štigler
+ * xvrbas01 Milan Vrbas
+ */
+
 #include "ast.h" // Vec, DataType::*
 
 #include "errors.h" // set_err_code, ERR_OTHER

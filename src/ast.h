@@ -1,3 +1,12 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xsleza23 Martin Slezák
+ * xstigl00 Jakub Antonín Štigler
+ * xvrbas01 Milan Vrbas
+ */
+
 #ifndef AST_H_INCLUDED
 #define AST_H_INCLUDED
 

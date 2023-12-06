@@ -1,3 +1,10 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #ifndef STREAM_H_INCLUDED
 #define STREAM_H_INCLUDED
 

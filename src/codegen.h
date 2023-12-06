@@ -1,3 +1,9 @@
+/**
+ * IFJ23
+ *
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #ifndef CODEGEN_H_INCLUDED
 #define CODEGEN_H_INCLUDED
 

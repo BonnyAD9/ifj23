@@ -1,3 +1,11 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xsleza23 Martin Slezák
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #ifndef ERRORS_H_INCLUDED
 #define ERRORS_H_INCLUDED
 

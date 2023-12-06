@@ -1,3 +1,10 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #include "parser.h" // Token, Parser, Token::*, bool
 
 #include "errors.h"

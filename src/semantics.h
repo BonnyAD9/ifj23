@@ -1,3 +1,10 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #ifndef SEMANTICS_H_INCLUDED
 #define SEMANTICS_H_INCLUDED
 

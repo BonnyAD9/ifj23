@@ -1,3 +1,10 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #include "stream.h" // Stream, FILE, NUL_STREAM, fgetc, EOF
 
 #include <errno.h>

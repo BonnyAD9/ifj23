@@ -1,3 +1,10 @@
+/**
+ * IFJ23
+ *
+ * xsleza23 Martin Slezák
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #include "errors.h"
 
 #include "utils.h"
