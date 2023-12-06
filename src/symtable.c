@@ -462,6 +462,7 @@ SymItem *sym_declare(Symtable *symtable, String name, bool is_function) {
             item->file_pos.column,
             name.str
         );
+        set_err_code(ERR_UNDEF_FUNCTION);
         return NULL;
     }
 

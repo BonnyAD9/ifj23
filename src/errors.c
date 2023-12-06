@@ -7,7 +7,7 @@ static int last_err_code;
 
 void set_err_code(int err_code) {
     last_err_code = err_code;
-    if (err_code == 0) {
+    if (first_err_code == 0) {
         first_err_code = err_code;
     }
 }
