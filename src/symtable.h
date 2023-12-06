@@ -40,6 +40,8 @@ typedef struct {
 
 typedef struct {
     DataType data_type;
+    DataType original_data_type; // Will be used just for if() statements with "let id" as condition, dont use anyhow else!
+    unsigned int counter;        // Will be used just for if() statements with "let id" as condition, dont use anyhow else!
     bool mutable;
 } VarData;
 

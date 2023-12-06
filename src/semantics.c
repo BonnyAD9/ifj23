@@ -367,7 +367,7 @@ static bool sem_process_call(AstFunctionCall *func_call) {
     func_call->data_type = sym_func_get_ret(func_call->ident, func_call->ident->name);
 
     if (check_func_params(func_call->ident, func_call->arguments)) {
-        func_call->sema_checked = true;
+        func_call->sema_checked = sem_top_level;
         return true;
     }
     return false;
@@ -553,12 +553,10 @@ static bool sem_process_variable(SymItem *ident) {
             ERR_UNDEF_FUNCTION
         );
     }
-    if (!ident->declared) {
-        //if (!context.in_func)
-            // Keep declaration check for main body
-            return true;
-    }
-    // Change from "ident->type != SYM_VAR"
+
+    if (!ident->declared && !sem_top_level)
+        return true;
+
     if (ident->type != SYM_VAR && ident->type != SYM_FUNC) {
         return sema_err(
             var_pos,
@@ -1050,6 +1048,17 @@ static bool sem_process_expr_condition(AstExpr *expr) {
 
 /////////////////////////////////////////////////////////////////////////
 
+void sem_if_block_end(AstCondition *cond) {
+    if (cond->type == AST_COND_LET) {
+        if (cond->expr->variable->ident->var.counter)
+            cond->expr->variable->ident->var.counter--;
+        else
+            cond->expr->variable->ident->var.data_type = cond->expr->variable->ident->var.original_data_type;
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////
+
 AstCondition *sem_let_condition(FilePos pos, SymItem *ident) {
     AstCondition *let_cond = ast_let_condition(pos, ident);
     var_pos = pos;
@@ -1086,6 +1095,21 @@ static bool sem_process_let_condition(SymItem *ident) {
             ERR_SEMANTIC
         );
     }
+
+    // If first entry to stmt -> change var type if needed
+    if (ident->var.original_data_type == DT_NONE) {
+        ident->var.counter = 0;
+        // Store original data type
+        ident->var.original_data_type = ident->var.data_type;
+        // Switch to NOT_NIL values if not already
+        if (ident->var.data_type & DT_NIL) {
+            // Clear nillable flag - XOR
+            ident->var.data_type ^= DT_NIL;
+        }
+    }
+    else
+        ident->var.counter++;
+
     return true;
 }
 

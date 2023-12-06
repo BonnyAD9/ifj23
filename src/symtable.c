@@ -363,6 +363,7 @@ bool sym_item_insert_new(
     case SYM_VAR:
         item->var.data_type = DT_NONE;
         item->var.mutable = false;
+        item->var.original_data_type = DT_NONE;
         break;
     default:
         break;

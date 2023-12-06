@@ -49,6 +49,7 @@ AstExpr *sem_literal(FilePos pos, FullToken token);
 AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params);
 bool sem_lex_literal(Lexer *lex, AstLiteral *res);
 AstExpr *sem_binary(FilePos pos, AstExpr *left, Token op, AstExpr *right);
+void sem_if_block_end(AstCondition *cond);
 /////////////////////////////////////////////////////////////////////////
 
 #endif // SEMANTICS_H_INCLUDED
