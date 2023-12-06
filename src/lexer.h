@@ -5,6 +5,7 @@
 
 #include "str.h" // String
 #include "stream.h"
+#include "enums.h"
 
 typedef enum {
     /// An error occured
@@ -18,14 +19,8 @@ typedef enum {
 
     /// Any identifier
     T_IDENT = 256,
-    /// The 'nil' keyword
-    T_NIL,
-    /// String literal
-    T_SLIT,
-    /// Int literal
-    T_ILIT,
-    /// Double literal
-    T_DLIT,
+    /// Number/String/nil
+    T_LITERAL,
 
     /// The '->' token
     T_RETURNS,
@@ -53,6 +48,11 @@ typedef enum {
     /// Any of the types (Int, String, Double)
     T_TYPE,
 } Token;
+
+typedef enum {
+    TD_LET,
+    TD_VAR,
+} DeclType;
 
 typedef struct {
     Stream in;

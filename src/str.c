@@ -24,10 +24,13 @@ bool str_eq(const String a, const String b) {
 String str_clone(const String s) {
     char *str = malloc(sizeof(*str) * (s.len + 1));
     if (!str) {
-        exit(ERR_OTHER);
+        (void)OTHER_ERR_FALSE;
+        return NUL_STR;
     }
 
-    memcpy(str, s.str, s.len + 1);
+    memcpy(str, s.str, s.len);
+
+    str[s.len] = 0;
 
     return (String) { .str = str, .len = s.len };
 }
@@ -67,7 +70,7 @@ bool sb_push(StringBuffer *sb, char c) {
 
         char *new_str = realloc(sb->str, sizeof(*new_str) * (new_size + 1));
         if (!new_str) {
-            return false;
+            return OTHER_ERR_FALSE;
         }
         sb->alloc = new_size;
         sb->str = new_str;

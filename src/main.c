@@ -1,22 +1,19 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#define DEBUG_FILE "test/testInput.swift"
-
 #include "utils.h"
 #include "lexer.h"
 #include "stream.h"
 #include "symtable.h"
 #include "vec.h"
+#include "ast.h"
+#include "parser.h"
+#include "printer.h"
+#include "debug_tools.h"
+#include "inner_code.h"
+#include "codegen.h"
 
-void print_node_data(Tree *tree, NodeData **data, const char *key) {
-    *data = tree_find(tree, key);
-    if (*data)
-        // Also print data stored in found node
-        fprintf(stdout, "Node %s found, data.layer=%d\n", key, (*data)->layer);
-    else
-        fprintf(stdout, "Node %s NOT found\n", key);
-}
+bool sym_generate_builtins(Symtable *sym);
 
 int main(void) {
     FILE* file = fopen(DEBUG_FILE, "r");
@@ -27,106 +24,137 @@ int main(void) {
 
     // Init mock lexer, let him read input and output parsed tokens
     Lexer lexer = lex_new(in);
-    Token token = lex_next(&lexer);
-
-    while (token != T_ERR && token != EOF) {
-        if (isprint(token)) {
-            printf(
-                DEBUG_FILE ":%zu:%zu: Token %c|%d [%s]\n",
-                lexer.token_start.line,
-                lexer.token_start.column,
-                token,
-                token,
-                lexer.buffer.str
-            );
-        }
-        else {
-            printf(
-                DEBUG_FILE ":%zu:%zu: Token |%d [%s]\n",
-                lexer.token_start.line,
-                lexer.token_start.column,
-                token,
-                lexer.buffer.str
-            );
-        }
-        token = lex_next(&lexer);
-    }
-    lex_free(&lexer);
-    printf("----------------------------------------\n");
-
-    // Symtable - tree tests
-    Tree tree = tree_new();
-    //////////////// Insertion ////////////////
-    tree_insert(&tree, "A", (NodeData){.layer = 1});
-    tree_insert(&tree, "B", (NodeData){.layer = 2});
-    tree_insert(&tree, "C", (NodeData){.layer = 3});
-    tree_insert(&tree, "D", (NodeData){.layer = 4});
-    tree_insert(&tree, "E", (NodeData){.layer = 5});
-    tree_insert(&tree, "F", (NodeData){.layer = 6});
-    // Print tree content
-    tree_visualise(&tree);
-    fprintf(stdout, "\n");
-    //////////////// Deletion ////////////////
-    tree_remove(&tree, "C");
-    tree_remove(&tree, "E");
-    tree_remove(&tree, "@");
-    // Print tree content
-    tree_visualise(&tree);
-    //////////////// Lookup ////////////////
-    NodeData *data;
-    print_node_data(&tree, &data, "F");
-    // Try to modify node's data, layer=6 -> layer=0
-    if (data)
-        data->layer = 0;
-    // Print again and expect data.layer value change
-    print_node_data(&tree, &data, "F");
-    // Modify node's layer by insertion
-    tree_insert(&tree, "F", (NodeData){.layer = 1});
-    print_node_data(&tree, &data, "F");
-    // Try to find non-existing node
-    print_node_data(&tree, &data, "@");
-
-    tree_free(&tree);
+    Symtable table = sym_new();
+    sym_generate_builtins(&table);
+    Parser parser = parser_new(&lexer, &table);
+    AstBlock *block = parser_parse(&parser);
+    parser_free(&parser);
     fclose(file);
-
-    printf("----------------------------------------\n");
-    // vector test
-    Vec v = VEC_NEW(int);
-
-    vec_push_span(&v, SPAN_ARR(((int []) { 5, 4, 3, 2, 1 })));
-
-    VEC_PUSH(&v, int, 0);
-
-    VEC_FOR_EACH(&v, int, item) {
-        printf("%zu: %d\n", item.i, *item.v);
+    lex_free(&lexer);
+    if (!block) {
+        ast_free_block(&block);
+        sym_free(&table);
+        return get_first_err_code() ?: ERR_OTHER;
     }
 
-    printf("pop %d, set [3]=10 and set last = 7\n", VEC_POP(&v, int));
-    VEC_AT(&v, int, 3) = 10;
-    VEC_LAST(&v, int) = 7;
+    print_ast_block(block, 1);
+    printf("\n");
 
-    VEC_FOR_EACH(&v, int, item) {
-        printf("%zu: %d\n", item.i, *item.v);
+    InnerCode ic;
+    if (!ic_inner_code(&table, block, &ic)) {
+        EPRINTF("Error generating inner code\n");
+        ast_free_block(&block);
+        sym_free(&table);
+        return get_first_err_code() ?: ERR_OTHER;
     }
 
-    printf("push tail of vec to the vec\n");
-
-    Span tail = vec_slice(&v, 1, v.len - 1);
-
-
-    printf("tail of vec:\n");
-    SPAN_FOR_EACH(tail, int, item) {
-        printf("%zu: %d\n", item.i, *item.v);
+    FILE *res = fopen("res/res.ifjcode", "w");
+    if (!cg_generate(&table, &ic, res)) {
+        EPRINTF("Error generating target code\n");
+        ast_free_block(&block);
+        ic_free_code(&ic);
+        sym_free(&table);
+        return ERR_OTHER;
     }
 
-    Vec v2 = span_to_vec(tail);
-    vec_push_span(&v, vec_as_span(&v2));
-    vec_free(&v2);
+    ic_free_code(&ic);
+    sym_free(&table);
 
-    printf("Vec:\n");
-    VEC_FOR_EACH(&v, int, item) {
-        printf("%zu: %d\n", item.i, *item.v);
+    return get_first_err_code();
+}
+
+bool sym_generate_builtins(Symtable *sym) {
+    if (!sym_scope_add(sym)) {
+        return OTHER_ERR_FALSE;
     }
 
-    vec_free(&v);
+    SymItem *func = sym_declare(sym, STR("readString"), true);
+    sym_item_func(func, sym_func_new(DT_STRING_NIL, VEC_NEW(FuncParam)));
+
+    func = sym_declare(sym, STR("readInt"), true);
+    sym_item_func(func, sym_func_new(DT_INT_NIL, VEC_NEW(FuncParam)));
+
+    func = sym_declare(sym, STR("readDouble"), true);
+    sym_item_func(func, sym_func_new(DT_DOUBLE_NIL, VEC_NEW(FuncParam)));
+
+    func = sym_declare(sym, STR("write"), true);
+    sym_item_func(func, sym_func_new(DT_VOID, VEC_NEW(FuncParam)));
+
+    func = sym_declare(sym, STR("Int2Double"), true);
+    sym_scope_add(sym);
+    SymItem *term = sym_declare(sym, STR("term"), false);
+    sym_item_var(term, sym_var_new(DT_INT, false));
+    sym_scope_pop(sym);
+    sym_item_func(func, sym_func_new(
+        DT_DOUBLE,
+        span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = term },
+        })))
+    ));
+
+    func = sym_declare(sym, STR("Double2Int"), true);
+    sym_scope_add(sym);
+    term = sym_declare(sym, STR("term"), false);
+    sym_item_var(term, sym_var_new(DT_DOUBLE, false));
+    sym_scope_pop(sym);
+    sym_item_func(func, sym_func_new(
+        DT_INT,
+        span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = term },
+        })))
+    ));
+
+    func = sym_declare(sym, STR("length"), true);
+    sym_scope_add(sym);
+    SymItem *s = sym_declare(sym, STR("s"), false);
+    sym_item_var(s, sym_var_new(DT_STRING, false));
+    sym_scope_pop(sym);
+    sym_item_func(func, sym_func_new(
+        DT_INT,
+        span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = s },
+        })))
+    ));
+
+    func = sym_declare(sym, STR("substring"), true);
+    sym_scope_add(sym);
+    s = sym_declare(sym, STR("s"), false);
+    sym_item_var(s, sym_var_new(DT_STRING, false));
+    SymItem *i = sym_declare(sym, STR("i"), false);
+    sym_item_var(i, sym_var_new(DT_INT, false));
+    SymItem *j = sym_declare(sym, STR("j"), false);
+    sym_item_var(j, sym_var_new(DT_INT, false));
+    sym_scope_pop(sym);
+    sym_item_func(func, sym_func_new(
+        DT_STRING_NIL,
+        span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .label = str_clone(STR("of")), .ident = s },
+            { .label = str_clone(STR("startingAt")), .ident = i },
+            { .label = str_clone(STR("endingBefore")), .ident = j },
+        })))
+    ));
+
+    func = sym_declare(sym, STR("ord"), true);
+    sym_scope_add(sym);
+    SymItem *c = sym_declare(sym, STR("c"), false);
+    sym_item_var(c, sym_var_new(DT_STRING, false));
+    sym_scope_pop(sym);
+    sym_item_func(func, sym_func_new(
+        DT_INT, span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = c },
+        })))
+    ));
+
+    func = sym_declare(sym, STR("chr"), true);
+    sym_scope_add(sym);
+    i = sym_declare(sym, STR("i"), false);
+    sym_item_var(i, sym_var_new(DT_INT, false));
+    sym_scope_pop(sym);
+    sym_item_func(func, sym_func_new(
+        DT_STRING, span_to_vec(SPAN_ARR(((FuncParam[]) {
+            { .ident = i },
+        })))
+    ));
+
+    return true;
 }

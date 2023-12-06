@@ -21,6 +21,8 @@
 
 #define DPRINTF(fmt, ...) EPRINTF("debug: " fmt "\n", ##__VA_ARGS__)
 
+#define WPRINTF(fmt, ...) fprintf(stdout, "warning: " fmt "\n", ##__VA_ARGS__)
+
 #endif // NDEBUG
 
 #endif // UTILS_H_INCLUDED
