@@ -15,6 +15,9 @@
 
 #define STACK_SYMB INST_SYMB_ID(NULL)
 
+// dirty way to solve the problem
+SymItem *tmps[3];
+
 static bool cg_generate_block(Symtable *sym, Vec code, FILE *out);
 static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out);
 static bool cg_write_symb(InstSymb symb, FILE *out);
@@ -116,6 +119,15 @@ bool cg_generate(Symtable *sym, InnerCode *code, FILE *out) {
     OPRINTLN("");
     OPRINTLN("CREATEFRAME");
     OPRINTLN("PUSHFRAME");
+
+    // declare necesary temporary variables
+    for (size_t i = 0; i < sizeof(tmps) / sizeof(*tmps); ++i) {
+        CHECK(tmps[i] = sym_tmp_var(sym, DT_NONE));
+        tmps[i]->global = true;
+        OPRINT("DEFVAR ");
+        CHECK(cg_write_ident(tmps[i], out));
+        OPRINTLN("");
+    }
 
     CHECK(cg_generate_block(sym, code->code, out));
 
@@ -298,10 +310,10 @@ static bool cg_get_symb(Symtable *sym, InstSymb src, InstSymb *dst, FILE *out)
         return true;
     }
 
-    CHECKD(SymItem *, itm, sym_tmp_var(sym, DT_NONE));
-    OPRINT("DEFVAR ");
-    CHECK(cg_write_ident(itm, out));
-    OPRINTLN("");
+    static size_t id_idx = 0;
+
+    SymItem *itm = tmps[id_idx];
+    id_idx = (id_idx + 1) & 1;
 
     OPRINT("POPS ");
     CHECK(cg_write_ident(itm, out));
@@ -316,17 +328,7 @@ static SymItem *cg_get_ident(Symtable *sym, SymItem *dst, FILE *out) {
     if (dst) {
         return dst;
     }
-    dst = sym_tmp_var(sym, DT_NONE);
-    if (!dst) {
-        return NULL;
-    }
-
-    OPRINT("DEFVAR ");
-    if (cg_write_ident(dst, out)) {
-        return NULL;
-    }
-    OPRINTLN("");
-    return dst;
+    return tmps[2];
 }
 
 static bool cg_push(SymItem *cur, SymItem *target, FILE *out) {
