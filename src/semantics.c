@@ -141,6 +141,7 @@ static bool use_before_decl(FilePos decl, FilePos usage);
 static bool not_another_func_decl(Vec stmts);
 static void check_adapt_to_conversion(AstExpr *expr, DataType new_data_type);
 bool check_func_decl_params_duplicity(Vec parameters);
+static bool check_func_return(AstBlock *block);
 /////////////////////////////////////////////////////////////////////////
 
 static bool sema_err(FilePos pos, const char *msg, const int err_type) {
@@ -393,7 +394,7 @@ static bool handle_write_func(SymItem *ident, Vec args) {
         }
 
         if (arg.v->type == AST_VARIABLE) {
-            var_pos = arg.v->variable->file_pos;
+            var_pos = arg.v->pos;
             context.in_func_call = true;
 
             // Check if variable is defined
@@ -404,7 +405,7 @@ static bool handle_write_func(SymItem *ident, Vec args) {
             context.in_func_call = false;
         }
         else if (arg.v->type == AST_LITERAL) {
-            var_pos = arg.v->literal.pos;
+            var_pos = arg.v->pos;
             if (!sem_process_literal(&(arg.v->literal)))
                 // Error already set by sem_process_literal()
                 return false;
@@ -445,10 +446,10 @@ static bool check_func_params(SymItem *ident, Vec args) {
 
     VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
         param = VEC_AT(params, FuncParam, arg.i);
+        var_pos = arg.v->pos;
 
         param_data_type = param.ident->var.data_type;
         if (arg.v->type == AST_VARIABLE) {
-            var_pos = arg.v->variable->file_pos;
             context.in_func_call = true;
 
             // Check if variable is defined
@@ -460,7 +461,6 @@ static bool check_func_params(SymItem *ident, Vec args) {
             arg_data_type = arg.v->variable->var.data_type;
         }
         else if (arg.v->type == AST_LITERAL) {
-            var_pos = arg.v->literal.pos;
             if (!sem_process_literal(&(arg.v->literal)))
                 // Error already set by sem_process_literal()
                 return false;
@@ -468,7 +468,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
         }
         else {
             return sema_err(
-                ident->file_pos,
+                var_pos,
                 "Unexpected argument type",
                 ERR_INVALID_FUN
             );
@@ -564,14 +564,6 @@ AstExpr *sem_variable(FilePos pos, SymItem *ident) {
 }
 
 static bool sem_process_variable(SymItem *ident) {
-    if (sem_top_level && use_before_decl(ident->file_pos, var_pos)) {
-        return sema_err(
-            var_pos,
-            "Undeclared variable",
-            ERR_UNDEF_FUNCTION
-        );
-    }
-
     if (context.in_func_call) {
         // Trying to work with function like with variable
         if (ident->type == SYM_FUNC) {
@@ -581,6 +573,22 @@ static bool sem_process_variable(SymItem *ident) {
                 ERR_SEMANTIC
             );
         }
+        else if (!ident->declared) {
+            return sema_err(
+                var_pos,
+                "Undeclared variable",
+                ERR_UNDEF_FUNCTION
+            );
+        }
+        return true;
+    }
+
+    if (sem_top_level && use_before_decl(ident->file_pos, var_pos)) {
+        return sema_err(
+            var_pos,
+            "Undeclared variable",
+            ERR_UNDEF_FUNCTION
+        );
     }
 
     if (!ident->declared && !sem_top_level)
@@ -831,6 +839,26 @@ bool check_func_decl_params_duplicity(Vec parameters) {
 
 /////////////////////////////////////////////////////////////////////////
 
+static bool check_func_return(AstBlock *block) {
+    VEC_FOR_EACH(&(block->stmts), AstStmt*, block_stmt) {
+        AstStmt *stmt = (*block_stmt.v);
+        if (stmt->type == AST_IF) {
+            bool if_part_ret = check_func_return(stmt->if_v->if_body);
+            bool else_part_ret = false;
+            if (stmt->if_v->else_body)
+                else_part_ret = check_func_return(stmt->if_v->else_body);
+            if (if_part_ret && else_part_ret) {
+                return true;
+            }
+        } else if (stmt->type == AST_RETURN) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/////////////////////////////////////////////////////////////////////////
+
 AstStmt *sem_func_decl(
     FilePos pos,
     SymItem *ident,
@@ -869,12 +897,15 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
     if(!not_another_func_decl(func_decl->body->stmts))
         return false;
 
-    if (sym_func_get_ret(func_decl->ident, func_decl->ident->name) != DT_VOID && !context.ret_stmt_found) {
-        return sema_err(
-            func_decl->pos,
-            "Missing return statement for function",
-            ERR_SYNTAX
-        );
+    if (context.func_ret_type != DT_VOID) {
+        // Check if return is everywhere where needed
+        if (!check_func_return(func_decl->body)) {
+            return sema_err(
+                func_decl->pos,
+                "Missing return statement for function",
+                ERR_SYNTAX
+            );
+        }
     }
     set_block_checked(func_decl->body, &(func_decl->sema_checked));
 
@@ -1095,8 +1126,6 @@ static bool sem_process_expr_condition(AstExpr *expr) {
             ERR_INCOM_TYPE
         );
     }
-
-    // Check for using undefined variables in condition
 
     // Check for relational operators usage (f.e. operator '+' doesnt make sense and cant be evaluated as true/false)
     Token oper = expr->binary_op->operator;
