@@ -834,9 +834,10 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
         OPRINTLN(" int@0");
     } else {
         OPRINTLN("DEFVAR TF@!chr");
-        OPRINT("STR2INT TF@!chr ");
+        OPRINT("STRI2INT TF@!chr ");
         CHECK(cg_write_symb(c, out));
         OPRINTLN(" int@0");
+        OPRINTLN("PUSHS TF@!chr");
     }
 
     OPRINTLN("JUMP %s", end_l->uname.str);
