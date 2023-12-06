@@ -3,21 +3,17 @@
 #include <assert.h>
 
 #include "debug_tools.h"
+#include "errors.h"
+#include "errno.h"
 
 // helper macro, expects that there is FILE named out
-#define OPRINTLN(fmt, ...) fprintf(out, fmt"\n", ##__VA_ARGS__)
+#define OPRINTLN(fmt, ...) if ((fprintf(out, fmt"\n", ##__VA_ARGS__), errno)) \
+    return false
 // helper macro, expects that there is FILE named out
-#define OPRINT(fmt, ...) fprintf(out, fmt,##__VA_ARGS__)
+#define OPRINT(fmt, ...) if ((fprintf(out, fmt,##__VA_ARGS__), errno)) \
+    return false
 
 #define STACK_SYMB INST_SYMB_ID(NULL)
-
-// simple error propagation: returns false if the expression is false
-#define CHECK(...) if (!(__VA_ARGS__)) return false
-// simle error propagation: declares variable and returns false if it is not
-// true
-#define CHECKD(type, name, ...) \
-    type name = (__VA_ARGS__); \
-    if (!name) return false
 
 static bool cg_generate_block(Symtable *sym, Vec code, FILE *out);
 static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out);
@@ -209,8 +205,8 @@ static bool cg_generate_inst(Symtable *sym, Instruction inst, FILE *out) {
     case IT_EXIT:
         return cg_gen_exit(sym, inst.exit, out);
     }
-    assert(false);
-    return false;
+
+    return OTHER_ERR_FALSE;
 }
 
 static bool cg_write_symb(InstSymb symb, FILE *out) {
@@ -246,8 +242,7 @@ static bool cg_write_ident(SymItem *ident, FILE *out) {
 
 static bool cg_write_tident(SymItem *ident, bool tf, FILE *out) {
     if (!ident) {
-        assert(false);
-        return false;
+        return OTHER_ERR_FALSE;
     }
 
     if (tf) {

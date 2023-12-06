@@ -75,7 +75,9 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
 
     while (par->cur != end) {
         if (par->cur == T_EOF) {
-            sym_scope_pop(par->table);
+            if (!top_level) {
+                sym_scope_pop(par->table);
+            }
             return parse_error(
                 par,
                 ERR_SYNTAX,
@@ -91,7 +93,13 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
             return NULL;
         }
 
-        VEC_PUSH(&stmts, AstStmt *, stmt);
+        if (!vec_push(&stmts, &stmt)) {
+            if (!top_level) {
+                sym_scope_pop(par->table);
+            }
+            vec_free_with(&stmts, (FreeFun)ast_free_stmt);
+            return NULL;
+        }
     }
 
     if (!top_level) {
@@ -244,6 +252,7 @@ static bool parse_func_param(Parser *par, AstFuncCallParam *res) {
     }
 
     String name = str_clone(par->lex->str);
+    CHECK(name.str);
 
     tok_next(par);
     if (par->cur != ':') {
@@ -321,6 +330,7 @@ static AstStmt *parse_decl(Parser *par) {
     }
 
     String name = str_clone(par->lex->str);
+    CHECK(name.str);
     FilePos id_pos = par->lex->token_start;
 
     tok_next(par);
@@ -409,7 +419,12 @@ static AstStmt *parse_func(Parser *par) {
             vec_free_with(&params, (FreeFun)sym_free_func_param);
             return NULL;
         }
-        VEC_PUSH(&params, FuncParam, param);
+        if (!vec_push(&params, &param)) {
+            sym_scope_pop(par->table);
+            vec_free_with(&params, (FreeFun)sym_free_func_param);
+            sym_free_func_param(&param);
+            return NULL;
+        }
         if (par->cur == ',') {
             if (tok_next(par) == ')') {
                 sym_scope_pop(par->table);
@@ -461,6 +476,7 @@ static bool parse_func_decl_param(Parser *par, FuncParam *res) {
         return false;
     } else if (par->cur == T_IDENT) {
         label = str_clone(par->lex->str);
+        CHECK(label.str);
     }
 
     if (tok_next(par) != T_IDENT && par->cur != '_') {

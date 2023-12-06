@@ -50,7 +50,7 @@ struct ExpansionStack {
 
 void *parse_error(Parser *par, int err_type, char *msg);
 
-static struct ExpansionStack es_new(void);
+static bool es_new(struct ExpansionStack *res);
 /// <
 static bool es_shift(struct ExpansionStack *stack, Parser *lex);
 /// =
@@ -81,7 +81,8 @@ static bool is_value_token(Token t);
 
 
 AstExpr *parse_infix(Parser *par) {
-    struct ExpansionStack stack = es_new();
+    struct ExpansionStack stack;
+    CHECKN(es_new(&stack));
 
     // the first can be anything different than PA_NONE
     enum PrecedenceAction action;
@@ -355,31 +356,35 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
     return PA_FOLD;
 }
 
-static struct ExpansionStack es_new(void) {
+static bool es_new(struct ExpansionStack *res) {
     Vec v = VEC_NEW(struct StackItem);
-    VEC_PUSH(&v, struct StackItem, ((struct StackItem) {
+    struct StackItem item = {
         .type = SI_TERM,
         .term = {
             .type = T_EOF,
         },
-    }));
+    };
+    CHECK(vec_push(&v, &item));
 
-    return (struct ExpansionStack) {
+    *res = (struct ExpansionStack) {
         .stack = v,
         .last_term = T_EOF,
         .is_stop_term = true,
         .is_top_term = true,
     };
+
+    return true;
 }
 
 static bool es_shift(struct ExpansionStack *stack, Parser *par) {
     vec_reserve(&stack->stack, stack->stack.len + 2);
 
     size_t i = es_top_index(stack, SI_TERM);
-
-    VEC_INSERT(&stack->stack, struct StackItem, i + 1, ((struct StackItem) {
+    struct StackItem item = {
         .type = SI_STOP,
-    }));
+    };
+
+    CHECK(vec_insert(&stack->stack, i + 1, &item));
 
     return es_push(stack, par);
 }
@@ -423,8 +428,7 @@ static bool es_push(struct ExpansionStack *stack, Parser *par) {
         break;
     }
 
-    VEC_PUSH(&stack->stack, struct StackItem, item);
-
+    CHECK(vec_push(&stack->stack, &item));
     tok_next(par);
 
     return true;
@@ -472,7 +476,14 @@ static bool es_fold(struct ExpansionStack *stack) {
     }
 
     if (res == NO_MATCH) {
-        return OTHER_ERR_FALSE;
+        FilePos pos = VEC_LAST(&stack->stack, struct StackItem).pos;
+        EPRINTF(
+            DEBUG_FILE ":%zu:%zu: Failed to parse expression.",
+            pos.line,
+            pos.column
+        );
+        set_err_code(ERR_SYNTAX);
+        return false;
     }
     return false;
 }
@@ -706,13 +717,22 @@ static bool es_call(struct ExpansionStack *stack, Parser *par) {
 
 static AstExpr *es_finish(struct ExpansionStack *stack) {
     while (stack->stack.len > 2) {
-        if (!es_fold(stack)) {
-            return NULL;
-        }
+        CHECKN(es_fold(stack));
     }
     struct StackItem last = VEC_POP(&stack->stack, struct StackItem);
     if (last.type != SI_NTERM) {
-        return OTHER_ERR_NULL;
+        set_err_code(ERR_SYNTAX);
+        if (last.type == SI_TERM && last.term.type == T_EOF) {
+            EPRINTF("Expected expression.");
+        } else {
+            FilePos pos = last.pos;
+            EPRINTF(
+                DEBUG_FILE ":%zu:%zu: Failed to parse expression.",
+                pos.line,
+                pos.column
+            );
+        }
+        return NULL;
     }
     return last.nterm;
 }

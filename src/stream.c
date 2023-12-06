@@ -1,5 +1,10 @@
 #include "stream.h" // Stream, FILE, NUL_STREAM, fgetc, EOF
 
+#include <errno.h>
+
+#include "errors.h"
+#include "utils.h"
+
 Stream stream_from_file(FILE *f, const char *filename) {
     if (!f) {
         return NUL_STREAM;
@@ -32,6 +37,11 @@ int stream_get(Stream *s) {
 
     int ret = s->cur;
     s->cur = fgetc(s->inner);
+    if (errno) {
+        EPRINTF("error: Failed to read from file.\n");
+        set_err_code(ERR_OTHER);
+        s->cur = STREAM_ERR;
+    }
     return ret;
 }
 
@@ -54,10 +64,6 @@ FilePos stream_get_pos(const Stream *s) {
     }
 
     return pos;
-}
-
-const char *get_filename(const Stream *s) {
-    return s->filename;
 }
 
 FilePos pos_min(FilePos a, FilePos b) {

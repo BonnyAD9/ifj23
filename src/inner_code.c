@@ -1,17 +1,9 @@
 #include "inner_code.h"
 
-#include "assert.h"
-
-// returns false if the expression is false
-#define CHECK(...) if (!(__VA_ARGS__)) return false
-// declares variable and returns false if it is not true
-#define CHECKD(type, name, ...) \
-    type name = (__VA_ARGS__); \
-    if (!name) return false
-
+#include "errors.h"
 // extracts functions from the top level block
 // vector of AstFunctionDecl *
-static Vec ic_get_blocks(AstBlock *block);
+static bool ic_get_blocks(AstBlock *block, Vec *res);
 
 static bool ic_gen_block(Symtable *sym, AstBlock *block, Vec *code);
 static bool ic_gen_binary(
@@ -70,7 +62,12 @@ static InstSymb symb_from_literal(AstLiteral *lit);
 
 bool ic_inner_code(Symtable *sym, AstBlock *block, InnerCode *res) {
     CHECK(sym_scope_add(sym));
-    Vec funcs = ic_get_blocks(block);
+    Vec funcs = VEC_NEW(AstFunctionDecl *);
+    if (!ic_get_blocks(block, &funcs)) {
+        vec_free_with(&funcs, (FreeFun)ast_free_function_decl);
+        ast_free_block(&block);
+        return false;
+    }
     res->functions = VEC_NEW(FunctionCode);
 
     VEC_FOR_EACH(&funcs, AstFunctionDecl *, fun) {
@@ -195,21 +192,19 @@ void ic_free_opt_symb(InstOptSymb *symb) {
     symb->has_value = false;
 }
 
-static Vec ic_get_blocks(AstBlock *block) {
-    Vec funcs = VEC_NEW(AstFunctionDecl *);
-
+static bool ic_get_blocks(AstBlock *block, Vec *res) {
     VEC_FOR_EACH(&block->stmts, AstStmt *, stmt) {
         if ((*stmt.v)->type != AST_FUNCTION_DECL) {
             continue;
         }
 
-        vec_push(&funcs, &(*stmt.v)->function_decl);
+        CHECK(vec_push(res, &(*stmt.v)->function_decl));
         free(*stmt.v);
         vec_remove(&block->stmts, stmt.i);
         --stmt.i;
     }
 
-    return funcs;
+    return true;
 }
 
 static bool ic_gen_block(Symtable *sym, AstBlock *block, Vec *code) {
@@ -399,9 +394,7 @@ static bool ic_gen_binary(
         inst.type = IT_GTE;
         break;
     default:
-        // if this happens, it is bug
-        assert(false);
-        return false;
+        return OTHER_ERR_FALSE;
     }
 
     // PUSH eval(op->left)
@@ -425,7 +418,9 @@ static bool ic_gen_unary(
         return ic_gen_expr(sym, op->param, dst, code);
     }
 
-    assert(op->operator == '-');
+    if (op->operator != '-') {
+        return OTHER_ERR_FALSE;
+    }
 
     // PUSH 0
     // PUSH eval(op->param)
@@ -735,10 +730,10 @@ static bool ic_gen_expr(
     case AST_VARIABLE:
         return ic_gen_variable(sym, expr->variable, dst, code);
     default:
-        assert(false);
+        break;
     }
 
-    return false;
+    return OTHER_ERR_FALSE;
 }
 
 static bool ic_gen_stmt(Symtable *sym, AstStmt *stmt, Vec *code) {
@@ -759,10 +754,10 @@ static bool ic_gen_stmt(Symtable *sym, AstStmt *stmt, Vec *code) {
     case AST_WHILE:
         return ic_gen_while(sym, stmt->while_v, code);
     default:
-        assert(false);
+        break;
     }
 
-    return false;
+    return OTHER_ERR_FALSE;
 }
 
 static InstSymb symb_from_literal(AstLiteral *lit) {
@@ -785,6 +780,7 @@ static InstSymb symb_from_literal(AstLiteral *lit) {
         break;
     default: // NIL
         res.literal.type = DT_ANY_NIL;
+        break;
     }
 
     return res;

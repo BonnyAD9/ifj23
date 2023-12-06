@@ -7,6 +7,7 @@
 
 #include "utils.h" // DEBUG_FILE
 #include "enums.h" // DataType::*
+#include "debug_tools.h"
 
 // Avoid double usage of these chars for number parsing
 bool plus_minus_used   = false,
@@ -53,8 +54,7 @@ void lex_free(Lexer *lex) {
 Token lex_error(Lexer *lex, char *msg) {
     set_err_code(ERR_LEX);
     EPRINTF(
-        "%s:%zu:%zu: error: %s\n",
-        get_filename(&lex->in),
+        DEBUG_FILE ":%zu:%zu: error: %s\n",
         lex->token_start.line,
         lex->token_start.column,
         msg
