@@ -196,7 +196,7 @@ static bool process_expr(AstExpr *expr) {
             expr->sema_checked = expr->variable->sema_checked = (expr->variable->ident->declared && expr->variable->ident->var.data_type != DT_NONE);
             return ret_val;
         default:
-            return sema_err(expr->pos, "Uknown expression type", ERR_SEMANTIC);
+            return sema_err(expr->pos, "Unknown expression type", ERR_SEMANTIC);
     }
 }
 
@@ -241,7 +241,7 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
     ) {
         return sema_err(
             binary_op->left->pos,
-            "Cant handle function as variable",
+            "Can't handle function as variable",
             ERR_SEMANTIC
         );
     }
@@ -251,7 +251,7 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
         if (binary_op->left->type == AST_VARIABLE && !binary_op->left->variable->ident->var.mutable && binary_op->left->variable->ident->declared) {
             return sema_err(
                 binary_op->left->pos,
-                "Cant change non-mutable variable's value",
+                "Can't change non-mutable variable's value",
                 ERR_SEMANTIC
             );
         }
@@ -307,7 +307,7 @@ static bool sem_process_unary(AstUnaryOp *unary_op) {
     if (unary_op->param->data_type == DT_NONE || !eval_expr) {
         return sema_err(
             unary_op->param->pos,
-            "Invalid expression, cant convert to non-nil type",
+            "Invalid expression, can't convert to non-nil type",
             ERR_SEMANTIC
         );
     }
@@ -388,7 +388,7 @@ static bool handle_write_func(SymItem *ident, Vec args) {
         if (arg.v->name.str != NULL && arg.v->name.len) {
             return sema_err(
                 ident->file_pos,
-                "Param's names arent allowed for write() function",
+                "Param's names aren't allowed for write() function",
                 ERR_INVALID_FUN
             );
         }
@@ -432,7 +432,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
         return sema_err(
             ident->file_pos,
             "Provided count of args differs from func's count of params",
-            ERR_SEMANTIC
+            ERR_INVALID_FUN
         );
     }
     /*
@@ -577,7 +577,7 @@ static bool sem_process_variable(SymItem *ident) {
             return sema_err(
                 var_pos,
                 "Undeclared variable",
-                ERR_UNDEF_FUNCTION
+                ERR_UNDEF_VAR
             );
         }
         return true;
@@ -587,7 +587,7 @@ static bool sem_process_variable(SymItem *ident) {
         return sema_err(
             var_pos,
             "Undeclared variable",
-            ERR_UNDEF_FUNCTION
+            ERR_UNDEF_VAR
         );
     }
 
@@ -1171,7 +1171,7 @@ static bool sem_process_let_condition(SymItem *ident) {
         return sema_err(
             var_pos,
             "Undeclared variable",
-            ERR_UNDEF_FUNCTION
+            ERR_UNDEF_VAR
         );
     }
     if (ident->type != SYM_VAR) {
