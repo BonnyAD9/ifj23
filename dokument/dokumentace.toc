@@ -10,8 +10,8 @@
 \contentsline {subsection}{\numberline {3.3}Sémantická analýza}{6}{subsection.3.3}%
 \contentsline {subsubsection}{\numberline {3.3.1}Tabulka symbolů}{6}{subsubsection.3.3.1}%
 \contentsline {subsection}{\numberline {3.4}Generování kódu}{6}{subsection.3.4}%
-\contentsline {subsection}{\numberline {3.5}Rozšíření}{6}{subsection.3.5}%
-\contentsline {section}{\numberline {4}Práce v týmu}{7}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Organizace}{7}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Rozdělení práce}{7}{subsection.4.2}%
-\contentsline {section}{\numberline {5}Závěr}{7}{section.5}%
+\contentsline {section}{\numberline {4}Rozšíření}{6}{section.4}%
+\contentsline {section}{\numberline {5}Práce v týmu}{7}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Organizace}{7}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Rozdělení práce}{7}{subsection.5.2}%
+\contentsline {section}{\numberline {6}Závěr}{7}{section.6}%

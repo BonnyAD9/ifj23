@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10) (preloaded format=pdflatex 2023.11.26)  5 DEC 2023 21:07
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 23.10) (preloaded format=pdflatex 2023.11.26)  6 DEC 2023 16:45
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -287,54 +287,80 @@ Package: float 2001/11/08 v1.3d Float enhancements (AL)
 \float@box=\box55
 \@float@everytoks=\toks26
 \@floatcapt=\box56
-) (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/csquotes\csquotes.sty
-Package: csquotes 2022-09-14 v5.2n context-sensitive quotations (JAW)
-\csq@reset=\count283
-\csq@gtype=\count284
-\csq@glevel=\count285
-\csq@qlevel=\count286
-\csq@maxlvl=\count287
-\csq@tshold=\count288
-\csq@ltx@everypar=\toks27
- (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/csquotes\csquotes.def
-File: csquotes.def 2022-09-14 v5.2n csquotes generic definitions (JAW)
+) (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/adjustbox\adjustbox.sty
+Package: adjustbox 2022/10/17 v1.3a Adjusting TeX boxes (trim, clip, ...)
+ (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/xkeyval\xkeyval.sty
+Package: xkeyval 2022/06/16 v2.9 package option processing (HA)
+ (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/generic/xkeyval\xkeyval.tex (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/generic/xkeyval\xkvutils.tex
+\XKV@toks=\toks27
+\XKV@tempa@toks=\toks28
 )
-Package csquotes Info: Trying to load configuration file 'csquotes.cfg'...
-Package csquotes Info: ... configuration file loaded successfully.
- (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/csquotes\csquotes.cfg
-File: csquotes.cfg 
+\XKV@depth=\count283
+File: xkeyval.tex 2014/12/03 v2.7a key=value parser (HA)
+)) (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/adjustbox\adjcalc.sty
+Package: adjcalc 2012/05/16 v1.1 Provides advanced setlength with multiple back-ends (calc, etex, pgfmath)
+) (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/adjustbox\trimclip.sty
+Package: trimclip 2020/08/19 v1.2 Trim and clip general TeX material
+ (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+Package: graphicx 2021/09/16 v1.2d Enhanced LaTeX Graphics (DPC,SPQR)
+\Gin@req@height=\dimen162
+\Gin@req@width=\dimen163
+) (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/collectbox\collectbox.sty
+Package: collectbox 2022/10/17 v0.4c Collect macro arguments as boxes
+\collectedbox=\box57
+)
+\tc@llx=\dimen164
+\tc@lly=\dimen165
+\tc@urx=\dimen166
+\tc@ury=\dimen167
+Package trimclip Info: Using driver 'tc-pdftex.def'.
+ (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/adjustbox\tc-pdftex.def
+File: tc-pdftex.def 2019/01/04 v2.2 Clipping driver for pdftex
 ))
-Package csquotes Info: Checking for multilingual support...
-Package csquotes Info: ... found 'babel' package.
-Package csquotes Info: Adjusting default style.
-Package csquotes Info: Redefining alias 'default' -> 'czech'.
- (dokumentace.aux)
+\adjbox@Width=\dimen168
+\adjbox@Height=\dimen169
+\adjbox@Depth=\dimen170
+\adjbox@Totalheight=\dimen171
+\adjbox@pwidth=\dimen172
+\adjbox@pheight=\dimen173
+\adjbox@pdepth=\dimen174
+\adjbox@ptotalheight=\dimen175
+ (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/ifoddpage\ifoddpage.sty
+Package: ifoddpage 2022/10/18 v1.2 Conditionals for odd/even page detection
+\c@checkoddpage=\count284
+) (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/varwidth\varwidth.sty
+Package: varwidth 2009/03/30 ver 0.92;  Variable-width minipages
+\@vwid@box=\box58
+\sift@deathcycles=\count285
+\@vwid@loff=\dimen176
+\@vwid@roff=\dimen177
+)) (dokumentace.aux)
 \openout1 = `dokumentace.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for IL2/cmr/m/n on input line 48.
-LaTeX Font Info:    Trying to load font information for IL2+cmr on input line 48.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for IL2/cmr/m/n on input line 45.
+LaTeX Font Info:    Trying to load font information for IL2+cmr on input line 45.
  (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/cslatex/base\il2cmr.fd
 File: il2cmr.fd 1997/02/06 CSLaTeX font definitions
 )
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 48.
-LaTeX Font Info:    ... okay on input line 48.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -372,24 +398,24 @@ LaTeX Font Info:    ... okay on input line 48.
 
 (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count289
-\scratchdimen=\dimen162
-\scratchbox=\box57
-\nofMPsegments=\count290
-\nofMParguments=\count291
-\everyMPshowfont=\toks28
-\MPscratchCnt=\count292
-\MPscratchDim=\dimen163
-\MPnumerator=\count293
-\makeMPintoPDFobject=\count294
-\everyMPtoPDFconversion=\toks29
+\scratchcounter=\count286
+\scratchdimen=\dimen178
+\scratchbox=\box59
+\nofMPsegments=\count287
+\nofMParguments=\count288
+\everyMPshowfont=\toks29
+\MPscratchCnt=\count289
+\MPscratchDim=\dimen179
+\MPnumerator=\count290
+\makeMPintoPDFobject=\count291
+\everyMPtoPDFconversion=\toks30
 ) (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
  (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-Package hyperref Info: Link coloring OFF on input line 48.
+Package hyperref Info: Link coloring OFF on input line 45.
  (dokumentace.out) (dokumentace.out)
 \@outlinefile=\write3
 \openout3 = `dokumentace.out'.
@@ -397,12 +423,12 @@ Package hyperref Info: Link coloring OFF on input line 48.
 <pictures/FIT_logo.png, id=67, 2713.13625pt x 602.25pt>
 File: pictures/FIT_logo.png Graphic file (type png)
 <use pictures/FIT_logo.png>
-Package pdftex.def Info: pictures/FIT_logo.png  used on input line 52.
+Package pdftex.def Info: pictures/FIT_logo.png  used on input line 49.
 (pdftex.def)             Requested size: 2713.12965pt x 602.24852pt.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <14.4> on input line 62.
+(Font)              <14.4> on input line 59.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 62.
+(Font)              <7> on input line 59.
  [1
 
 {C:/Users/milan/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8a.enc} <./pictures/FIT_logo.png>] (dokumentace.toc
@@ -420,53 +446,53 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.75     \newpage
+l.72     \newpage
                   [1]
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 92.
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 89.
  (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
 pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.128             \newpage
+l.125             \newpage
                            [1{C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}]
 <pictures/KO.png, id=107, 5947.21875pt x 6835.5375pt>
 File: pictures/KO.png Graphic file (type png)
 <use pictures/KO.png>
-Package pdftex.def Info: pictures/KO.png  used on input line 132.
+Package pdftex.def Info: pictures/KO.png  used on input line 129.
 (pdftex.def)             Requested size: 5947.20433pt x 6835.52094pt.
  [2
 pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.140             \newpage
+l.137             \newpage
                            <./pictures/KO.png>]
-LaTeX Font Info:    Trying to load font information for IL2+pcr on input line 159.
+LaTeX Font Info:    Trying to load font information for IL2+pcr on input line 156.
  (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/cslatex/cspsfonts\il2pcr.fd
 File: il2pcr.fd 1998/01/31 CS Courier
 LaTeX Font Info:     CS Courier on input line 2.
 LaTeX Font Info:    (C) Z. Wagner,1998/01/31 on input line 3.
 LaTeX Font Info:    Created by CsPsFont utility v.1.0e (C) Z. Wagner, 1998/01/31 on input line 4.
 )
-LaTeX Font Info:    Trying to load font information for OMS+pcr on input line 162.
+LaTeX Font Info:    Trying to load font information for OMS+pcr on input line 159.
  (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omspcr.fd
 File: omspcr.fd 
 )
 LaTeX Font Info:    Font shape `OMS/pcr/m/n' in size <10.1> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 162.
-LaTeX Font Info:    Calculating math sizes for size <10.1> on input line 163.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 159.
+LaTeX Font Info:    Calculating math sizes for size <10.1> on input line 160.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <10.1> on input line 163.
+(Font)              <10.1> on input line 160.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7.06996> on input line 163.
+(Font)              <7.06996> on input line 160.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5.05> on input line 163.
+(Font)              <5.05> on input line 160.
  [3]
 <pictures/LL_tabulka.png, id=165, 1205.2528pt x 445.665pt>
 File: pictures/LL_tabulka.png Graphic file (type png)
 <use pictures/LL_tabulka.png>
-Package pdftex.def Info: pictures/LL_tabulka.png  used on input line 213.
+Package pdftex.def Info: pictures/LL_tabulka.png  used on input line 210.
 (pdftex.def)             Requested size: 1205.24988pt x 445.66391pt.
  [4
 
@@ -474,27 +500,29 @@ Package pdftex.def Info: pictures/LL_tabulka.png  used on input line 213.
 pdfTeX warning (ext4): destination with the same identifier (name{figure.2}) has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.217             \end{landscape}
+l.214             \end{landscape}
                                   <./pictures/LL_tabulka.png>] (C:\Users\milan\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omlptm.fd)
-Overfull \hbox (1.58574pt too wide) in paragraph at lines 271--271
+Overfull \hbox (1.58574pt too wide) in paragraph at lines 269--269
  []|\OML/cmm/b/it/10.95 <\IL2/ptm/b/n/10.95 =| 
  []
 
 
-Overfull \hbox (1.58574pt too wide) in paragraph at lines 271--271
+Overfull \hbox (1.58574pt too wide) in paragraph at lines 269--269
  []|\OML/cmm/b/it/10.95 >\IL2/ptm/b/n/10.95 =| 
  []
 
 
-Overfull \hbox (1.58574pt too wide) in paragraph at lines 271--271
+Overfull \hbox (1.58574pt too wide) in paragraph at lines 269--269
  []|\OML/cmm/b/it/10.95 <\IL2/ptm/b/n/10.95 =| 
  []
 
 
-Overfull \hbox (1.58574pt too wide) in paragraph at lines 271--271
+Overfull \hbox (1.58574pt too wide) in paragraph at lines 269--269
  []|\OML/cmm/b/it/10.95 >\IL2/ptm/b/n/10.95 =| 
  []
 
+LaTeX Font Info:    Font shape `OML/ptm/m/n' in size <12> not available
+(Font)              Font shape `OML/cmm/m/it' tried instead on input line 280.
 [5
 
 
@@ -511,27 +539,27 @@ l.312
 pdfTeX warning (ext4): destination with the same identifier (name{table.3}) has been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.393     \end{document}
+l.395     \end{document}
                         ] (dokumentace.aux)
  ***********
 LaTeX2e <2023-06-01> patch level 1
 L3 programming layer <2023-08-29>
  ***********
 Package rerunfilecheck Info: File `dokumentace.out' has not changed.
-(rerunfilecheck)             Checksum: 084016E4A20CF774D8B0CDB3100C69C4;2351.
+(rerunfilecheck)             Checksum: 9F7F6B5F18E2479499A94F4E13C09DE7;2337.
  ) 
 Here is how much of TeX's memory you used:
- 12632 strings out of 475248
- 201288 string characters out of 5757812
- 2016785 words of memory out of 5000000
- 33879 multiletter control sequences out of 15000+600000
- 574665 words of font info for 79 fonts, out of 8000000 for 9000
+ 13222 strings out of 475248
+ 212775 string characters out of 5757812
+ 2018785 words of memory out of 5000000
+ 34439 multiletter control sequences out of 15000+600000
+ 575488 words of font info for 81 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,13n,79p,699b,601s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmib10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on dokumentace.pdf (9 pages, 1452934 bytes).
+ 75i,13n,79p,698b,553s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmib10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/milan/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
+Output written on dokumentace.pdf (9 pages, 1465688 bytes).
 PDF statistics:
- 245 PDF objects out of 1000 (max. 8388607)
+ 250 PDF objects out of 1000 (max. 8388607)
  71 named destinations out of 1000 (max. 500000)
  144 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -20,12 +20,9 @@
     \usepackage{tabularx} % lepší tabulky
     \usepackage{array} % lepší tabulky
     \usepackage[table]{xcolor} % barvy tabulek
-    \usepackage{float}
-    \usepackage{csquotes}
-
+    \usepackage{float} % lepší umístění obrázku
+    \usepackage{adjustbox} % menší tabulky
     
- 
-
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Makra a přizpůsobení dokumentu %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \newcolumntype{Y}{>{\centering\arraybackslash}X}
     \NewDocumentCommand{\orange}{m}{\textcolor{orange}{\texttt{#1}}} % oranžová barva textu
@@ -60,10 +57,10 @@
         {\large \today \hfill
         \large
         \begin{tabular}{l l l}
-        \textbf{Tomáš Daniel} & \quad \textbf{xdanie14} & \quad X\,\% \\
-        Martin Slezák         & \quad xsleza26          & \quad X\,\% \\
-        Jakub Antonín Štigler & \quad xstigl00          & \quad X\,\% \\
-        Milan Vrbas           & \quad xvrbas01          & \quad X\,\% \\
+        \textbf{Tomáš Daniel} & \quad \textbf{xdanie14} & \quad 25\,\% \\
+        Martin Slezák         & \quad xsleza26          & \quad 25\,\% \\
+        Jakub Antonín Štigler & \quad xstigl00          & \quad 25\,\% \\
+        Milan Vrbas           & \quad xvrbas01          & \quad 25\,\% \\
         \end{tabular}
         }
     \end{titlepage}
@@ -79,7 +76,7 @@
     \setcounter{page}{1}
     \section{Úvod}
     Tato dokumentace slouží k popisu implementace a vývoje \textbf{překladače pro jazyk IFJ23}, 
-    který je podmnožinou jazyka \textbf{Swift 5} od společnosti Apple. Program má za úkol načíst 
+    který je podmnožinou jazyka \textbf{Swift 5} od společnosti Apple. Program má za úkol načíst vstupní 
     kód v tomto jazyku a přeložit ho do cílového jazyka \textbf{IFJcode23}. Vybrali jsme si variantu 
     zadání \textbf{vv-BVS}, podle které jsme pomocí \textbf{výškově vyváženého binárního 
     vyhledávacího stromu} implementovali \textbf{tabulku symbolů}.
@@ -87,23 +84,23 @@
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Části překladače %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
     \section{Jednotlivé části překladače}
-    Realizovaný překladač se dá rozdělit na následující dílní moduly:
+    Realizovaný překladač se dá rozdělit na následující dílčí moduly:
     \begin{itemize}[noitemsep]
-        \item \hyperref[lexer]{\textbf{Scanner}} - lexikální analyzátor
+        \item \hyperref[lexer]{\textbf{Scanner}} -- lexikální analyzátor
         \item \textbf{Parser}
             \begin{itemize}
                 \item \hyperref[syntactics]{Syntaktický analyzátor}
                 \item \hyperref[semantics]{Sémantický analyzátor}
             \end{itemize}
-        \item \hyperref[codegen]{\textbf{Codegen}} - Genérátor cílového kódu
+        \item \hyperref[codegen]{\textbf{Codegen}} -- Genérátor cílového kódu
     \end{itemize}
     Samotný překlad nejprve provede lexikální analýzu, následuje syntaktický 
-    analyzátor spolu se sémantickou analýzou a poté se přistoupí k generování 
+    analyzátor spolu se sémantickou analýzou a poté se přistoupí ke generování 
     cílového kódu. 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Části překladače %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Lexikální analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-    \section{Návrh a implementace} \label{lexer}
+    \section{Návrh a implementace}\label{lexer}
         \subsection{Lexikální analýza}
             Jako první část projektu, kterou jsme implementovali byla lexikální analýza, kterou
             lze najít v modulu \textit{lexer.c}. Ta se
@@ -126,7 +123,7 @@
 
 
             \newpage
-            \subsubsection{Diagram konečného automatu} \label{kodiagram}
+            \subsubsection{Diagram konečného automatu}\label{kodiagram}
                 \begin{figure}[H]
                     \centering
                     \scalebox{0.081}{\includegraphics{pictures/KO.png}}
@@ -134,31 +131,31 @@
                 \end{figure}
 
                 \rule{5cm}{0.4pt} \\
-                {\footnotesize Poznámka: pokud automat nemá možnost přejít do dalšího stavu z 
-                nekoncového stavu, je to automaticky bráno jako chyba. (pro zjednodušení návrhu
-                automatu)}
+                {\footnotesize \textbf{Poznámka:} Pokud automat nemá možnost přejít do dalšího stavu z 
+                nekoncového stavu, je to automaticky bráno jako chyba (pro zjednodušení návrhu
+                automatu).}
             \newpage
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Lexikální analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Syntaktická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-        \subsection{Syntaktická analýza} \label{syntactics}
+        \subsection{Syntaktická analýza}\label{syntactics}
             \subsubsection{Rekurzivní sestup}
-                Implementace syntaktické analýzy se nachází v souboru \textbf{parser.c}, který se
+                Implementace syntaktické analýzy se nachází v souboru \textit{parser.c}, který se
                 zaobírá aplikací metody shora dolů, respektive \textbf{rekurzivního sestupu}, který
                 je složen z \hyperref[llgramatika]{\textbf{LL--gramatiky}} a 
-                \hyperref[lltabulka]{\textbf{LL--tabulky}}. Parser si za svůj vstup bere jednotlivé 
-                tokeny z lexikální analýzy a následně nalpní tabulku symbolů v podobě výškově 
-                vyváženého binárního vyhledávacího stromu (vv-BVS). Pro většinu neterminálů z 
+                \hyperref[lltabulka]{\textbf{LL--tabulky}}. Parser si jako svůj vstup bere jednotlivé 
+                tokeny z lexikální analýzy a následně nalpní tabulku symbolů v podobě \textbf{výškově 
+                vyváženého binárního vyhledávacího stromu} (vv-BVS). Pro většinu neterminálů z 
                 LL-gramatiky je sestavena funkce, která následně volá další funkce na základě 
-                předcházejícího tokenu. Tyto tokeny se získávají pomocí funkce \textit{lex\_next()}.
+                předcházejícího tokenu.
             %%%%%%%%%%%%%%%%%%%%%%% LL-gramatika %%%%%%%%%%%%%%%%%%%%%%%
             {\fontsize{10.1}{13.4}\selectfont
             \subsubsection*{LL--gramatika}\label{llgramatika}
             \begin{enumerate}[noitemsep]
                 \item \texttt{MAIN -> \orange{"EOF"}}
                 \item \texttt{MAIN -> STATEMENT MAIN}
-                \item \texttt{{MAIN -> \orange{"func"'~ident~"("} PARAMS \orange{")"}
+                \item \texttt{{MAIN -> \orange{"func"~ident~"("} PARAMS \orange{")"}
                 RETVAL \orange{"\{"}} STATEMENT \orange{"\}"} MAIN }
                 \item \texttt{STATEMENT -> \blue{$\epsilon$}}
                 \item \texttt{PARAMS -> \blue{$\epsilon$}}
@@ -220,11 +217,12 @@
 
             %%%%%%%%%%%%%%%%%%%%%%% PSA-tabulka %%%%%%%%%%%%%%%%%%%%%%%%
             \subsubsection{Precedenční syntaktická analýza}
-                Precedenční syntaktická analýza neboli PSA se stará o syntaktickou analýzu metodou
-                zdola-nahoru pomocí \hyperref[prectabulka]{\textbf{precedenční tabulky}}. Na základě
+                Precedenční syntaktická analýza neboli PSA, nacházející se v souboru \textit{infix\_parser.c}, 
+                se stará o syntaktickou analýzu metodou
+                \textbf{zdola-nahoru} pomocí \hyperref[prectabulka]{\textbf{precedenční tabulky}}. Na základě
                 žádosti PSA pošle lexikální analyzátor token, který se poté zpracuje s nejvyšším tokenem
-                na zásobníku a funkce \textit{prec\_table} na základě níže uvedených pravidel vrací to,
-                které se má na daný výraz aplikovat. Precedenční syntaktická analýza končí v moment, kdy 
+                na zásobníku a funkce \textit{prec\_table()} v souladu s níže uvedenými pravidly vrací vztah,
+                který se má na daný výraz aplikovat. Precedenční syntaktická analýza končí v moment, kdy 
                 přijde prázdné pravidlo a zároveň je zásobník (\textit{stack}) prázdný. Následně skončí 
                 úspěšně a vrací poslední načtený znak. V opačném případě končí neúspěšně.
             \begin{table}[ht]
@@ -232,41 +230,41 @@
                     \small
                     \begin{tabularx}{\textwidth}{|*{18}{Y|}}
                         \hline
-                        \cellcolor{black!80}&  \cellcolor{blue!60}\textbf{$\pi$} &\cellcolor{blue!60} \textbf{*} &\cellcolor{blue!60} \textbf{/} &\cellcolor{blue!60} \textbf{+} &\cellcolor{blue!60} \textbf{-} &\cellcolor{blue!60} \textbf{==} & \cellcolor{blue!60}\textbf{!=} & \cellcolor{blue!60}\textbf{{\textless}} & \cellcolor{blue!60}\textbf{{\textgreater}} & \cellcolor{blue!60}\textbf{{\textless}=} & \cellcolor{blue!60}\textbf{{\textgreater}=} & \cellcolor{blue!60}\textbf{??} & \cellcolor{blue!60}\textbf{=} & \cellcolor{blue!60}\textbf{(} & \cellcolor{blue!60}\textbf{)} & \cellcolor{blue!60}\textbf{$t$} & \cellcolor{blue!60}\textbf{\$} \\
+                        \cellcolor{black!80}&  \cellcolor{blue!60}\textbf{$p!$} &\cellcolor{blue!60} \textbf{*} &\cellcolor{blue!60} \textbf{/} &\cellcolor{blue!60} \textbf{+} &\cellcolor{blue!60} \textbf{-} &\cellcolor{blue!60} \textbf{==} & \cellcolor{blue!60}\textbf{!=} & \cellcolor{blue!60}\textbf{{\textless}} & \cellcolor{blue!60}\textbf{{\textgreater}} & \cellcolor{blue!60}\textbf{{\textless}=} & \cellcolor{blue!60}\textbf{{\textgreater}=} & \cellcolor{blue!60}\textbf{??} & \cellcolor{blue!60}\textbf{=} & \cellcolor{blue!60}\textbf{(} & \cellcolor{blue!60}\textbf{)} & \cellcolor{blue!60}\textbf{$t$} & \cellcolor{blue!60}\textbf{\$} \\
                         \hline
-                        \cellcolor{blue!60}\textbf{$\pi$} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}! & \cellcolor{purple!85}c & \cellcolor{green!75}{\textgreater} & \cellcolor{black!50}{.} & \cellcolor{black!50}{.} \\
+                        \cellcolor{blue!60}\textbf{$p!$} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}! & \cellcolor{purple!85}c & \cellcolor{green!75}{\textgreater} & \cellcolor{black!50}{.} & \cellcolor{black!50}{.} \\
                         \hline
-                        \cellcolor{blue!60}\textbf{*} & \cellcolor{red!60}!& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{gray!75}x& \cellcolor{gray!75}x& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{*} & \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{gray!75}x& \cellcolor{gray!75}x& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{/} &\cellcolor{red!60}! & \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{gray!75}x& \cellcolor{gray!75}x& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{/} &\cellcolor{yellow!75}{\textless} & \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{gray!75}x& \cellcolor{gray!75}x& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{+} & \cellcolor{red!60}! & \cellcolor{gray!75}0& \cellcolor{gray!75}0&\cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}&\cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{+} & \cellcolor{yellow!75}{\textless} & \cellcolor{gray!75}0& \cellcolor{gray!75}0&\cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}&\cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{-}& \cellcolor{red!60}! & \cellcolor{gray!75}0& \cellcolor{gray!75}0&\cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}&\cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{-}& \cellcolor{yellow!75}{\textless} & \cellcolor{gray!75}0& \cellcolor{gray!75}0&\cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}&\cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{==}& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{==}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!& \cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{!=}& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{!=}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{{\textless}} & \cellcolor{red!60}!&\cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{{\textless}} & \cellcolor{yellow!75}{\textless}&\cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{{\textgreater}} & \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{{\textgreater}} & \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{{\textless}=} & \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{{\textless}=} & \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{{\textgreater}=} & \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{{\textgreater}=} & \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}!&\cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{??} & \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}! & \cellcolor{yellow!75}{\textless}& \cellcolor{green!75}{\textgreater}& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{??} & \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}! & \cellcolor{violet!75}$e$& \cellcolor{green!75}{\textgreater}& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{=} & \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}! & \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{=} & \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}! & \cellcolor{violet!75}$e$& \cellcolor{red!60}!& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{(} & \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}! & \cellcolor{yellow!75}{\textless}& \cellcolor{brown!75}=& \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}!\\
+                        \cellcolor{blue!60}\textbf{(} & \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}! & \cellcolor{violet!75}$e$& \cellcolor{brown!75}=& \cellcolor{violet!75}$e$& \cellcolor{red!60}!\\
                         \hline
                         \cellcolor{blue!60}\textbf{)} & \cellcolor{brown!75}=& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{red!60}! &\cellcolor{purple!85}c& \cellcolor{green!75}{\textgreater}&\cellcolor{black!50}{.} &\cellcolor{black!50}{.}\\
                         \hline
                         \cellcolor{blue!60}\textbf{$t$} & \cellcolor{green!75}{\textgreater} & \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater}& \cellcolor{green!75}{\textgreater} & \cellcolor{purple!85}c& \cellcolor{green!75}{\textgreater}&\cellcolor{black!50}{.} &\cellcolor{black!50}{.}\\
                         \hline
-                        \cellcolor{blue!60}\textbf{\$} & \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{red!60}!& \cellcolor{red!60}!& \cellcolor{yellow!75}{\textless}& \cellcolor{black!50}{.}\\
+                        \cellcolor{blue!60}\textbf{\$} & \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{yellow!75}{\textless}& \cellcolor{violet!75}$e$& \cellcolor{red!60}!& \cellcolor{violet!75}$e$& \cellcolor{black!50}{.}\\
                         \hline
                     \end{tabularx}
                     \caption{Tabulka pro precedenční analýzu}\label{prectabulka}
@@ -274,69 +272,71 @@
 
                 \begin{table}[h]
                     \centering
-                    \small
-                    \begin{tabular}{|c|c|l|}
-                      \hline
-                      \textbf{Symbol} & \textbf{Název} & \textbf{Popis}\\
-                      \hline
-                      \textless & PA\_SHIFT & Shift\\
-                      \hline
-                      = & PA\_PUSH & Push \\
-                      \hline
-                      \textgreater & PA\_FOLD & Fold \\
-                      \hline
-                      . & PA\_END & Successful end\\
-                      \hline
-                      ! & PA\_ERR  & Error\\
-                      \hline
-                      x & PA\_TOP &  Shift if terminal is top, fold if non-terminal is top\\
-                      \hline
-                      0 & PA\_STOP & Fold if terminal after stop, shift if non-terminal after stop\\
-                      \hline
-                      c & PA\_CALL & Parse function call\\
-                      \hline
-                    \end{tabular}
+                    \begin{adjustbox}{width=0.72\textwidth}
+                        \begin{tabular}{|c|c|l|}
+                            \hline
+                            \textbf{Symbol} & \textbf{Název} & \textbf{Popis}\\
+                            \hline
+                            \textless & PA\_SHIFT & Shift\\
+                            \hline
+                            = & PA\_PUSH & Push \\
+                            \hline
+                            \textgreater & PA\_FOLD & Fold \\
+                            \hline
+                            . & PA\_END & Successful end\\
+                            \hline
+                            ! & PA\_ERR  & Error\\
+                            \hline
+                            x & PA\_TOP &  Shift if terminal is top, fold if non-terminal is top\\
+                            \hline
+                            0 & PA\_STOP & Fold if terminal after stop, shift if non-terminal after stop\\
+                            \hline
+                            c & PA\_CALL & Parse function call\\
+                            \hline
+                            $e$ & PA\_EMPTY & Shift if the stack is emtpy, otherwise end\\
+                        \hline
+                        \end{tabular}
+                    \end{adjustbox}
                     \caption{Legenda precedenční analýzy}
-                    \label{tab:tabulka}
                   \end{table}
             %%%%%%%%%%%%%%%%%%%%%%%% PSA-tabulka %%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Syntaktická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Sémantická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        \subsection{Sémantická analýza} \label{semantics}
+        \subsection{Sémantická analýza}\label{semantics}
             Sémantická analýza je implementována v modulu \textit{semantics.c}, kde jsou 
             na určitých místech prováděny kontroly, které zahrnují například 
             ověření definice použitých funkcí a proměnných, počty proměnných a výrazů přiřazených 
-            do nich, shodu datových typů. Dále se kontroluje, zda nedochází k dělení nulou a zda 
+            do nich a shodu datových typů. Dále se kontroluje, zda nedochází k dělení nulou a zda 
             návratové hodnoty funkcí odpovídají jejich hlavičkám. 
             
             Po úspěšném dokončení sémantické 
             analýzy se přechází k tvorbě \textbf{abstraktně syntatického stromu} (AST), který lze najít v 
-            \textit{ast.c} a na základě kterého se nadále pracuje s generováním cílového kódu IFJcode23. 
+            souboru \textit{ast.c} a na základě kterého se nadále pracuje s generováním cílového kódu IFJcode23. 
             V opačném případě při zjištění chyby končí program s odpovídají návratovou hodnotou a 
             zároveň vypisuje na standartní chybový výstup informace a podrobnosti o daném problému.
 
 
             \subsubsection{Tabulka symbolů}
-                Tabulky symbolů jsou implementovány jako \textbf{výškově vyvážené binární vyhledávací 
-                stromy}
+                Tabulky symbolů jsou dle zadání implementovány jako \textbf{výškově vyvážené binární 
+                vyhledávací stromy}
                 v modulu \textit{symtable.c}. Každý uzel obsahuje identifikátor (klíč, díky kterému 
                 vyhledáváme uzly), data a 2 ukazatele na jeho podstromy.
                 
-                Tabulky jsou uloženy ve vektoru a dělí na lokální a globální. Lokální pro lokální 
-                proměnné a globální pro funkce. Tabulky symbolů jsou implementovány jako rozptýlené 
-                tabulky.
+                Tabulky jsou uloženy ve vektoru a dělí se na lokální a globální. Lokální tabulky jsou
+                určeny pro lokální proměnné a globální tabulky pro funkce. Tabulky symbolů jsou 
+                implementovány jako rozptýlené tabulky.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Syntaktická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Codegen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        \subsection{Generování kódu} \label{codegen}
-            Generovaní cílového kódu IFJcode23 je poslední částí tohoto překladače, který lze najít 
-            v modulu \textit{codegen.c}. Pro tvorbu finálního kódu se využívá abstraktně syntaktický strom
-            na základě, kterého se tento výsledný kód vytváří. 
+        \subsection{Generování kódu}\label{codegen}
+            Generovaní cílového kódu \textbf{IFJcode23} je poslední částí tohoto překladače, který lze najít 
+            v modulu \textit{codegen.c}. Pro tvorbu finálního kódu se využívá \textbf{abstraktně syntaktický 
+            strom}, na základě kterého se tento výsledný kód vytváří. 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Codegen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Rozšíření %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        \subsection{Rozšíření}
+        \section{Rozšíření}
             Vzhledem k omezenému časovému rozsahu projektu jsme se rozhodli soustředit pouze na 
             základní implementaci a nezačleňovat do ní žádná rozšíření. Místo toho jsme se zaměřili 
             na dokončení základní funkcionality, abychom mohli dodržet termíny a dosáhnout funkčního 
@@ -347,7 +347,7 @@
     \newpage
     \section{Práce v týmu}
         \subsection{Organizace}
-            Na projektu jsme snažili začít pracovat hled od začátku jeho zadání -- tedy
+            Na projektu jsme snažili začít pracovat hned od začátku jeho zadání -- tedy
             na začátku října. Celková komunikace probíhala především pomocí komunikační
             platformy \textbf{Discord}, kde jsme se domluvali na dalším postupu, a nebo 
             na přednáškách, na kterých jsme se potkávali. Práci jsme si rozdělili na 
@@ -360,16 +360,17 @@
             schválení začlenili do hlavní vývojové větve.
 
         \subsection{Rozdělení práce}            
-            \begin{table}[h]
+            \begin{table}[htbp]
                 \centering
                 \begin{tabular}{| l | l |}
                     \hline
                     \textbf{Jméno člena týmu} & \textbf{Přidělená práce} \\
                     \hline
-                    Tomáš Daniel            &  vedení týmu, lexikální analýza, vv-BVS, sémantická analýza ...\\
-                    Martin Slezák           &  ...\\
-                    Jakub Antonín Štigler   &  generování cílového kódu ...\\
-                    Milan Vrbas             & testování, dokumentace, prezentace \\
+                    Tomáš Daniel            &  vedení týmu, lexikální analýza, symtable, sémantická 
+                                                analýza, testování\\
+                    Martin Slezák           &  lexikální analýza, symtable, testování\\
+                    Jakub Antonín Štigler   &  syntaktická analýza, codegen, pomocné struktury, testování\\
+                    Milan Vrbas             &  dokumentace, prezentace, testování \\
                     \hline
                 \end{tabular}
                 \caption{Rozdělení práce mezi jednotlivé členy týmu}
@@ -380,13 +381,14 @@
     \section{Závěr}
         Cílem tohoto projektu bylo pochopit a následně si prakticky vyzkoušet metody 
         probírané v předmětech IFJ a IAL, díky kterým jsme byli schopni implementovat 
-        překladač a jeho jednotlivé části. Bohužel jsme v době pokusného odevzdání 
-        projektu ještě nedosáhli fáze, kdy bychom ho mohli odevzdat a nechat otestovat.
+        překladač a jeho jednotlivé části. Bohužel jsme v době prvního pokusného odevzdání 
+        projektu ještě nedosáhli fáze, kdy bychom ho mohli odevzdat a nechat otestovat,
+        avšak druhé pokusné odevzdání jsme stihli a na základě výsledků postupovali dál.
         Většina členů týmu již měla zkušenost s prací na týmovém úkolu, což nám pomohlo
-        s komunikací a celkovým postupem při plnění tohoto zadání úkolu. 
+        s komunikací a celkovým postupem při plnění tohoto úkolu. 
         
         Projekt byl vzhledem ke své časové náročnosti poměrně komplexní, což znamenalo, 
-        že vyžadoval podstatně více času a pozornosti než jsme původně předpokládali. 
+        že vyžadoval podstatně více času a pozornosti, než jsme původně předpokládali. 
         Nicméně jsme se tomu dokázali postavit a úspěšně ho dokončili včas.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Závěr %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
