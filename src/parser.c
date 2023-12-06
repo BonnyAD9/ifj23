@@ -78,6 +78,7 @@ static AstBlock *parse_block(Parser *par, bool top_level) {
             if (!top_level) {
                 sym_scope_pop(par->table);
             }
+            vec_free_with(&stmts, (FreeFun)ast_free_stmt);
             return parse_error(
                 par,
                 ERR_SYNTAX,
