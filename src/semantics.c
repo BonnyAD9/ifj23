@@ -935,7 +935,7 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
             return sema_err(
                 func_decl->pos,
                 "Missing return statement for function",
-                ERR_SYNTAX
+                ERR_SEMANTIC
             );
         }
     }
