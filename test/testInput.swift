@@ -1,4 +1,6 @@
-let a=a??0
+let a: Int? = nil
+
+// let a=a??0
 
 5*(5+i)
 
@@ -14,10 +16,10 @@ let tq = """
     triple quote test
     """
 
-let a = "ahoj "
+let b = "ahoj "
 var ct : String
-ct = concat(a, with: "svete")
-write(ct, a)
+ct = concat(b, with: "svete")
+write(ct, b)
 
 write("Ahoj\n\"Sve'te \\\u{22}")
 
@@ -30,12 +32,13 @@ func decrement(of n: Int, by m: Int) -> Int {
 func factorial(_ n : Int /* comments anywhere */) -> Int {
     var result : Int?
     if (n < 2) {
-        result = 2.5E5
+        //result = 2.5E5
         // Nested comments
         /* START
             /*BODY****A*/
         END */
         /*/*ON-LINE*/*/
+        return 1
     } else {
         let decremented_n = decrement(of: n, by: 1)
         let temp_result = factorial(decremented_n)

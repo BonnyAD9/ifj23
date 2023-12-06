@@ -1,0 +1,9 @@
+.IFJcode23
+
+pushs bool@false
+pushs bool@false
+jumpifeqs $label
+label $label
+defvar GF@a
+pops GF@a
+dprint GF@a

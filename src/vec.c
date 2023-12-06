@@ -1,4 +1,5 @@
 #include "vec.h" // Vec, bool, size_t, NULL, true, false, Span, FreeFun
+#include "errors.h"
 
 #include <stdlib.h> // free, realloc, malloc
 #include <string.h> // memcpy
@@ -40,6 +41,12 @@ void *vec_pop(Vec *vec) {
     return vec_at(vec, vec->len);
 }
 
+Span vec_pop_range(Vec *vec, size_t count) {
+    Span res = vec_slice(vec, vec->len - count, count);
+    vec->len -= count;
+    return res;
+}
+
 void *vec_last(Vec *vec) {
     return vec_at(vec, vec->len - 1);
 }
@@ -66,7 +73,7 @@ bool vec_reserve(Vec *vec, size_t len) {
 
     char *new_data = realloc(vec->items, vec->item_size * new_size);
     if (!new_data) {
-        return false;
+        return OTHER_ERR_FALSE;
     }
 
     vec->allocated = new_size;
@@ -107,6 +114,39 @@ Vec vec_clone(Vec *vec) {
     return span_to_vec(vec_as_span(vec));
 }
 
+bool vec_insert(Vec *vec, size_t index, void *item) {
+    if (index == vec->len) {
+        return vec_push(vec, item);
+    }
+
+    if (!vec_reserve(vec, vec->len + 1)) {
+        return false;
+    }
+
+    memmove(
+        vec_at(vec, index + 1),
+        vec_at(vec, index),
+        (vec->len - index) * vec->item_size
+    );
+    memcpy(vec_at(vec, index), item, vec->item_size);
+    ++vec->len;
+    return true;
+}
+
+void vec_remove(Vec *vec, size_t index) {
+    if (index == vec->len - 1) {
+        vec_pop(vec);
+        return;
+    }
+
+    memmove(
+        vec_at(vec, index),
+        vec_at(vec, index + 1),
+        (vec->len - index - 1) * vec->item_size
+    );
+    --vec->len;
+}
+
 Span span_new(void *data, size_t item_size, size_t len) {
     return (Span) {
         .items = data,
@@ -132,6 +172,7 @@ Vec span_to_vec(Span span) {
     };
 
     if (!res.items) {
+        (void)OTHER_ERR_FALSE;
         return vec_new(span.item_size);
     }
 

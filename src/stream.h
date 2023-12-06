@@ -7,6 +7,8 @@
 /// An invalid stream
 #define NUL_STREAM ((Stream) { .cur = EOF })
 
+#define STREAM_ERR -2
+
 typedef struct {
     // starting from 1
     size_t line;
@@ -40,7 +42,7 @@ bool stream_is_invalid(const Stream *s);
 /// Gets the position of the last char returned by stream_get
 FilePos stream_get_pos(const Stream *s);
 
-/// Gets filename of currently opened input source
-const char *get_filename(const Stream *s);
+/// Returns the position that is first in the file
+FilePos pos_min(FilePos a, FilePos b);
 
 #endif // STREAM_H_INCLUDED

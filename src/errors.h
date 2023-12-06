@@ -1,6 +1,9 @@
 #ifndef ERRORS_H_INCLUDED
 #define ERRORS_H_INCLUDED
 
+#include <stdbool.h>
+#include <stddef.h>
+
 /// no error
 #define SUCCESS
 
@@ -33,5 +36,30 @@
 
 /// Other error
 #define ERR_OTHER 99
+
+#define OTHER_ERR_FALSE (other_err(__FILE__, __LINE__), false)
+#define OTHER_ERR_NULL (other_err(__FILE__, __LINE__), NULL)
+
+// returns false if the expression is false
+#define CHECK(...) if (!(__VA_ARGS__)) return false
+// declares variable and returns false if it is not true
+#define CHECKD(type, name, ...) \
+    type name = (__VA_ARGS__); \
+    if (!name) return false
+
+// returns NULL if the expression is false
+#define CHECKN(...) if (!(__VA_ARGS__)) return NULL
+// declares variable and returns null if it is not true
+#define CHECKND(type, name, ...) \
+    type name = (__VA_ARGS__); \
+    if (!name) return NULL
+
+void set_err_code(int err_code);
+
+int get_first_err_code();
+
+int get_last_err_code();
+
+void other_err(char *file, int line);
 
 #endif // ERRORS_H_INCLDUED
