@@ -618,6 +618,13 @@ static bool sem_process_variable(SymItem *ident) {
                 ERR_UNDEF_VAR
             );
         }
+
+    if (sem_top_level && use_before_decl(ident->file_pos, var_pos)) {
+        return sema_err(
+            var_pos,
+            "Undeclared variable",
+            ERR_UNDEF_VAR
+        );
     }
 
     if (!ident->declared && !sem_top_level)
