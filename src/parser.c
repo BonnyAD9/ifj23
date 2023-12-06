@@ -140,6 +140,8 @@ static AstStmt *parse_if(Parser *par) {
         return NULL;
     }
 
+    sem_if_block_end(cond);
+
     if (par->cur != T_ELSE) {
         return sem_if(pos, cond, true_block, NULL);
     }
@@ -300,6 +302,7 @@ static AstStmt *parse_while(Parser *par) {
         ast_free_condition(&cond);
         return NULL;
     }
+    sem_if_block_end(cond);
 
     return sem_while(pos, cond, loop);
 }
@@ -433,6 +436,8 @@ static AstStmt *parse_func(Parser *par) {
         }
     }
 
+    sym_item_func(ident, sym_func_new(type, params));
+
     AstBlock *block = parse_block(par, false);
     if (!block) {
         sym_scope_pop(par->table);
@@ -442,7 +447,7 @@ static AstStmt *parse_func(Parser *par) {
 
     sym_scope_pop(par->table);
 
-    return sem_func_decl(pos, ident, params, type, block);
+    return sem_func_decl(pos, ident, block);
 }
 
 static bool parse_func_decl_param(Parser *par, FuncParam *res) {

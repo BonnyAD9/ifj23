@@ -277,7 +277,7 @@ static bool ic_gen_binary(
         CHECK(vec_push_span(code, SPAN_ARR(insts)));
 
         // MOVE dst, eval(op->right)
-        CHECK(!ic_gen_expr(sym, op->right, dst, code));
+        CHECK(ic_gen_expr(sym, op->right, dst, code));
 
         // l_end:
         inst = (Instruction) {

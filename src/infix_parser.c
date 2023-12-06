@@ -86,7 +86,7 @@ AstExpr *parse_infix(Parser *par) {
     // the first can be anything different than PA_NONE
     enum PrecedenceAction action;
     while ((action = prec_table(stack.last_term, par->cur)) != PA_END) {
-        if (action == PA_EMPTY && stack.stack.len != 1) {
+        if (action == PA_EMPTY && !stack.is_top_term) {
             break;
         }
         switch (action) {
@@ -181,24 +181,24 @@ AstExpr *parse_infix(Parser *par) {
 // x PA_TOP   Shift if terminal is top, fold if non-terminal is top
 // o PA_STOP  Fold if terminal after stop, shift if non-terminal after stop
 // c PA_CALL  Parse function call
-// e PA_EMTY  Shift if the stack is emtpy, otherwise end
+// e PA_EMPTY Shift if the stack is emtpy, otherwise end
 //
 //     | p!  *   /   +   -   ==  !=  <   >   <=  >=  ??  =   (   )   t   $
 // ----+-------------------------------------------------------------------
 //  p! | >   >   >   >   >   >   >   >   >   >   >   >   !   c   >   .   .
-//  *  | <   >   >   x   x   >   >   >   >   >   >   >   !   <   >   <   .
-//  /  | <   >   >   x   x   >   >   >   >   >   >   >   !   <   >   <   .
-//  +  | <   o   o   >   >   >   >   >   >   >   >   >   !   <   >   <   .
-//  -  | <   o   o   >   >   >   >   >   >   >   >   >   !   <   >   <   .
-//  == | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  != | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  <  | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  >  | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  <= | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  >= | <   <   <   <   <   >   >   >   >   >   >   >   !   <   >   <   .
-//  ?? | <   <   <   <   <   <   <   <   <   <   <   <   !   <   >   <   .
-//  =  | <   <   <   <   <   <   <   <   <   <   <   <   !   <   !   <   .
-//  (  | <   <   <   <   <   <   <   <   <   <   <   <   !   <   =   <   !
+//  *  | <   >   >   x   x   >   >   >   >   >   >   >   !   e   >   e   .
+//  /  | <   >   >   x   x   >   >   >   >   >   >   >   !   e   >   e   .
+//  +  | <   o   o   >   >   >   >   >   >   >   >   >   !   e   >   e   .
+//  -  | <   o   o   >   >   >   >   >   >   >   >   >   !   e   >   e   .
+//  == | <   <   <   <   <   >   >   >   >   >   >   >   !   e   >   e   .
+//  != | <   <   <   <   <   >   >   >   >   >   >   >   !   e   >   e   .
+//  <  | <   <   <   <   <   >   >   >   >   >   >   >   !   e   >   e   .
+//  >  | <   <   <   <   <   >   >   >   >   >   >   >   !   e   >   e   .
+//  <= | <   <   <   <   <   >   >   >   >   >   >   >   !   e   >   e   .
+//  >= | <   <   <   <   <   >   >   >   >   >   >   >   !   e   >   e   .
+//  ?? | <   <   <   <   <   <   <   <   <   <   <   <   !   e   >   e   .
+//  =  | <   <   <   <   <   <   <   <   <   <   <   <   !   e   !   e   .
+//  (  | <   <   <   <   <   <   <   <   <   <   <   <   !   e   =   e   !
 //  )  | =   >   >   >   >   >   >   >   >   >   >   >   !   c   >   .   .
 //  t  | >   >   >   >   >   >   >   >   >   >   >   >   >   c   >   .   .
 //  $  | <   <   <   <   <   <   <   <   <   <   <   <   <   e   !   e   .
@@ -224,11 +224,12 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         case '-':
             return PA_TOP;
         case '!':
-        case '(':
             return PA_SHIFT;
+        case '(':
+            return PA_EMPTY;
         }
         if (is_value_token(input)) {
-            return PA_SHIFT;
+            return PA_EMPTY;
         }
         if (!is_infix_token(input)) {
             return PA_END;
@@ -243,11 +244,12 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         case '/':
             return PA_STOP;
         case '!':
-        case '(':
             return PA_SHIFT;
+        case '(':
+            return PA_EMPTY;
         }
         if (is_value_token(input)) {
-            return PA_SHIFT;
+            return PA_EMPTY;
         }
         if (!is_infix_token(input)) {
             return PA_END;
@@ -259,9 +261,14 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
             return PA_ERR;
         case ')':
             return PA_FOLD;
+        case '(':
+            return PA_EMPTY;
         }
         if (!is_infix_token(input)) {
             return PA_END;
+        }
+        if (is_value_token(input)) {
+            return PA_EMPTY;
         }
         return PA_SHIFT;
     case '=':
@@ -269,9 +276,14 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
         case '=':
         case ')':
             return PA_ERR;
+        case '(':
+            return PA_EMPTY;
         }
         if (!is_infix_token(input)) {
             return PA_END;
+        }
+        if (is_value_token(input)) {
+            return PA_EMPTY;
         }
         return PA_SHIFT;
     case '(':
@@ -329,12 +341,13 @@ static enum PrecedenceAction prec_table(Token stack, Token input) {
     case '/':
     case '+':
     case '-':
-    case '(':
     case '!':
         return PA_SHIFT;
+    case '(':
+        return PA_EMPTY;
     }
     if (is_value_token(input)) {
-        return PA_SHIFT;
+        return PA_EMPTY;
     }
     if (!is_infix_token(input)) {
         return PA_END;
@@ -355,6 +368,7 @@ static struct ExpansionStack es_new(void) {
         .stack = v,
         .last_term = T_EOF,
         .is_stop_term = true,
+        .is_top_term = true,
     };
 }
 

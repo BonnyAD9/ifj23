@@ -834,14 +834,11 @@ bool check_func_decl_params_duplicity(Vec parameters) {
 AstStmt *sem_func_decl(
     FilePos pos,
     SymItem *ident,
-    Vec params,
-    DataType return_type,
     AstBlock *body
 ) {
-    sym_item_func(ident, sym_func_new(return_type, params));
     AstStmt *func_decl = ast_function_decl_stmt(
         pos,
-        ast_function_decl(pos, ident, params, body)
+        ast_function_decl(pos, ident, ident->func.params, body)
     );
     var_pos = pos;
 
@@ -1122,10 +1119,10 @@ static bool sem_process_expr_condition(AstExpr *expr) {
 
 void sem_if_block_end(AstCondition *cond) {
     if (cond->type == AST_COND_LET) {
-        if (cond->expr->variable->ident->var.counter)
-            cond->expr->variable->ident->var.counter--;
+        if (cond->let->var.counter)
+            cond->let->var.counter--;
         else
-            cond->expr->variable->ident->var.data_type = cond->expr->variable->ident->var.original_data_type;
+            cond->let->var.data_type = cond->let->var.original_data_type;
     }
 }
 
