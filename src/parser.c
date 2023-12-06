@@ -149,13 +149,15 @@ static AstStmt *parse_if(Parser *par) {
     tok_next(par); // skip the else
 
     if (par->cur != '{') {
+        ast_free_condition(&cond);
+        ast_free_block(&true_block);
         return parse_error(par, ERR_SYNTAX, "Expected {");
     }
 
     AstBlock *false_block = parse_block(par, false);
     if (!false_block) {
         ast_free_condition(&cond);
-        ast_free_block(&false_block);
+        ast_free_block(&true_block);
         return NULL;
     }
 
@@ -443,7 +445,6 @@ static AstStmt *parse_func(Parser *par) {
     AstBlock *block = parse_block(par, false);
     if (!block) {
         sym_scope_pop(par->table);
-        vec_free_with(&params, (FreeFun)sym_free_func_param);
         return NULL;
     }
 
