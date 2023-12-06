@@ -1,7 +1,8 @@
 dep.d
 ifj23
-obj/
+obj
 tmp
-.vscode/
+.vscode
 ic32int
-res/
+res
+submit

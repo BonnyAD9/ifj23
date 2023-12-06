@@ -1,0 +1,9 @@
+TARGET:=ifj23
+CFLAGS:=-std=c17 -DNDEBUG -O3
+CC:=gcc
+
+ifj23: *.c
+	$(CC) $(CFLAGS) $^ -o ifj23
+
+clean:
+	-rm ifj23

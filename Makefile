@@ -13,7 +13,7 @@ DOBJTEST:=$(patsubst src/%.c,obj/debug/%.o,$(filter-out src/main.c,$(SRC)))
 
 .DEFAULT_GOAL:=debug
 
-.PHONY: debug release clean rel deb test
+.PHONY: debug release clean rel deb test submit
 
 debug:
 	mkdir -p obj/debug
@@ -30,6 +30,12 @@ run:
 	./ifj23
 	$(IFJ_EXEC) res/res.ifjcode
 
+submit:
+	-mkdir submit
+	cp src/*.c src/*.h submit/
+	cp dokument/dokumentace.pdf submit/
+	cat SubmitMakefile > submit/Makefile
+
 deb: $(DOBJ)
 	$(CC) $(CFLAGS) $^ -o $(TARGET) $(LDFLAGS)
 
@@ -43,7 +49,7 @@ obj/debug/%.o: src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	-rm obj/debug/*.o obj/release/*.o $(TARGET) dep.d
+	-rm -r obj/debug/*.o obj/release/*.o $(TARGET) dep.d submit
 
 test: $(TOBJ) $(DOBJTEST)
 	$(CC) $(CFLAGS) $^ -o lex_test $(LDFLAGS)
