@@ -22,7 +22,7 @@
     \usepackage[table]{xcolor} % barvy tabulek
     \usepackage{float} % lepší umístění obrázku
     \usepackage{adjustbox} % menší tabulky
-    
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Makra a přizpůsobení dokumentu %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \newcolumntype{Y}{>{\centering\arraybackslash}X}
     \NewDocumentCommand{\orange}{m}{\textcolor{orange}{\texttt{#1}}} % oranžová barva textu
@@ -70,56 +70,56 @@
     \tableofcontents
     \thispagestyle{empty}
     \newpage
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Obsah %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Obsah %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Úvod %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Úvod %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \setcounter{page}{1}
     \section{Úvod}
-    Tato dokumentace slouží k popisu implementace a vývoje \textbf{překladače pro jazyk IFJ23}, 
-    který je podmnožinou jazyka \textbf{Swift 5} od společnosti Apple. Program má za úkol načíst vstupní 
-    kód v tomto jazyku a přeložit ho do cílového jazyka \textbf{IFJcode23}. Vybrali jsme si variantu 
-    zadání \textbf{vv-BVS}, podle které jsme pomocí \textbf{výškově vyváženého binárního 
+    Tato dokumentace slouží k popisu implementace a vývoje \textbf{překladače pro jazyk IFJ23},
+    který je podmnožinou jazyka \textbf{Swift 5} od společnosti Apple. Program má za úkol načíst vstupní
+    kód v tomto jazyku a přeložit ho do cílového jazyka \textbf{IFJcode23}. Vybrali jsme si variantu
+    zadání \textbf{vv-BVS}, podle které jsme pomocí \textbf{výškově vyváženého binárního
     vyhledávacího stromu} implementovali \textbf{tabulku symbolů}.
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Úvod %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Úvod %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Části překladače %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Části překladače %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \section{Jednotlivé části překladače}
     Realizovaný překladač se dá rozdělit na následující dílčí moduly:
     \begin{itemize}[noitemsep]
-        \item \hyperref[lexer]{\textbf{Scanner}} -- lexikální analyzátor
+        \item \hyperref[lexer]{\textbf{Lexer}} -- lexikální analyzátor
         \item \textbf{Parser}
             \begin{itemize}
                 \item \hyperref[syntactics]{Syntaktický analyzátor}
                 \item \hyperref[semantics]{Sémantický analyzátor}
             \end{itemize}
-        \item \hyperref[codegen]{\textbf{Codegen}} -- Genérátor cílového kódu
+        \item \hyperref[codegen]{\textbf{Codegen}} -- Genérátor kódu
     \end{itemize}
-    Samotný překlad nejprve provede lexikální analýzu, následuje syntaktický 
-    analyzátor spolu se sémantickou analýzou a poté se přistoupí ke generování 
-    cílového kódu. 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Části překladače %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    Samotný překlad nejprve provede lexikální analýzu, následuje syntaktický
+    analyzátor spolu se sémantickou analýzou a poté se přistoupí ke generování
+    vnitřního kódu, který se na konci převede na cílový kód.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Části překladače %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Lexikální analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Lexikální analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \section{Návrh a implementace}\label{lexer}
         \subsection{Lexikální analýza}
             Jako první část projektu, kterou jsme implementovali byla lexikální analýza, kterou
             lze najít v modulu \textit{lexer.c}. Ta se
-            stará o načítání znaků neboli lexémů ze standartního vstupu a rozdělování vstupních dat na 
-            jednotlivé tokeny, u nichž následně určuje jejich typ a posílá 
-            je k syntaktické a sémantické analýze k 
-            dalšímu zpracování. 
+            stará o načítání znaků neboli lexémů ze standartního vstupu a rozdělování vstupních dat na
+            jednotlivé tokeny, u nichž následně určuje jejich typ a posílá
+            je k syntaktické a sémantické analýze k
+            dalšímu zpracování.
 
-            Lexikální analýza využívá koncept \hyperref[kodiagram]{\textbf{konečného automatu}} pro 
-            identifikaci a zpracování tokenů ve vstupním kódu. Tento přístup umožňuje systematicky 
-            analyzovat postupně načtené znaky a identifikovat je jako jednotlivé tokeny na základě 
-            definovaných pravidel a přechodů mezi stavy automatu. Tímto způsobem je struktura 
-            vstupního kódu efektivně analyzována a převedena do podoby tokenů pro další zpracování. 
+            Lexikální analýza využívá koncept \hyperref[kodiagram]{\textbf{konečného automatu}} pro
+            identifikaci a zpracování tokenů ve vstupním kódu. Tento přístup umožňuje systematicky
+            analyzovat postupně načtené znaky a identifikovat je jako jednotlivé tokeny na základě
+            definovaných pravidel a přechodů mezi stavy automatu. Tímto způsobem je struktura
+            vstupního kódu efektivně analyzována a převedena do podoby tokenů pro další zpracování.
 
-            Funkce \textit{lex\_next()} zajišťuje většinu vnitřní logiky scanneru tím, že načte 
-            token a uloží ho do struktury \textit{Lexer}, která obsahuje důležité informace o každém 
+            Funkce \textit{lex\_next()} zajišťuje většinu vnitřní logiky scanneru tím, že načte
+            token a uloží ho do struktury \textit{Lexer}, která obsahuje důležité informace o každém
             předaném tokenu. V případě, že ve zdrojovém souboru narazí na neplatný token či neplatnou
-            posloupnost znaků, překladač skončí s návratovou hodnotou, která odpovídá konkrétnímu 
-            příznaku lexikální chyby. 
+            posloupnost znaků, překladač skončí s návratovou hodnotou, která odpovídá konkrétnímu
+            příznaku lexikální chyby.
 
 
             \newpage
@@ -131,23 +131,23 @@
                 \end{figure}
 
                 \rule{5cm}{0.4pt} \\
-                {\footnotesize \textbf{Poznámka:} Pokud automat nemá možnost přejít do dalšího stavu z 
+                {\footnotesize \textbf{Poznámka:} Pokud automat nemá možnost přejít do dalšího stavu z
                 nekoncového stavu, je to automaticky bráno jako chyba (pro zjednodušení návrhu
                 automatu).}
             \newpage
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Lexikální analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Lexikální analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Syntaktická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Syntaktická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         \subsection{Syntaktická analýza}\label{syntactics}
             \subsubsection{Rekurzivní sestup}
                 Implementace syntaktické analýzy se nachází v souboru \textit{parser.c}, který se
                 zaobírá aplikací metody shora dolů, respektive \textbf{rekurzivního sestupu}, který
-                je složen z \hyperref[llgramatika]{\textbf{LL--gramatiky}} a 
-                \hyperref[lltabulka]{\textbf{LL--tabulky}}. Parser si jako svůj vstup bere jednotlivé 
-                tokeny z lexikální analýzy a následně nalpní tabulku symbolů v podobě \textbf{výškově 
-                vyváženého binárního vyhledávacího stromu} (vv-BVS). Pro většinu neterminálů z 
-                LL-gramatiky je sestavena funkce, která následně volá další funkce na základě 
+                je složen z \hyperref[llgramatika]{\textbf{LL--gramatiky}} a
+                \hyperref[lltabulka]{\textbf{LL--tabulky}}. Parser si jako svůj vstup bere jednotlivé
+                tokeny z lexikální analýzy a následně nalpní tabulku symbolů v podobě \textbf{výškově
+                vyváženého binárního vyhledávacího stromu} (vv-BVS). Pro většinu neterminálů z
+                LL-gramatiky je sestavena funkce, která následně volá další funkce na základě
                 předcházejícího tokenu.
             %%%%%%%%%%%%%%%%%%%%%%% LL-gramatika %%%%%%%%%%%%%%%%%%%%%%%
             {\fontsize{10.1}{13.4}\selectfont
@@ -176,17 +176,17 @@
                 \item \texttt{RIGHTSIDE -> \orange{"$=$"} EXPR}
                 \item \texttt{EXPR -> \orange{"Do~it~using~precedence~table"}}
                 \item \texttt{STATEMENT -> \orange{ident~"$=$"} EXPR STATEMENT}
-                \item \texttt{{STATEMENT -> \orange{"$=$"} COND \orange{"\{"}} 
+                \item \texttt{{STATEMENT -> \orange{"$=$"} COND \orange{"\{"}}
                 STATEMENT \orange{"\}"} ELSESTAT}
                 \item \texttt{COND -> EXPR}
                 \item \texttt{COND -> \orange{"("~"let"~ident~")"}}
                 \item \texttt{COND -> \orange{"let"~ident}}
                 \item \texttt{ELSESTAT -> STATEMENT}
-                \item \texttt{{ELSESTAT -> \orange{"else"~"\{"}} STATEMENT 
+                \item \texttt{{ELSESTAT -> \orange{"else"~"\{"}} STATEMENT
                 \orange{"\}"}STATEMENT}
-                \item \texttt{{WHILESTAT -> \orange{"while"} COND \orange{"\{"}} 
+                \item \texttt{{WHILESTAT -> \orange{"while"} COND \orange{"\{"}}
                 STATEMENT \orange{"\}"} STATEMENT}
-                \item \texttt{FUNCCALL -> LEFTSIDE \orange{ident~"("} FUNCPARAMS 
+                \item \texttt{FUNCCALL -> LEFTSIDE \orange{ident~"("} FUNCPARAMS
                 \orange{")"} STATEMENT}
                 \item \texttt{LEFTSIDE -> \blue{$\epsilon$}}
                 \item \texttt{LEFTSIDE -> VAR \orange{"$=$"}}
@@ -217,16 +217,16 @@
 
             %%%%%%%%%%%%%%%%%%%%%%% PSA-tabulka %%%%%%%%%%%%%%%%%%%%%%%%
             \subsubsection{Precedenční syntaktická analýza}
-                Precedenční syntaktická analýza neboli PSA, nacházející se v souboru \textit{infix\_parser.c}, 
+                Precedenční syntaktická analýza neboli PSA, nacházející se v souboru \textit{infix\_parser.c},
                 se stará o syntaktickou analýzu metodou
                 \textbf{zdola-nahoru} pomocí \hyperref[prectabulka]{\textbf{precedenční tabulky}}. Na základě
                 žádosti PSA pošle lexikální analyzátor token, který se poté zpracuje s nejvyšším tokenem
                 na zásobníku a funkce \textit{prec\_table()} v souladu s níže uvedenými pravidly vrací vztah,
-                který se má na daný výraz aplikovat. Precedenční syntaktická analýza končí v moment, kdy 
-                přijde prázdné pravidlo a zároveň je zásobník (\textit{stack}) prázdný. Následně skončí 
+                který se má na daný výraz aplikovat. Precedenční syntaktická analýza končí v moment, kdy
+                přijde prázdné pravidlo a zároveň je zásobník (\textit{stack}) prázdný. Následně skončí
                 úspěšně a vrací poslední načtený znak. V opačném případě končí neúspěšně.
             \begin{table}[ht]\label{prectabulka}
-                    \centering 
+                    \centering
                     \small
                     \begin{tabularx}{\textwidth}{|*{18}{Y|}}
                         \hline
@@ -293,7 +293,7 @@
                             \hline
                             c & PA\_CALL & Parse function call\\
                             \hline
-                            $e$ & PA\_EMPTY & Shift if the stack is emtpy, otherwise end\\
+                            $e$ & PA\_EMPTY & Shift if terminal on top, otherwise successful end\\
                         \hline
                         \end{tabular}
                     \end{adjustbox}
@@ -304,73 +304,73 @@
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Sémantická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         \subsection{Sémantická analýza}\label{semantics}
-            Sémantická analýza je implementována v modulu \textit{semantics.c}, kde jsou 
-            na určitých místech prováděny kontroly, které zahrnují například 
-            ověření definice použitých funkcí a proměnných, počty proměnných a výrazů přiřazených 
-            do nich a shodu datových typů. Dále se kontroluje, zda nedochází k dělení nulou a zda 
-            návratové hodnoty funkcí odpovídají jejich hlavičkám. 
-            
-            Po úspěšném dokončení sémantické 
-            analýzy se přechází k tvorbě \textbf{abstraktně syntatického stromu} (AST), který lze najít v 
-            souboru \textit{ast.c} a na základě kterého se nadále pracuje s generováním cílového kódu IFJcode23. 
-            V opačném případě při zjištění chyby končí program s odpovídají návratovou hodnotou a 
+            Sémantická analýza je implementována v modulu \textit{semantics.c}, kde jsou
+            na určitých místech prováděny kontroly, které zahrnují například
+            ověření definice použitých funkcí a proměnných, počty proměnných a výrazů přiřazených
+            do nich a shodu datových typů. Dále se kontroluje, zda nedochází k dělení nulou a zda
+            návratové hodnoty funkcí odpovídají jejich hlavičkám.
+
+            Po úspěšném dokončení sémantické
+            analýzy se přechází k tvorbě \textbf{abstraktně syntatického stromu} (AST), který lze najít v
+            souboru \textit{ast.c} a na základě kterého se nadále pracuje s generováním cílového kódu IFJcode23.
+            V opačném případě při zjištění chyby končí program s odpovídají návratovou hodnotou a
             zároveň vypisuje na standartní chybový výstup informace a podrobnosti o daném problému.
 
 
             \subsubsection{Tabulka symbolů}
-                Tabulky symbolů jsou dle zadání implementovány jako \textbf{výškově vyvážené binární 
+                Tabulky symbolů jsou dle zadání implementovány jako \textbf{výškově vyvážené binární
                 vyhledávací stromy}
-                v modulu \textit{symtable.c}. Každý uzel obsahuje identifikátor (klíč, díky kterému 
+                v modulu \textit{symtable.c}. Každý uzel obsahuje identifikátor (klíč, díky kterému
                 vyhledáváme uzly), data a 2 ukazatele na jeho podstromy.
-                
+
                 Tabulky jsou uloženy ve vektoru a dělí se na lokální a globální. Lokální tabulky jsou
-                určeny pro lokální proměnné a globální tabulky pro funkce. Tabulky symbolů jsou 
+                určeny pro lokální proměnné a globální tabulky pro funkce. Tabulky symbolů jsou
                 implementovány jako rozptýlené tabulky.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Syntaktická analýza %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Codegen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         \subsection{Generování kódu}\label{codegen}
-            Generovaní cílového kódu \textbf{IFJcode23} je poslední částí tohoto překladače, který lze najít 
-            v modulu \textit{codegen.c}. Pro tvorbu finálního kódu se využívá \textbf{abstraktně syntaktický 
-            strom}, na základě kterého se tento výsledný kód vytváří. 
+            Generovaní cílového kódu \textbf{IFJcode23} je poslední částí tohoto překladače, který lze najít
+            v modulu \textit{codegen.c}. Před tím se však ještě vytvoří vnitřní kód z \textbf{abstraktního syntaktického
+            stromu}, na základě kterého se výsledný kód vytváří.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Codegen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Rozšíření %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         \section{Rozšíření}
-            Vzhledem k omezenému časovému rozsahu projektu jsme se rozhodli soustředit pouze na 
-            základní implementaci a nezačleňovat do ní žádná rozšíření. Místo toho jsme se zaměřili 
-            na dokončení základní funkcionality, abychom mohli dodržet termíny a dosáhnout funkčního 
+            Vzhledem k omezenému časovému rozsahu projektu jsme se rozhodli soustředit pouze na
+            základní implementaci a nezačleňovat do ní žádná rozšíření. Místo toho jsme se zaměřili
+            na dokončení základní funkcionality, abychom mohli dodržet termíny a dosáhnout funkčního
             jádra projektu.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Rozšíření %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Práce v týmu %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \newpage
     \section{Práce v týmu}
         \subsection{Organizace}
             Na projektu jsme snažili začít pracovat hned od začátku jeho zadání -- tedy
             na začátku října. Celková komunikace probíhala především pomocí komunikační
-            platformy \textbf{Discord}, kde jsme se domluvali na dalším postupu, a nebo 
-            na přednáškách, na kterých jsme se potkávali. Práci jsme si rozdělili na 
+            platformy \textbf{Discord}, kde jsme se domluvali na dalším postupu, a nebo
+            na přednáškách, na kterých jsme se potkávali. Práci jsme si rozdělili na
             základě schopností a dovedností jednotlivých členů týmu. Na dílčích částech
-            projektu pracovali především jednotlivci s pomocí tzv.\ \textit{Pull request}, 
-            díky kterému jsme měli možnost poskytovat zpětnou vazbu na konkrétní části kódu 
-            a který nám umožnil verzovaný systém \textbf{Git}, přičemž jako úložistě 
+            projektu pracovali především jednotlivci s pomocí tzv.\ \textit{Pull request},
+            díky kterému jsme měli možnost poskytovat zpětnou vazbu na konkrétní části kódu
+            a který nám umožnil verzovaný systém \textbf{Git}, přičemž jako úložistě
             našeho repozitáře jsme využili platformu \textbf{GitHub}. Právě Git nám umožnil
-            pracovat na více úkolech projektu v tzv.\ větvích, které jsme po otestování a 
+            pracovat na více úkolech projektu v tzv.\ větvích, které jsme po otestování a
             schválení začlenili do hlavní vývojové větve.
 
-        \subsection{Rozdělení práce}            
+        \subsection{Rozdělení práce}
             \begin{table}[htbp]
                 \centering
                 \begin{tabular}{| l | l |}
                     \hline
                     \textbf{Jméno člena týmu} & \textbf{Přidělená práce} \\
                     \hline
-                    Tomáš Daniel            &  vedení týmu, lexikální analýza, symtable, sémantická 
+                    Tomáš Daniel            &  vedení týmu, lexikální analýza, symtable, sémantická
                                                 analýza, testování\\
                     Martin Slezák           &  lexikální analýza, symtable, testování\\
                     Jakub Antonín Štigler   &  syntaktická analýza, codegen, pomocné struktury, testování\\
-                    Milan Vrbas             &  dokumentace, prezentace, testování \\
+                    Milan Vrbas             &  abstraktní syntaktický strom, dokumentace, prezentace, testování \\
                     \hline
                 \end{tabular}
                 \caption{Rozdělení práce mezi jednotlivé členy týmu}
@@ -379,16 +379,16 @@
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Závěr %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \section{Závěr}
-        Cílem tohoto projektu bylo pochopit a následně si prakticky vyzkoušet metody 
-        probírané v předmětech IFJ a IAL, díky kterým jsme byli schopni implementovat 
-        překladač a jeho jednotlivé části. Bohužel jsme v době prvního pokusného odevzdání 
+        Cílem tohoto projektu bylo pochopit a následně si prakticky vyzkoušet metody
+        probírané v předmětech IFJ a IAL, díky kterým jsme byli schopni implementovat
+        překladač a jeho jednotlivé části. Bohužel jsme v době prvního pokusného odevzdání
         projektu ještě nedosáhli fáze, kdy bychom ho mohli odevzdat a nechat otestovat,
         avšak druhé pokusné odevzdání jsme stihli a na základě výsledků postupovali dál.
         Většina členů týmu již měla zkušenost s prací na týmovém úkolu, což nám pomohlo
-        s komunikací a celkovým postupem při plnění tohoto úkolu. 
-        
-        Projekt byl vzhledem ke své časové náročnosti poměrně komplexní, což znamenalo, 
-        že vyžadoval podstatně více času a pozornosti, než jsme původně předpokládali. 
+        s komunikací a celkovým postupem při plnění tohoto úkolu.
+
+        Projekt byl vzhledem ke své časové náročnosti poměrně komplexní, což znamenalo,
+        že vyžadoval podstatně více času a pozornosti, než jsme původně předpokládali.
         Nicméně jsme se tomu dokázali postavit a úspěšně ho dokončili včas.
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Závěr %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
