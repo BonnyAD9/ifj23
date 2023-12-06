@@ -115,7 +115,7 @@ static bool process_expr(AstExpr *expr);
 static bool sem_process_binary(AstBinaryOp *binary_op);
 static bool sem_process_unary(AstUnaryOp *unary_op);
 static bool sem_process_call(AstFunctionCall *func_call);
-static bool check_func_params(SymItem *ident, Vec args);
+static bool check_func_params(SymItem *ident, Vec args, bool *checked);
 static bool sem_process_literal(AstLiteral *literal);
 static bool sem_process_variable(SymItem *ident);
 
@@ -133,7 +133,7 @@ static bool sem_process_let_condition(SymItem *ident);
 static bool sem_process_if(AstIf *if_v);
 static bool sem_process_while(AstWhile *while_v);
 
-static bool handle_write_func(SymItem *ident, Vec args);
+static bool handle_write_func(SymItem *ident, Vec args, bool *checked);
 
 // HELP FUNCS
 static void set_block_checked(AstBlock* block, bool* sema_to_check);
@@ -387,15 +387,15 @@ static bool sem_process_call(AstFunctionCall *func_call) {
 
     func_call->data_type = sym_func_get_ret(func_call->ident, func_call->ident->name);
 
-    if (check_func_params(func_call->ident, func_call->arguments)) {
-        // bylo tady funccall-semachedk = top+level
-        func_call->sema_checked = (func_call->ident->func.return_type != DT_NONE);
+    bool checked;
+    if (check_func_params(func_call->ident, func_call->arguments, &checked)) {
+        func_call->sema_checked = (func_call->ident->func.return_type != DT_NONE && checked);
         return true;
     }
     return false;
 }
 
-static bool handle_write_func(SymItem *ident, Vec args) {
+static bool handle_write_func(SymItem *ident, Vec args, bool *checked) {
     VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
         // write() function can't have param's name, f.e. write(paramname : "ahoj", ...)
         if (arg.v->name.str != NULL && arg.v->name.len) {
@@ -407,6 +407,11 @@ static bool handle_write_func(SymItem *ident, Vec args) {
         }
 
         if (arg.v->type == AST_VARIABLE) {
+            if (!sem_top_level && arg.v->variable->var.data_type == DT_NONE) {
+                *checked = false;
+                return true;
+            }
+
             var_pos = arg.v->pos;
             context.in_func_call = true;
 
@@ -424,13 +429,15 @@ static bool handle_write_func(SymItem *ident, Vec args) {
                 return false;
         }
     }
+
+    *checked = true;
     return true;
 }
 
-static bool check_func_params(SymItem *ident, Vec args) {
+static bool check_func_params(SymItem *ident, Vec args, bool *checked) {
     // Special case for write() function
     if (!strcmp(ident->name.str, "write"))
-        return handle_write_func(ident, args);
+        return handle_write_func(ident, args, checked);
 
     Vec *params = sym_func_get_params(ident, ident->name);
     if (!params) {
@@ -463,6 +470,11 @@ static bool check_func_params(SymItem *ident, Vec args) {
 
         param_data_type = param.ident->var.data_type;
         if (arg.v->type == AST_VARIABLE) {
+            if (!sem_top_level && arg.v->variable->var.data_type == DT_NONE) {
+                *checked = false;
+                return true;
+            }
+
             context.in_func_call = true;
 
             // Check if variable is defined
@@ -515,6 +527,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
             }
         }
     }
+    *checked = true;
     return true;
 }
 
@@ -618,13 +631,6 @@ static bool sem_process_variable(SymItem *ident) {
                 ERR_UNDEF_VAR
             );
         }
-
-    if (sem_top_level && use_before_decl(ident->file_pos, var_pos)) {
-        return sema_err(
-            var_pos,
-            "Undeclared variable",
-            ERR_UNDEF_VAR
-        );
     }
 
     if (!ident->declared && !sem_top_level)
