@@ -1,3 +1,17 @@
 \babel@toc {czech}{}\relax 
 \contentsline {section}{\numberline {1}Úvod}{1}{section.1}%
-\contentsline {section}{\numberline {2}Návrh a implementace}{1}{section.2}%
+\contentsline {section}{\numberline {2}Jednotlivé části překladače}{1}{section.2}%
+\contentsline {section}{\numberline {3}Návrh a implementace}{1}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Lexikální analýza}{1}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}Diagram konečného automatu}{2}{subsubsection.3.1.1}%
+\contentsline {subsection}{\numberline {3.2}Syntaktická analýza}{3}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Rekurzivní sestup}{3}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Precedenční syntaktická analýza}{5}{subsubsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.3}Sémantická analýza}{6}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Tabulka symbolů}{6}{subsubsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.4}Generování kódu}{6}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Rozšíření}{6}{section.4}%
+\contentsline {section}{\numberline {5}Práce v týmu}{7}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Organizace}{7}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Rozdělení práce}{7}{subsection.5.2}%
+\contentsline {section}{\numberline {6}Závěr}{7}{section.6}%
