@@ -196,7 +196,7 @@ static bool process_expr(AstExpr *expr) {
             expr->sema_checked = expr->variable->sema_checked = (expr->variable->ident->declared && expr->variable->ident->var.data_type != DT_NONE);
             return ret_val;
         default:
-            return sema_err(expr->pos, "Uknown expression type", ERR_SEMANTIC);
+            return sema_err(expr->pos, "Unknown expression type", ERR_SEMANTIC);
     }
 }
 
@@ -241,7 +241,7 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
     ) {
         return sema_err(
             binary_op->left->pos,
-            "Cant handle function as variable",
+            "Can't handle function as variable",
             ERR_SEMANTIC
         );
     }
@@ -251,11 +251,23 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
         if (binary_op->left->type == AST_VARIABLE && !binary_op->left->variable->ident->var.mutable && binary_op->left->variable->ident->declared) {
             return sema_err(
                 binary_op->left->pos,
-                "Cant change non-mutable variable's value",
+                "Can't change non-mutable variable's value",
                 ERR_SEMANTIC
             );
         }
-        //if (binary_op->left)
+        if (binary_op->left->type == AST_VARIABLE) {
+            binary_op->left->variable->ident->var.initialized = true;
+        }
+    }
+    else {
+        if ((binary_op->left->type == AST_VARIABLE && !binary_op->left->variable->ident->var.initialized) ||
+            (binary_op->right->type == AST_VARIABLE && !binary_op->right->variable->ident->var.initialized)) {
+                    return sema_err(
+                    binary_op->pos,
+                    "Uninitialized variable",
+                    ERR_UNDEF_VAR
+                );
+            }
     }
 
     bool left_side = process_expr(binary_op->left);
@@ -308,7 +320,7 @@ static bool sem_process_unary(AstUnaryOp *unary_op) {
     if (unary_op->param->data_type == DT_NONE || !eval_expr) {
         return sema_err(
             unary_op->param->pos,
-            "Invalid expression, cant convert to non-nil type",
+            "Invalid expression, can't convert to non-nil type",
             ERR_SEMANTIC
         );
     }
@@ -385,11 +397,11 @@ static bool sem_process_call(AstFunctionCall *func_call) {
 
 static bool handle_write_func(SymItem *ident, Vec args) {
     VEC_FOR_EACH(&(args), AstFuncCallParam, arg) {
-        // write() function cant have param's name, f.e. write(paramname : "ahoj", ...)
+        // write() function can't have param's name, f.e. write(paramname : "ahoj", ...)
         if (arg.v->name.str != NULL && arg.v->name.len) {
             return sema_err(
                 ident->file_pos,
-                "Param's names arent allowed for write() function",
+                "Param's names aren't allowed for write() function",
                 ERR_INVALID_FUN
             );
         }
@@ -433,7 +445,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
         return sema_err(
             ident->file_pos,
             "Provided count of args differs from func's count of params",
-            ERR_SEMANTIC
+            ERR_INVALID_FUN
         );
     }
     /*
@@ -570,7 +582,7 @@ static bool sem_process_variable(SymItem *ident) {
         if (ident->type == SYM_FUNC) {
             return sema_err(
                 var_pos,
-                "Cant handle function as variable",
+                "Can't handle function as variable",
                 ERR_SEMANTIC
             );
         }
@@ -578,7 +590,7 @@ static bool sem_process_variable(SymItem *ident) {
             return sema_err(
                 var_pos,
                 "Undeclared variable",
-                ERR_UNDEF_FUNCTION
+                ERR_UNDEF_VAR
             );
         }
         else if (!ident->var.initialized) {
@@ -596,7 +608,7 @@ static bool sem_process_variable(SymItem *ident) {
             return sema_err(
                 var_pos,
                 "Undeclared variable",
-                ERR_UNDEF_FUNCTION
+                ERR_UNDEF_VAR
             );
         }
         if (!ident->var.initialized) {
@@ -649,7 +661,7 @@ static void check_in_array(unsigned int arr_sel, const char **err_msg, const cha
 
     // Check for unexpected type provided
     if (get_arr_index(left_type) == 8 || get_arr_index(right_type) == 8)
-        *err_msg = "Cant find data type - probably undefined";
+        *err_msg = "Can't find data type - probably undefined";
     else if (!compat_array[arr_sel][get_arr_index(left_type)][get_arr_index(right_type)]) {
         // If an error occured, check for any literal involved and try it agin with to-DOUBLE casting
         if (left_expr_type == AST_LITERAL && (left_type == DT_INT || left_type == DT_INT_NIL)) {
@@ -723,7 +735,7 @@ static bool check_compatibility(AstBinaryOp *binary_op) {
             check_in_array(5, &err_msg, "Uncompatible types for performing '>' operation", binary_op);
             break;
         default:
-            err_msg = "Uknown operator type";
+            err_msg = "Unknown operator type";
             break;
     }
 
@@ -818,7 +830,7 @@ static bool sem_process_stmt(AstStmt *stmt) {
 
             return ret_val;
         default:
-            return sema_err(stmt->pos, "Uknown stament type", ERR_SEMANTIC);
+            return sema_err(stmt->pos, "Unknown stament type", ERR_SEMANTIC);
     }
 }
 
@@ -984,12 +996,21 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
             return true;
 
         // Trying to work with function like with variable
-        if (variable_decl->value->type == AST_VARIABLE && variable_decl->value->variable->ident->type == SYM_FUNC) {
-            return sema_err(
-                variable_decl->value->pos,
-                "Cant handle function as variable",
-                ERR_SEMANTIC
-            );
+        if (variable_decl->value->type == AST_VARIABLE) {
+            if (variable_decl->value->variable->ident->type == SYM_FUNC) {
+                return sema_err(
+                    variable_decl->value->pos,
+                    "Can't handle function as variable",
+                    ERR_SEMANTIC
+                );
+            }
+            if (!variable_decl->value->variable->ident->var.initialized) {
+                    return sema_err(
+                    var_pos,
+                    "Uninitialized variable",
+                    ERR_UNDEF_VAR
+                );
+            }
         }
 
         variable_decl->sema_checked = variable_decl->value->sema_checked;
@@ -1091,7 +1112,7 @@ static bool sem_process_return(AstReturn *return_v) {
 
         context.ret_stmt_found = true;
 
-        if (!return_v->expr->sema_checked)
+        if (!void_ret && !return_v->expr->sema_checked)
             return true;
 
         if (!void_ret)
@@ -1144,12 +1165,12 @@ static bool sem_process_expr_condition(AstExpr *expr) {
     if (expr->type != AST_BINARY_OP) {
         return sema_err(
             expr->pos,
-            "Statement condition cant be evaluated",
+            "Statement condition can't be evaluated",
             ERR_INCOM_TYPE
         );
     }
 
-    // Check for relational operators usage (f.e. operator '+' doesnt make sense and cant be evaluated as true/false)
+    // Check for relational operators usage (f.e. operator '+' doesnt make sense and can't be evaluated as true/false)
     Token oper = expr->binary_op->operator;
     // T_EQUALS, T_DIFFERS, T_LESS_OR_EQUAL, T_GREATER_OR_EQUAL, '>', '<'
     if ((oper < T_EQUALS || oper > T_GREATER_OR_EQUAL)
@@ -1158,7 +1179,7 @@ static bool sem_process_expr_condition(AstExpr *expr) {
     ) {
         return sema_err(
             expr->binary_op->pos,
-            "Statement condition cant be evaluated",
+            "Statement condition can't be evaluated",
             ERR_INCOM_TYPE
         );
     }
@@ -1197,7 +1218,7 @@ static bool sem_process_let_condition(SymItem *ident) {
         return sema_err(
             var_pos,
             "Undeclared variable",
-            ERR_UNDEF_FUNCTION
+            ERR_UNDEF_VAR
         );
     }
     if (ident->type != SYM_VAR) {
@@ -1252,7 +1273,7 @@ static bool not_another_func_decl(Vec stmts) {
         if ((*stmt.v)->type == AST_FUNCTION_DECL) {
             return sema_err(
                 (*stmt.v)->pos,
-                "Cant declare function here",
+                "Can't declare function here",
                 ERR_SEMANTIC
             );
         }
