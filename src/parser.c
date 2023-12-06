@@ -491,6 +491,14 @@ static bool parse_func_decl_param(Parser *par, FuncParam *res) {
         ? sym_declare(par->table, STR("_"), false)
         : sym_declare(par->table, par->lex->str, false);
 
+    if (!ident) {
+        str_free(&label);
+        return false;
+    }
+
+    // Make sure func params are always initialized
+    ident->var.initialized = true;
+
     if (tok_next(par) != ':') {
         str_free(&label);
         parse_error(par, ERR_SYNTAX, "Expected ':'");

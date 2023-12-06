@@ -43,6 +43,7 @@ typedef struct {
     DataType original_data_type; // Will be used just for if() statements with "let id" as condition, dont use anyhow else!
     unsigned int counter;        // Will be used just for if() statements with "let id" as condition, dont use anyhow else!
     bool mutable;
+    bool initialized;
 } VarData;
 
 // Values saved in each tree node

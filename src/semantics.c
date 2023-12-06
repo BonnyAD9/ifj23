@@ -255,6 +255,7 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
                 ERR_SEMANTIC
             );
         }
+        //if (binary_op->left)
     }
 
     bool left_side = process_expr(binary_op->left);
@@ -573,22 +574,38 @@ static bool sem_process_variable(SymItem *ident) {
                 ERR_SEMANTIC
             );
         }
-        else if (!ident->declared) {
+        if (!ident->declared) {
             return sema_err(
                 var_pos,
                 "Undeclared variable",
                 ERR_UNDEF_FUNCTION
             );
         }
+        else if (!ident->var.initialized) {
+            return sema_err(
+                var_pos,
+                "Uninitialized variable",
+                ERR_UNDEF_VAR
+            );
+        }
         return true;
     }
 
-    if (sem_top_level && use_before_decl(ident->file_pos, var_pos)) {
-        return sema_err(
-            var_pos,
-            "Undeclared variable",
-            ERR_UNDEF_FUNCTION
-        );
+    if (sem_top_level) {
+        if (use_before_decl(ident->file_pos, var_pos) || !ident->declared) {
+            return sema_err(
+                var_pos,
+                "Undeclared variable",
+                ERR_UNDEF_FUNCTION
+            );
+        }
+        if (!ident->var.initialized) {
+            return sema_err(
+                var_pos,
+                "Uninitialized variable",
+                ERR_UNDEF_VAR
+            );
+        }
     }
 
     if (!ident->declared && !sem_top_level)
@@ -951,6 +968,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
 
     // Check expression
     if (variable_decl->value) {
+        variable_decl->ident->var.initialized = true;
         bool check_expr = process_expr(variable_decl->value);
 
         // Check if expr type is inferiable
@@ -1012,13 +1030,21 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
             return ret_val;
         }
     }
-    else if (variable_decl->ident->var.data_type == DT_NONE) {
-        // Case when type and expression are missing
-        return sema_err(
-            variable_decl->pos,
-            "Variable declaration is missing both type and expression",
-            ERR_UNKNOWN_TYPE
-        );
+    else {
+        if (variable_decl->ident->var.data_type == DT_NONE) {
+            // Case when type and expression are missing
+            return sema_err(
+                variable_decl->pos,
+                "Variable declaration is missing both type and expression",
+                ERR_UNKNOWN_TYPE
+            );
+        }
+        if (variable_decl->ident->var.data_type & DT_NIL) {
+            // Init nillable variable to NIL, otherwise keep it uninitialized
+            variable_decl->ident->var.initialized = true;
+        }
+        else
+            variable_decl->ident->var.initialized = false;
     }
     variable_decl->sema_checked = true;
     // Else nothing to do, type is given but without expression
@@ -1047,7 +1073,7 @@ static bool sem_process_return(AstReturn *return_v) {
         return false;
 
     if (context.in_func) {
-        if (context.func_ret_type == DT_VOID) {
+        if (context.func_ret_type == DT_VOID && return_v->expr) {
             return sema_err(
                 return_v->pos,
                 "Unexpected return expression for void type function",
