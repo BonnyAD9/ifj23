@@ -96,7 +96,7 @@ static bool compat_array[6][8][8] = {
 */
 
 static int final_type_arr[8][8] = {
-    // INT   NOT_NIL  DOUBLE NOT_NIL  STRING NOT_NIL   NIL   NOT_NIL
+    // INT   NOT_NIL  DOUBLE NOT_NIL STRING  NOT_NIL   NIL   NOT_NIL
     {   3   ,   3   ,   5   ,   5   ,   0   ,   0   ,   3   ,   3   }, // INT
     {   3   ,   2   ,   5   ,   4   ,   0   ,   0   ,   3   ,   2   }, // INT_NOT_NIL
     {   5   ,   5   ,   5   ,   5   ,   0   ,   0   ,   5   ,   5   }, // DOUBLE
@@ -650,8 +650,12 @@ static void check_in_array(unsigned int arr_sel, const char **err_msg, const cha
         // Set error message to non-NILL otherwise keep it NULL
         *err_msg = err_msg_cnt;
     }
-    else
-        binary_op->data_type = final_type_arr[get_arr_index(left_type)][get_arr_index(right_type)];
+    else {
+        if (binary_op->operator == T_DOUBLE_QUES)
+            binary_op->data_type = final_type_arr[get_arr_index(right_type)][get_arr_index(right_type)];
+        else
+            binary_op->data_type = final_type_arr[get_arr_index(left_type)][get_arr_index(right_type)];
+    }
 }
 
 static bool check_compatibility(AstBinaryOp *binary_op) {
@@ -721,15 +725,7 @@ AstBlock *sem_block(FilePos pos, Vec stmts, bool top_level) {
     AstBlock *block = ast_block(pos, stmts);
     sem_top_level = top_level;
 
-    bool ret_val = sem_process_block(stmts);
-    // if top_level is true, after the cycle, everything should have sema_checked true, otherwise unexpected error
-    if (top_level) {
-        bool block_valid;
-        set_block_checked(block, &block_valid);
-        if (!block_valid)
-            WPRINTF("Unexpected sema_checked value after top_level true block");
-    }
-    if (ret_val)
+    if (sem_process_block(stmts))
         return block;
 
     ast_free_block(&block);
