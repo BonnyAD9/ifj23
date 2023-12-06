@@ -203,10 +203,12 @@ static AstExpr *parse_expression(Parser *par) {
 bool parse_func_params(Parser *par, Vec *res) {
     tok_next(par);
     while (par->cur != ')') {
+        FilePos pos = par->lex->token_start;
         AstFuncCallParam param;
         if (!parse_func_param(par, &param)) {
             return false;
         }
+        param.pos = pos;
         if (!vec_push(res, &param)) {
             return OTHER_ERR_FALSE;
         }
