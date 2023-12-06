@@ -112,24 +112,28 @@ static TreeNode *create_node(const String key, Vec data) {
 
 static TreeNode *right_rotate(TreeNode *y){
     TreeNode *x = y->left_node;
-    y->left_node = x->right_node;
-    x->right_node = y;
+    if (x) {
+        y->left_node = x->right_node;
+        x->right_node = y;
 
-    // Height values update
-    x->height = max(node_height(x->left_node), node_height(x->right_node)) + 1;
-    y->height = max(node_height(y->left_node), node_height(y->right_node)) + 1;
+        // Height values update
+        x->height = max(node_height(x->left_node), node_height(x->right_node)) + 1;
+        y->height = max(node_height(y->left_node), node_height(y->right_node)) + 1;
+    }
 
     return x;
 }
 
 static TreeNode *left_rotate(TreeNode *y){
     TreeNode *x = y->right_node;
-    y->right_node = x->left_node;
-    x->left_node = y;
+    if (x) {
+        y->right_node = x->left_node;
+        x->left_node = y;
 
-    // Height values update
-    x->height = max(node_height(x->left_node), node_height(x->right_node)) + 1;
-    y->height = max(node_height(y->left_node), node_height(y->right_node)) + 1;
+        // Height values update
+        x->height = max(node_height(x->left_node), node_height(x->right_node)) + 1;
+        y->height = max(node_height(y->left_node), node_height(y->right_node)) + 1;
+    }
 
     return x;
 }

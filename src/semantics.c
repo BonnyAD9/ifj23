@@ -7,9 +7,10 @@ FilePos var_pos = (FilePos) {};
 // Global variable for telling function check whether on top level or not
 bool sem_top_level = false;
 Context context = {
-    .in_func = false,
+    .in_func        = false,
     .ret_stmt_found = false,
-    .func_ret_type = DT_NONE
+    .in_func_call   = false,
+    .func_ret_type  = DT_NONE
 };
 /////////////////////////////////////////////////////////////////////////
 
@@ -139,6 +140,7 @@ static void set_block_checked(AstBlock* block, bool* sema_to_check);
 static bool use_before_decl(FilePos decl, FilePos usage);
 static bool not_another_func_decl(Vec stmts);
 static void check_adapt_to_conversion(AstExpr *expr, DataType new_data_type);
+bool check_func_decl_params_duplicity(Vec parameters);
 /////////////////////////////////////////////////////////////////////////
 
 static bool sema_err(FilePos pos, const char *msg, const int err_type) {
@@ -190,7 +192,7 @@ static bool process_expr(AstExpr *expr) {
         case AST_VARIABLE:
             ret_val = sem_process_variable(expr->variable->ident);
             expr->data_type = expr->variable->data_type = expr->variable->ident->var.data_type;
-            expr->sema_checked = expr->variable->sema_checked = expr->variable->ident->declared;
+            expr->sema_checked = expr->variable->sema_checked = (expr->variable->ident->declared && expr->variable->ident->var.data_type != DT_NONE);
             return ret_val;
         default:
             return sema_err(expr->pos, "Uknown expression type", ERR_SEMANTIC);
@@ -204,6 +206,7 @@ AstExpr *sem_binary(FilePos pos, AstExpr *left, Token op, AstExpr *right) {
         left->pos,
         ast_binary_op(pos, op, left, right)
     );
+    var_pos = pos;
 
     if (process_expr(binary_expr))
         return binary_expr;
@@ -232,7 +235,9 @@ static bool sem_process_binary(AstBinaryOp *binary_op) {
         return true;
 
     // Trying to work with function like with variable
-    if (binary_op->right->type == AST_VARIABLE && binary_op->right->variable->ident->type == SYM_FUNC) {
+    if ((binary_op->right->type == AST_VARIABLE && binary_op->right->variable->ident->type == SYM_FUNC) ||
+        (binary_op->left->type == AST_VARIABLE && binary_op->left->variable->ident->type == SYM_FUNC)
+    ) {
         return sema_err(
             binary_op->left->pos,
             "Cant handle function as variable",
@@ -279,6 +284,7 @@ AstExpr *sem_unary(FilePos pos, AstExpr *expr, Token op) {
         pos_min(pos, expr->pos),
         ast_unary_op(pos, op, expr)
     );
+    var_pos = pos;
 
     if (process_expr(unary_expr))
         return unary_expr;
@@ -330,6 +336,7 @@ SymItem *calle_ident(AstExpr *expr) {
 AstExpr *sem_call(FilePos pos, AstExpr *calle, Vec params) {
     SymItem* ident = calle_ident(calle);
     ast_free_expr(&calle);
+    var_pos = pos;
 
     if (!ident) {
         // Error already set in calle_ident()
@@ -367,7 +374,8 @@ static bool sem_process_call(AstFunctionCall *func_call) {
     func_call->data_type = sym_func_get_ret(func_call->ident, func_call->ident->name);
 
     if (check_func_params(func_call->ident, func_call->arguments)) {
-        func_call->sema_checked = sem_top_level;
+        // bylo tady funccall-semachedk = top+level
+        func_call->sema_checked = (func_call->ident->func.return_type != DT_NONE);
         return true;
     }
     return false;
@@ -386,10 +394,14 @@ static bool handle_write_func(SymItem *ident, Vec args) {
 
         if (arg.v->type == AST_VARIABLE) {
             var_pos = arg.v->variable->file_pos;
+            context.in_func_call = true;
+
             // Check if variable is defined
             if (!sem_process_variable(arg.v->variable))
                 // Error already set by sem_process_variable()
                 return false;
+
+            context.in_func_call = false;
         }
         else if (arg.v->type == AST_LITERAL) {
             var_pos = arg.v->literal.pos;
@@ -437,10 +449,14 @@ static bool check_func_params(SymItem *ident, Vec args) {
         param_data_type = param.ident->var.data_type;
         if (arg.v->type == AST_VARIABLE) {
             var_pos = arg.v->variable->file_pos;
+            context.in_func_call = true;
+
             // Check if variable is defined
             if (!sem_process_variable(arg.v->variable))
                 // Error already set by sem_process_variable()
                 return false;
+
+            context.in_func_call = false;
             arg_data_type = arg.v->variable->var.data_type;
         }
         else if (arg.v->type == AST_LITERAL) {
@@ -493,6 +509,7 @@ static bool check_func_params(SymItem *ident, Vec args) {
 
 AstExpr *sem_literal(FilePos pos, FullToken token) {
     AstLiteral *literal;
+    var_pos = pos;
 
     if (token.subtype == DT_INT)
         literal = ast_int_literal(pos, token.int_v);
@@ -533,6 +550,7 @@ AstExpr *sem_variable(FilePos pos, SymItem *ident) {
         pos,
         ast_variable(pos, ident)
     );
+    var_pos = pos;
 
     if (!var_expr) {
         return NULL;
@@ -552,6 +570,17 @@ static bool sem_process_variable(SymItem *ident) {
             "Undeclared variable",
             ERR_UNDEF_FUNCTION
         );
+    }
+
+    if (context.in_func_call) {
+        // Trying to work with function like with variable
+        if (ident->type == SYM_FUNC) {
+            return sema_err(
+                var_pos,
+                "Cant handle function as variable",
+                ERR_SEMANTIC
+            );
+        }
     }
 
     if (!ident->declared && !sem_top_level)
@@ -601,16 +630,12 @@ static void check_in_array(unsigned int arr_sel, const char **err_msg, const cha
         if (left_expr_type == AST_LITERAL && (left_type == DT_INT || left_type == DT_INT_NIL)) {
             // Left operand is LITERAL - change type from INT -> DOUBLE and check again
             binary_op->left->data_type += 2;
-            // Do the same for datatype stored in SymItem
-            //binary_op->left->literal->data_type +=2;
             check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
             return;
         }
         if (right_expr_type == AST_LITERAL && (right_type == DT_INT || right_type == DT_INT_NIL)) {
             // Right operand is LITERAL - change type from INT -> DOUBLE and check again
             binary_op->right->data_type += 2;
-            // Do the same for datatype stored in SymItem
-            //binary_op->right->literal->data_type +=2;
             check_in_array(arr_sel, err_msg, err_msg_cnt, binary_op);
             return;
         }
@@ -778,6 +803,34 @@ static bool sem_process_stmt(AstStmt *stmt) {
 
 /////////////////////////////////////////////////////////////////////////
 
+bool check_func_decl_params_duplicity(Vec parameters) {
+    VEC_FOR_EACH(&(parameters), FuncParam, func_param) {
+        for (unsigned int index = (func_param.i + 1); index < parameters.len; ++index) {
+            FuncParam param;
+            param = VEC_AT(&parameters, FuncParam, index);
+            // Check for labels
+            if (func_param.v->label.str && str_eq(func_param.v->label, param.label)) {
+                return sema_err(
+                    var_pos,
+                    "Duplicit names for function declaration labels",
+                    ERR_SEMANTIC
+                );
+            }
+            // Check for variable's names
+            if (str_eq(func_param.v->ident->name, param.ident->name)) {
+                return sema_err(
+                    var_pos,
+                    "Duplicit names for function declaration idents",
+                    ERR_SEMANTIC
+                );
+            }
+        }
+    }
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////
+
 AstStmt *sem_func_decl(
     FilePos pos,
     SymItem *ident,
@@ -787,6 +840,7 @@ AstStmt *sem_func_decl(
         pos,
         ast_function_decl(pos, ident, ident->func.params, body)
     );
+    var_pos = pos;
 
     if (sem_process_stmt(func_decl))
         return func_decl;
@@ -800,6 +854,11 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
         return true;
 
     context.func_ret_type = sym_func_get_ret(func_decl->ident, func_decl->ident->name);
+
+    // Check for valid params
+    if (!check_func_decl_params_duplicity(func_decl->parameters))
+        // Error already set in check_func_decl_params_duplicity()
+        return false;
 
     // First check body is valid
     bool func_body = sem_process_block(func_decl->body->stmts);
@@ -827,23 +886,24 @@ bool sem_process_func_decl(AstFunctionDecl *func_decl) {
 static void check_adapt_to_conversion(AstExpr *expr, DataType new_data_type) {
     if (expr->type == AST_LITERAL &&
         expr->literal->data_type != new_data_type &&
+        (new_data_type - 2) == expr->literal->data_type &&
        (expr->literal->data_type == DT_INT || expr->literal->data_type == DT_INT_NIL)
     ) {
         // Check if implicit conversion happened and if so update literal's datatype and value
         expr->literal->data_type = new_data_type;
         expr->literal->double_v = expr->literal->int_v;
+        expr->data_type = new_data_type;
     }
 }
 
 /////////////////////////////////////////////////////////////////////////
 
 AstStmt *sem_var_decl(FilePos pos, SymItem *ident, AstExpr *expr) {
-    var_pos = pos;
-
     AstStmt *var_decl = ast_variable_decl_stmt(
         pos,
         ast_variable_decl(pos, ident, expr)
     );
+    var_pos = pos;
 
     if (sem_process_stmt(var_decl))
         return var_decl;
@@ -942,6 +1002,7 @@ static bool sem_process_var_decl(AstVariableDecl *variable_decl) {
 
 AstStmt *sem_return(FilePos pos, AstExpr *expr) {
     AstStmt *ret_stmt = ast_return_stmt(pos, ast_return(pos, expr));
+    var_pos = pos;
 
     if (sem_process_stmt(ret_stmt))
         return ret_stmt;
@@ -975,6 +1036,14 @@ static bool sem_process_return(AstReturn *return_v) {
             );
         }
 
+        context.ret_stmt_found = true;
+
+        if (!return_v->expr->sema_checked)
+            return true;
+
+        if (!void_ret)
+            check_adapt_to_conversion(return_v->expr, context.func_ret_type);
+
         // Check for type compatibility (same as for '=')
         if (!void_ret && !compat_array
             [4]
@@ -987,8 +1056,8 @@ static bool sem_process_return(AstReturn *return_v) {
                 ERR_INVALID_FUN
             );
         }
-                context.ret_stmt_found = true;
-                return_v->sema_checked = ((void_ret) ? true : return_v->expr->sema_checked);
+
+        return_v->sema_checked = ((void_ret) ? true : return_v->expr->sema_checked);
     }
     return_v->data_type = ((void_ret) ? DT_VOID : return_v->expr->data_type);
 
@@ -1152,6 +1221,7 @@ AstStmt *sem_if(
         pos,
         ast_if(pos, cond, true_block, false_block)
     );
+    var_pos = pos;
 
     if (sem_process_stmt(if_stmt))
         return if_stmt;
@@ -1186,6 +1256,7 @@ static bool sem_process_if(AstIf *if_v) {
         return false;
 
     set_block_checked(if_v->if_body, &(if_v->sema_checked));
+    if_v->sema_checked = if_v->sema_checked && if_v->condition->sema_checked;
 
     if (if_v->else_body) {
         bool else_body = sem_process_block(if_v->else_body->stmts);
@@ -1212,6 +1283,7 @@ AstStmt *sem_expr_stmt(AstExpr *expr) {
 
 AstStmt *sem_while(FilePos pos, AstCondition *cond, AstBlock *loop) {
     AstStmt *while_stmt = ast_while_stmt(pos, ast_while(pos, cond, loop));
+    var_pos = pos;
 
     if (sem_process_stmt(while_stmt))
         return while_stmt;
@@ -1246,6 +1318,7 @@ static bool sem_process_while(AstWhile *while_v) {
         return false;
 
     set_block_checked(while_v->body, &(while_v->sema_checked));
+    while_v->sema_checked = while_v->sema_checked && while_v->condition->sema_checked;
 
     return true;
 }
