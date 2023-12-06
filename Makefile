@@ -35,6 +35,8 @@ submit:
 	cp src/*.c src/*.h submit/
 	cp dokument/dokumentace.pdf submit/
 	cat SubmitMakefile > submit/Makefile
+	-rm submit/xdanie14.tgz
+	cd submit && tar czf xdanie14.tgz -- ./*
 
 deb: $(DOBJ)
 	$(CC) $(CFLAGS) $^ -o $(TARGET) $(LDFLAGS)
