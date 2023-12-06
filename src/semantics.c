@@ -1050,10 +1050,10 @@ static bool sem_process_expr_condition(AstExpr *expr) {
 
 void sem_if_block_end(AstCondition *cond) {
     if (cond->type == AST_COND_LET) {
-        if (cond->expr->variable->ident->var.counter)
-            cond->expr->variable->ident->var.counter--;
+        if (cond->let->var.counter)
+            cond->let->var.counter--;
         else
-            cond->expr->variable->ident->var.data_type = cond->expr->variable->ident->var.original_data_type;
+            cond->let->var.data_type = cond->let->var.original_data_type;
     }
 }
 

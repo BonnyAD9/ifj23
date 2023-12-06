@@ -140,6 +140,8 @@ static AstStmt *parse_if(Parser *par) {
         return NULL;
     }
 
+    sem_if_block_end(cond);
+
     if (par->cur != T_ELSE) {
         return sem_if(pos, cond, true_block, NULL);
     }
@@ -300,6 +302,7 @@ static AstStmt *parse_while(Parser *par) {
         ast_free_condition(&cond);
         return NULL;
     }
+    sem_if_block_end(cond);
 
     return sem_while(pos, cond, loop);
 }
