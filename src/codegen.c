@@ -136,6 +136,7 @@ bool cg_generate(Symtable *sym, InnerCode *code, FILE *out) {
         OPRINTLN("");
         OPRINTLN("# Function");
         CHECK(cg_generate_block(sym, fcode.v->code, out));
+        OPRINTLN("RETURN");
     }
 
     return true;
