@@ -800,7 +800,7 @@ static bool cg_call_substring(Symtable *sym, InstCall call, FILE *out) {
 }
 
 static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
-    if (call.dst.has_value) {
+    if (!call.dst.has_value) {
         return true;
     }
 
@@ -822,10 +822,10 @@ static bool cg_call_ord(Symtable *sym, InstCall call, FILE *out) {
     OPRINT("STRLEN TF@!len ");
     CHECK(cg_write_symb(c, out));
     OPRINTLN("");
-    OPRINTLN("JUMPIFEQ %s !len int@0", empty_l->uname.str);
+    OPRINTLN("JUMPIFEQ %s TF@!len int@0", empty_l->uname.str);
 
     if (call.dst.ident) {
-        OPRINT("STR2INT ");
+        OPRINT("STRI2INT ");
         CHECK(cg_write_ident(call.dst.ident, out));
         OPRINT(" ");
         CHECK(cg_write_symb(c, out));
