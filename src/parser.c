@@ -139,6 +139,7 @@ static AstStmt *parse_if(Parser *par) {
     }
 
     if (par->cur != '{') {
+        ast_free_condition(&cond);
         return parse_error(par, ERR_SYNTAX, "Expected {");
     }
 
