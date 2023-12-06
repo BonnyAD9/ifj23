@@ -1,3 +1,9 @@
+/**
+ * IFJ23
+ *
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #ifndef VECTOR_H_INCLUDED
 #define VECTOR_H_INCLUDED
 

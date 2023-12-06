@@ -1,3 +1,9 @@
+/**
+ * IFJ23
+ *
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #ifndef INFIX_PARSER_H_INCLUDED
 #define INFIX_PARSER_H_INCLUDED
 

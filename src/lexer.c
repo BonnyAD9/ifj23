@@ -1,3 +1,11 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xsleza23 Martin Slezák
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #include "lexer.h" // FILE, Lexer, NUL_STR, Token (and its values), NULL,
                    // sb_new, sb_free, Stream, NUL_STREAM, stream_is_invalid
 

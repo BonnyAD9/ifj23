@@ -1,3 +1,9 @@
+/**
+ * IFJ23
+ *
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #include "inner_code.h"
 
 #include "errors.h"

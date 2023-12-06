@@ -1,3 +1,9 @@
+/**
+ * IFJ23
+ *
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #ifndef ENUMS_H_INCLUDED
 #define ENUMS_H_INCLUDED
 

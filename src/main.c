@@ -1,3 +1,12 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xsleza23 Martin Slezák
+ * xstigl00 Jakub Antonín Štigler
+ * xvrbas01 Milan Vrbas
+ */
+
 #include <stdio.h>
 #include <ctype.h>
 

@@ -1,3 +1,9 @@
+/**
+ * IFJ23
+ * 
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #include "codegen.h"
 
 #include <assert.h>

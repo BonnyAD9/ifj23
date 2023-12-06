@@ -1,3 +1,9 @@
+/**
+ * IFJ23
+ *
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #include "infix_parser.h"
 
 #include <stdint.h>

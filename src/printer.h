@@ -1,3 +1,9 @@
+/**
+ * IFJ23
+ *
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #ifndef PRINTER_H_INCLUDED
 #define PRINTER_H_INCLUDED
 

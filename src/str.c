@@ -1,3 +1,11 @@
+/**
+ * IFJ23
+ *
+ * xdanie14 Tomáš Daniel
+ * xsleza23 Martin Slezák
+ * xstigl00 Jakub Antonín Štigler
+ */
+
 #include "str.h" // String, bool, false, true
 
 #include <string.h> // memcmp, memcpy
