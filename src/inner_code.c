@@ -660,19 +660,51 @@ static bool ic_gen_while(Symtable *sym, AstWhile *while_v, Vec *code) {
     CHECKD(SymItem *, l_start, sym_label(sym));
     CHECKD(SymItem *, l_end, sym_label(sym));
 
+    Vec block_code = VEC_NEW(Instruction);
+    // eval(while_v->body)
+    if (!ic_gen_block(sym, while_v->body, &block_code)) {
+        vec_free_with(&block_code, (FreeFun)ic_free_instruction);
+        return false;
+    }
+
+    VEC_FOR_EACH(&block_code, Instruction, inst) {
+        if (inst.v->type == IT_DECL) {
+            if (!vec_push(code, inst.v)) {
+                vec_free_with(&block_code, (FreeFun)ic_free_instruction);
+                return false;
+            }
+        }
+    }
+
     // l_start:
     Instruction inst = {
         .type = IT_LABEL,
         .label = { .ident = l_start },
         .pos = while_v->pos,
     };
-    CHECK(vec_push(code, &inst));
+    if (!vec_push(code, &inst)) {
+        vec_free_with(&block_code, (FreeFun)ic_free_instruction);
+        return false;
+    }
 
     // CONDITION while_v->condition, l_end
-    CHECK(ic_gen_condition(sym, while_v->condition, l_end, code));
+    if (!ic_gen_condition(sym, while_v->condition, l_end, code)) {
+        vec_free_with(&block_code, (FreeFun)ic_free_instruction);
+        return false;
+    }
 
-    // eval(while_v->body)
-    CHECK(ic_gen_block(sym, while_v->body, code));
+    VEC_FOR_EACH(&block_code, Instruction, inst) {
+        if (inst.v->type != IT_DECL) {
+            if (!vec_push(code, inst.v)) {
+                vec_free_with(&block_code, (FreeFun)ic_free_instruction);
+                return false;
+            }
+            // make sure there is no double free
+            inst.v->type = IT_DECL;
+        }
+    }
+
+    vec_free(&block_code);
 
     Instruction insts[] = {
         { // JUMP l_start
