@@ -85,10 +85,10 @@ typedef struct {
 Tree tree_new(int id);
 
 /// Adds node into tree
-void tree_insert(Tree *tree, const String key, Vec data);
+bool tree_insert(Tree *tree, const String key, Vec data);
 
 /// Removes tree node by given key
-void tree_remove(Tree *tree, const String key);
+bool tree_remove(Tree *tree, const String key);
 
 /// Returns pointer to data of found node, if not found NULL
 Vec *tree_find(Tree *tree, const String key);
